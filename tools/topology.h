@@ -28,9 +28,9 @@ class Topology {
       int nbr_left = ((bid_rel - 1) % Globals::nranks + Globals::nranks) % Globals::nranks;
       int nbr_right = (bid_rel + 1) % Globals::nranks;
 
-      MeshBlock mb(ring_delta + bid_rel);
-      mb.AddNeighbor(nbr_left + ring_delta, nbr_left);
-      mb.AddNeighbor(nbr_right + ring_delta, nbr_right);
+      auto mb = std::make_shared<MeshBlock>(ring_delta + bid_rel);
+      mb->AddNeighbor(nbr_left + ring_delta, nbr_left);
+      mb->AddNeighbor(nbr_right + ring_delta, nbr_right);
 
       mesh.AddBlock(mb);
     }

@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 
+#define LOG_DBG2 5
+#define LOG_DBUG 4
 #define LOG_ERRO 3
 #define LOG_WARN 2
 #define LOG_INFO 1

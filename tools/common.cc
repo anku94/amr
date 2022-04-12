@@ -16,6 +16,12 @@ int logf(int lvl, const char *fmt, ...) {
   const char *prefix;
   va_list ap;
   switch (lvl) {
+    case 5:
+      prefix = " [Debug] ";
+      break;
+    case 4:
+      prefix = " [Debug] ";
+      break;
     case 3:
       prefix = "!!! ERROR !!! ";
       break;

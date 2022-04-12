@@ -77,6 +77,7 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
   MeshBlock(int block_id) : block_id_(block_id) {}
   MeshBlock(const MeshBlock& other)
       : block_id_(other.block_id_), nbrvec_(other.nbrvec_) {}
+
   Status AddNeighbor(int block_id, int peer_rank) {
     int buf_id = nbrvec_.size();
     nbrvec_.push_back({block_id, peer_rank, buf_id});
@@ -95,10 +96,24 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
   }
 
   Status AllocateBoundaryVariables(int bufsz) {
+    logf(LOG_INFO, "Allocating boundary variables");
     pbval_ = std::make_unique<BoundaryVariable>(shared_from_this());
     pbval_->SetupPersistentMPI(bufsz);
+    logf(LOG_INFO, "Allocating boundary variables - DONE!");
     return Status::OK;
   }
+
+  void StartReceiving() { pbval_->StartReceiving(); }
+
+  void SendBoundaryBuffers() { pbval_->SendBoundaryBuffers(); }
+
+  void ReceiveBoundaryBuffers() { pbval_->ReceiveBoundaryBuffers(); }
+
+  void ReceiveBoundaryBuffersWithWait() {
+    pbval_->ReceiveBoundaryBuffersWithWait();
+  }
+
+  void ClearBoundary() { pbval_->ClearBoundary(); }
 
  private:
   friend class BoundaryVariable;
@@ -109,15 +124,44 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
 
 class Mesh {
  public:
-  Status AddBlock(const MeshBlock& block) {
+  Status AddBlock(std::shared_ptr<MeshBlock> block) {
     blocks_.push_back(block);
     return Status::OK;
   }
 
   Status AllocateBoundaryVariables(int bufsz) {
     for (auto b : blocks_) {
-      Status s = b.AllocateBoundaryVariables(bufsz);
+      Status s = b->AllocateBoundaryVariables(bufsz);
       if (!(s == Status::OK)) return s;
+    }
+
+    return Status::OK;
+  }
+
+  Status DoCommunication() {
+    logf(LOG_DBUG, "Start Receiving...");
+    for (auto b : blocks_) {
+      b->StartReceiving();
+    }
+
+    logf(LOG_DBUG, "Sending Boundary Buffers...");
+    for (auto b : blocks_) {
+      b->SendBoundaryBuffers();
+    }
+
+    logf(LOG_DBUG, "Receiving Boundary Buffers...");
+    for (auto b : blocks_) {
+      b->ReceiveBoundaryBuffers();
+    }
+
+    logf(LOG_DBUG, "Receiving Remaining Boundary Buffers...");
+    for (auto b : blocks_) {
+      b->ReceiveBoundaryBuffersWithWait();
+    }
+
+    logf(LOG_DBUG, "Clearing Boundaries...");
+    for (auto b : blocks_) {
+      b->ClearBoundary();
     }
 
     return Status::OK;
@@ -125,10 +169,10 @@ class Mesh {
 
   void Print() {
     for (auto block : blocks_) {
-      block.Print();
+      block->Print();
     }
   }
 
  private:
-  std::vector<MeshBlock> blocks_;
+  std::vector<std::shared_ptr<MeshBlock>> blocks_;
 };

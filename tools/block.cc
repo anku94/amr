@@ -16,18 +16,21 @@ void BoundaryVariable::SetupPersistentMPI(int bufsz) {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
   for (auto nb : pmb->nbrvec_) {
+    logf(LOG_DBG2, "Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
+         nb.peer_rank, nb.buf_id);
+
     if (bd_var_.req_send[nb.buf_id] != MPI_REQUEST_NULL)
       MPI_Request_free(&bd_var_.req_send[nb.buf_id]);
 
     // buffer, msgsize, datatype, dest, tag, comm, req
-    MPI_Send_init(&bd_var_.sendbuf[nb.buf_id], bufsz, MPI_CHAR, nb.peer_rank, 0,
-                  MPI_COMM_WORLD, &bd_var_.req_recv[nb.buf_id]);
+    MPI_Send_init(bd_var_.sendbuf[nb.buf_id], bufsz, MPI_CHAR, nb.peer_rank, 0,
+                  MPI_COMM_WORLD, &(bd_var_.req_send[nb.buf_id]));
     bd_var_.sendbufsz[nb.buf_id] = bufsz;
 
     if (bd_var_.req_recv[nb.buf_id] != MPI_REQUEST_NULL)
-      MPI_Request_free(&bd_var_.req_send[nb.buf_id]);
+      MPI_Request_free(&bd_var_.req_recv[nb.buf_id]);
 
-    MPI_Recv_init(&bd_var_.recvbuf[nb.buf_id], bufsz, MPI_CHAR, nb.peer_rank, 0,
+    MPI_Recv_init(bd_var_.recvbuf[nb.buf_id], bufsz, MPI_CHAR, nb.peer_rank, 0,
                   MPI_COMM_WORLD, &(bd_var_.req_recv[nb.buf_id]));
     bd_var_.recvbufsz[nb.buf_id] = bufsz;
   }
@@ -37,11 +40,13 @@ void BoundaryVariable::StartReceiving() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
   for (auto nb : pmb->nbrvec_) {
-    // XXX: some sort of fence
     int status = MPI_Start(&(bd_var_.req_recv[nb.buf_id]));
     if (status != MPI_SUCCESS) {
       logf(LOG_ERRO, "MPI Start Failed");
     }
+
+    logf(LOG_DBG2, "Rank %d - Receive POSTED %d", Globals::my_rank,
+         nb.buf_id);
   }
 }
 void BoundaryVariable::ClearBoundary() {
@@ -64,8 +69,14 @@ void BoundaryVariable::SendBoundaryBuffers() {
 
   for (auto nb : pmb->nbrvec_) {
     // some fence
+    logf(LOG_DBG2, "Rank %d - Send START %d", Globals::my_rank,
+         nb.buf_id);
+
     int status = MPI_Start(&(bd_var_.req_send[nb.buf_id]));
     MPI_CHECK(status, "MPI Start Failed");
+
+    logf(LOG_DBG2, "Rank %d - Send POSTED %d", Globals::my_rank,
+         nb.buf_id);
   }
 }
 bool BoundaryVariable::ReceiveBoundaryBuffers() {

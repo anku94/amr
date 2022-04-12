@@ -40,6 +40,7 @@ class Driver {
     Topology::GenerateMesh(opts_, mesh_);
     mesh_.AllocateBoundaryVariables(opts_.size_per_msg);
     mesh_.Print();
+    mesh_.DoCommunication();
     Destroy();
   }
 

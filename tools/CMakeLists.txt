@@ -27,7 +27,7 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     endif ()
 endif ()
 
-add_executable(topobench topobench.cpp block.cc driver.cc topology.cc common.cc)
+add_executable(topobench topobench.cc block.cc driver.cc topology.cc common.cc)
 
 # Find required packages
 find_package (MPI MODULE REQUIRED)
