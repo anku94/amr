@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 
+#define LOG_LEVEL 3
+
 #define LOG_DBG2 5
 #define LOG_DBUG 4
 #define LOG_ERRO 3
@@ -42,6 +44,6 @@ enum class NeighborTopology { Ring,
 struct DriverOpts {
   NeighborTopology topology;
   size_t blocks_per_rank;
-  size_t msgs_per_block;
   size_t size_per_msg;
+  size_t comm_rounds;
 };

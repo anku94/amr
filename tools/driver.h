@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <mpi.h>
-
 #include "block.h"
 #include "common.h"
 #include "topology.h"
 
+#include <mpi.h>
+
 class Driver {
  public:
-  Driver(const DriverOpts &opts) : opts_(opts) {}
+  Driver(const DriverOpts& opts) : opts_(opts) {}
 
-  Status Setup(int argc, char *argv[]) {
+  Status Setup(int argc, char* argv[]) {
     if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
       return Status::MPIError;
     }
@@ -35,12 +35,23 @@ class Driver {
     return Status::OK;
   }
 
-  void Run(int argc, char *argv[]) {
+  void PrintOpts() {
+    if (Globals::my_rank == 0) {
+      printf("[Blocks Per Rank] %zu\n", opts_.blocks_per_rank);
+      printf("[Comm Rounds] %zu\n", opts_.comm_rounds);
+      printf("[Size Per Msg] %zu\n", opts_.size_per_msg);
+      printf("[TOPOLOGY] %s\n",
+             (opts_.topology == NeighborTopology::Ring ? "RING" : "ALLTOALL"));
+    }
+  }
+
+  void Run(int argc, char* argv[]) {
     Setup(argc, argv);
+    PrintOpts();
     Topology::GenerateMesh(opts_, mesh_);
     mesh_.AllocateBoundaryVariables(opts_.size_per_msg);
     mesh_.Print();
-    mesh_.DoCommunication();
+    mesh_.DoCommunication(opts_.comm_rounds);
     Destroy();
   }
 

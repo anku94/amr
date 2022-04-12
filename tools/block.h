@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common.h"
+#include "logger.h"
 
 #include <memory>
 #include <mpi.h>
@@ -53,6 +54,7 @@ class BoundaryVariable {
   void DestroyBoundaryData(BoundaryData<>& bd);
 
  private:
+  friend class MeshBlock;
   std::shared_ptr<MeshBlock> GetBlockPointer() {
     if (wpmb_.expired()) {
       ABORT("Invalid pointer to MeshBlock!");
@@ -91,15 +93,15 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
                 std::to_string(nbr.peer_rank) + ",";
     }
 
-    logf(LOG_INFO, "Rank %d, Block ID %d, Neighbors: %s", Globals::my_rank,
+    logf(LOG_DBUG, "Rank %d, Block ID %d, Neighbors: %s", Globals::my_rank,
          block_id_, nbrstr.c_str());
   }
 
   Status AllocateBoundaryVariables(int bufsz) {
-    logf(LOG_INFO, "Allocating boundary variables");
+    logf(LOG_DBUG, "Allocating boundary variables");
     pbval_ = std::make_unique<BoundaryVariable>(shared_from_this());
     pbval_->SetupPersistentMPI(bufsz);
-    logf(LOG_INFO, "Allocating boundary variables - DONE!");
+    logf(LOG_DBUG, "Allocating boundary variables - DONE!");
     return Status::OK;
   }
 
@@ -114,6 +116,10 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
   }
 
   void ClearBoundary() { pbval_->ClearBoundary(); }
+
+  uint64_t BytesSent() const { return pbval_->bytes_sent_; }
+
+  uint64_t BytesRcvd() const { return pbval_->bytes_rcvd_; }
 
  private:
   friend class BoundaryVariable;
@@ -138,7 +144,9 @@ class Mesh {
     return Status::OK;
   }
 
-  Status DoCommunication() {
+  Status DoCommunicationRound() {
+    logger_.LogBegin();
+
     logf(LOG_DBUG, "Start Receiving...");
     for (auto b : blocks_) {
       b->StartReceiving();
@@ -164,7 +172,21 @@ class Mesh {
       b->ClearBoundary();
     }
 
+    logger_.LogEnd();
+    logger_.LogData(blocks_);
+
     return Status::OK;
+  }
+
+  Status DoCommunication(size_t nrounds) {
+    Status s = Status::OK;
+    for (size_t cnt = 0; cnt < nrounds; cnt++) {
+      s = DoCommunicationRound();
+      if (!(s == Status::OK)) break;
+    }
+
+    logger_.Aggregate();
+    return s;
   }
 
   void Print() {
@@ -175,4 +197,5 @@ class Mesh {
 
  private:
   std::vector<std::shared_ptr<MeshBlock>> blocks_;
+  Logger logger_;
 };

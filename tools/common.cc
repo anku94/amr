@@ -3,6 +3,7 @@
 //
 
 #include "common.h"
+
 #include <errno.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -12,8 +13,10 @@ namespace Globals {
 int my_rank, nranks;
 }
 
-int logf(int lvl, const char *fmt, ...) {
-  const char *prefix;
+int logf(int lvl, const char* fmt, ...) {
+  if (lvl > LOG_LEVEL) return 0;
+
+  const char* prefix;
   va_list ap;
   switch (lvl) {
     case 5:
@@ -45,11 +48,11 @@ int logf(int lvl, const char *fmt, ...) {
   return 0;
 }
 
-int loge(const char *op, const char *path) {
+int loge(const char* op, const char* path) {
   return logf(LOG_ERRO, "!%s(%s): %s", strerror(errno), op, path);
 }
 
-void msg_abort(int err, const char *msg, const char *func, const char *file,
+void msg_abort(int err, const char* msg, const char* func, const char* file,
                int line) {
   fputs("*** ABORT *** ", stderr);
   fprintf(stderr, "@@ %s:%d @@ %s] ", file, line, func);
