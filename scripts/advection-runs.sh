@@ -12,7 +12,7 @@ BIN_TAU_PSM=/users/ankushj/repos/tau/tau-psm-2.31/tau-2.31/x86_64/bin/tau_exec
 OMPI_RUN=mpirun
 PSM_RUN=/users/ankushj/repos/tau/mvapich2-install/bin/mpirun
 
-DRYRUN=0
+DRYRUN=1
 
 hoststr() {
   cnt=$1
@@ -90,17 +90,17 @@ run_suite() {
     [[ $DRYRUN -eq 0 ]] && cd $JOBRUNDIR
     run_ompi_job $iface $hstr $BIN_TAU $JOBRUNDIR/log.txt
 
-    # iface=psm
-    # JOBRUNDIR=$RUNDIR/run-psm-noprof-$cnt-$iface
-    # [[ $DRYRUN -eq 0 ]] && mkdir -p $JOBRUNDIR
-    # [[ $DRYRUN -eq 0 ]] && cd $JOBRUNDIR
-    # run_psm_job $hstr "" $JOBRUNDIR/log.txt
+    iface=psm
+    JOBRUNDIR=$RUNDIR/run-psm-noprof-$cnt-$iface
+    [[ $DRYRUN -eq 0 ]] && mkdir -p $JOBRUNDIR
+    [[ $DRYRUN -eq 0 ]] && cd $JOBRUNDIR
+    run_psm_job $hstr "" $JOBRUNDIR/log.txt
 
-    # iface=psm
-    # JOBRUNDIR=$RUNDIR/run-psm-tauprof-$cnt-$iface
-    # [[ $DRYRUN -eq 0 ]] && mkdir -p $JOBRUNDIR
-    # [[ $DRYRUN -eq 0 ]] && cd $JOBRUNDIR
-    # run_psm_job $hstr $BIN_TAU_PSM $JOBRUNDIR/log.txt
+    iface=psm
+    JOBRUNDIR=$RUNDIR/run-psm-tauprof-$cnt-$iface
+    [[ $DRYRUN -eq 0 ]] && mkdir -p $JOBRUNDIR
+    [[ $DRYRUN -eq 0 ]] && cd $JOBRUNDIR
+    run_psm_job $hstr $BIN_TAU_PSM $JOBRUNDIR/log.txt
   done
 }
 

@@ -17,8 +17,8 @@ void Logger::LogData(std::vector<std::shared_ptr<MeshBlock>>& blocks_) {
     total_rcvd_ += b->BytesRcvd();
   }
 
-  auto delta = end_ - start_;
-  total_time_ += delta.count();
+  auto delta = end_ms_ - start_ms_;
+  total_time_ += (delta / 1000.0); // ms-to-s
 }
 
 void Logger::Aggregate() {

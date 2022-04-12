@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <string.h>
 
 #define LOG_LEVEL 3
 
