@@ -6,7 +6,9 @@
 
 #include <mpi.h>
 
+#include "block.h"
 #include "common.h"
+#include "topology.h"
 
 class Driver {
  public:
@@ -28,11 +30,20 @@ class Driver {
     return Status::OK;
   }
 
+  Status Destroy() {
+    MPI_Finalize();
+    return Status::OK;
+  }
+
   void Run(int argc, char *argv[]) {
     Setup(argc, argv);
-    return;
+    Topology::GenerateMesh(opts_, mesh_);
+    mesh_.AllocateBoundaryVariables(opts_.size_per_msg);
+    mesh_.Print();
+    Destroy();
   }
 
  private:
+  Mesh mesh_;
   const DriverOpts opts_;
 };

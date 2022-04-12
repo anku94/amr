@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(tools)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 # setup cache variables for ccmake users
 if (NOT CMAKE_BUILD_TYPE)
@@ -27,7 +27,7 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     endif ()
 endif ()
 
-add_executable(topobench topobench.cpp block.cc driver.cc driver.h topology.cc topology.h common.cc common.h)
+add_executable(topobench topobench.cpp block.cc driver.cc topology.cc common.cc)
 
 # Find required packages
 find_package (MPI MODULE REQUIRED)

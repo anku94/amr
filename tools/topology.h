@@ -9,25 +9,23 @@
 
 class Topology {
  public:
-  Status GenerateMesh(const DriverOpts &opts) {
+  static Status GenerateMesh(const DriverOpts &opts, Mesh &mesh) {
     switch (opts.topology) {
       case NeighborTopology::Ring:
-        return GenerateMeshRing(opts);
+        return GenerateMeshRing(opts, mesh);
       case NeighborTopology::AllToAll:
-        return GenerateMeshAllToAll(opts);
+        return GenerateMeshAllToAll(opts, mesh);
       default:
         return Status::Error;
     }
   }
 
  private:
-  Status GenerateMeshRing(const DriverOpts &opts) {
-    Mesh mesh;
-
+  static Status GenerateMeshRing(const DriverOpts &opts, Mesh &mesh) {
     for (size_t i = 0; i < opts.blocks_per_rank; i++) {
       int ring_delta = i * Globals::nranks;
       int bid_rel = Globals::my_rank;
-      int nbr_left = (bid_rel - 1) % Globals::nranks;
+      int nbr_left = ((bid_rel - 1) % Globals::nranks + Globals::nranks) % Globals::nranks;
       int nbr_right = (bid_rel + 1) % Globals::nranks;
 
       MeshBlock mb(ring_delta + bid_rel);
@@ -40,7 +38,7 @@ class Topology {
     return Status::OK;
   }
 
-  Status GenerateMeshAllToAll(const DriverOpts &opts) {
+  static Status GenerateMeshAllToAll(const DriverOpts &opts, Mesh &mesh) {
     return Status::OK;
   }
 };
