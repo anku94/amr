@@ -6,7 +6,7 @@
 void PrintHelp() {
   printf(
       "\n\t./prog -b <blocks_per_rank> -r <num_rounds>"
-      " -s <msg_sz> -t <topology>");
+      " -s <msg_sz> -t <topology>\n");
 }
 
 NeighborTopology parse_topology(int topo_id) {
@@ -24,6 +24,10 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
   int c;
   extern char* optarg;
   extern int optind;
+
+  opts.blocks_per_rank = SIZE_MAX;
+  opts.size_per_msg = SIZE_MAX;
+  opts.comm_rounds = SIZE_MAX;
 
   while ((c = getopt(argc, argv, "b:r:s:t:")) != -1) {
     switch (c) {
@@ -43,6 +47,12 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
         PrintHelp();
         break;
     }
+  }
+
+  if ((opts.blocks_per_rank == SIZE_MAX) || (opts.size_per_msg == SIZE_MAX) ||
+      (opts.comm_rounds == SIZE_MAX)) {
+    PrintHelp();
+    exit(-1);
   }
 }
 
