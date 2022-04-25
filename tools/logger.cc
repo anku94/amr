@@ -43,7 +43,7 @@ void Logger::Aggregate() {
          global_sent, global_rcvd);
     logf(LOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB", global_sent_mb,
          global_rcvd_mb);
-    logf(LOG_INFO, "Effective b/w SEND: %.2lf MB/s RECV: %.2lf MB/s", sent_mbps,
+    logf(LOG_INFO, "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps,
          rcvd_mbps);
   }
 }
