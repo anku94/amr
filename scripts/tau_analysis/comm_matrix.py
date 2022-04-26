@@ -9,6 +9,8 @@ class CommMatrix:
     def __init__(self, nranks):
         self.nranks = int(nranks)
         self.all_matrices = {}
+        self.all_rank_msgcnt = {}
+        self.all_rank_nbrcnt = {}
 
     def EnsureFit(self, phase, timestep):
         shape_new = [int(timestep) + 1, self.nranks, self.nranks]
@@ -18,6 +20,19 @@ class CommMatrix:
         elif self.all_matrices[phase].shape[0] <= timestep:
             self.all_matrices[phase].resize(shape_new)
 
+    def EnsureFit2D(self, phase, timestep):
+        shape_new = [int(timestep) + 1, self.nranks]
+
+        if phase not in self.all_rank_msgcnt:
+            self.all_rank_msgcnt[phase] = np.zeros(shape_new)
+        elif self.all_rank_msgcnt[phase].shape[0] <= timestep:
+            self.all_rank_msgcnt[phase].resize(shape_new)
+
+        if phase not in self.all_rank_nbrcnt:
+            self.all_rank_nbrcnt[phase] = np.zeros(shape_new)
+        elif self.all_rank_nbrcnt[phase].shape[0] <= timestep:
+            self.all_rank_nbrcnt[phase].resize(shape_new)
+
     def Add(self, phase, timestep, src, dest, msgsz):
         self.EnsureFit(phase, timestep)
         try:
@@ -25,11 +40,20 @@ class CommMatrix:
         except IndexError as e:
             print('error: ', phase, timestep, src, dest, msgsz)
 
+
+    def SetMsgCount(self, phase, timestep, src, msgcnt):
+        self.EnsureFit2D(phase, timestep)
+        self.all_rank_msgcnt[phase][timestep][src] = msgcnt
+
+    def SetNbrCount(self, phase, timestep, src, nbrcnt):
+        self.EnsureFit2D(phase, timestep)
+        self.all_rank_nbrcnt[phase][timestep][src] = nbrcnt
+
     def Print(self):
         print(self.all_matrices)
 
     def Persist(self):
-        persisted_state = [self.nranks, self.all_matrices]
+        persisted_state = [self.nranks, self.all_matrices, self.all_rank_msgcnt, self.all_rank_nbrcnt]
         with open('.matrix', 'wb+') as f:
             f.write(pickle.dumps(persisted_state))
 
@@ -39,6 +63,8 @@ class CommMatrix:
             persisted_state = pickle.loads(data_bytes)
             self.nranks = persisted_state[0]
             self.all_matrices = persisted_state[1]
+            self.all_rank_msgcnt = persisted_state[2]
+            self.all_rank_nbrcnt = persisted_state[3]
 
     def GetPhaseSums(self):
         ts_max = 0
@@ -57,9 +83,11 @@ class CommMatrix:
         return all_sums
 
     def PrintSummary(self):
-        all_sums = self.GetPhaseSums()
-        for phase in all_sums:
-            print(phase, all_sums[phase])
+        #  all_sums = self.GetPhaseSums()
+        #  for phase in all_sums:
+            #  print(phase, all_sums[phase])
+
+        print(self.all_rank_msgcnt['LoadBalancing'][0])
 
     @staticmethod
     def GetMatrixSimilarityScores(a, b):
@@ -101,15 +129,16 @@ def generate_matrix_rank(matrix, dpath, rank):
     df = pd.read_csv(rank_csv, on_bad_lines='skip')
     df = df[df['send_or_recv'] == 0]
     df = df[['rank', 'peer', 'timestep', 'phase', 'msg_sz']]
-    df = df.groupby(['rank', 'peer', 'timestep', 'phase'], as_index=False).agg(
-        ['sum']).reset_index()
-    df.columns = df.columns.to_flat_index().str.join('_')
-    df.columns = df.columns.str.strip('_')
 
-    df = df.astype({'rank': int, 'peer': int, 'timestep': int, 'phase': str,
+    df_rank_peer = df.groupby(['rank', 'peer', 'timestep', 'phase'], as_index=False).agg(
+        ['sum']).reset_index()
+    df_rank_peer.columns = df_rank_peer.columns.to_flat_index().str.join('_')
+    df_rank_peer.columns = df_rank_peer.columns.str.strip('_')
+
+    df_rank_peer = df_rank_peer.astype({'rank': int, 'peer': int, 'timestep': int, 'phase': str,
                     'msg_sz_sum': np.int64})
 
-    for index, row in df.iterrows():
+    for index, row in df_rank_peer.iterrows():
         rank = row['rank']
         peer = row['peer']
         timestep = row['timestep']
@@ -117,6 +146,26 @@ def generate_matrix_rank(matrix, dpath, rank):
         msgsz = row['msg_sz_sum']
 
         matrix.Add(phase, timestep, rank, peer, msgsz)
+
+    df_rank = df.groupby(['rank', 'timestep', 'phase'], as_index=False).agg({
+        'peer': 'nunique',
+        'msg_sz': 'count'
+    })
+
+    df_rank = df_rank.astype({'rank': int, 'timestep': int, 'phase': str,
+                              'peer': int,
+                              'msg_sz': int})
+
+    for index, row in df_rank.iterrows():
+        rank = row['rank']
+        timestep = row['timestep']
+        phase = row['phase']
+        msgcnt = row['msg_sz']
+        nbrcnt = row['peer']
+
+        #  print(phase, timestep, msgcnt)
+        matrix.SetMsgCount(phase, timestep, rank, msgcnt)
+        matrix.SetNbrCount(phase, timestep, rank, nbrcnt)
 
 
 def generate_matrix(dpath):
@@ -128,8 +177,9 @@ def generate_matrix(dpath):
         print('Reading Rank {}'.format(rank))
         generate_matrix_rank(matrix, dpath, rank)
 
-    matrix.PrintSummary()
     matrix.Persist()
+    matrix.LoadPersisted()
+    matrix.PrintSummary()
 
 
 def plot_matrix_phasewise_sums(all_sums, fig_dir) -> None:
@@ -188,8 +238,8 @@ def analyze_matrix():
 
 def run():
     dpath = "/mnt/lt20ad2/parthenon-topo/profile"
-    #  generate_matrix(dpath)
-    analyze_matrix()
+    generate_matrix(dpath)
+    #  analyze_matrix()
 
 
 if __name__ == '__main__':
