@@ -37,12 +37,26 @@ class CommMatrix:
             self.nranks = persisted_state[0]
             self.all_matrices = persisted_state[1]
 
-    def PrintSummary(self):
+    def GetPhaseSums(self):
+        ts_max = 0
+        all_sums = {}
+
         for phase in self.all_matrices.keys():
             phase_matrix = self.all_matrices[phase]
             phase_sum = np.sum(phase_matrix, axis=(1, 2))
-            print(phase, phase_sum.shape)
-            #  print(phase_sum)
+
+            ts_max = max(ts_max, phase_sum.shape[0])
+            all_sums[phase] = phase_sum
+
+        for phase in all_sums:
+            all_sums[phase].resize(ts_max)
+
+        return all_sums
+
+    def PrintSummary(self):
+        all_sums = self.GetPhaseSums()
+        for phase in all_sums:
+            print(phase, all_sums[phase])
 
 
 
