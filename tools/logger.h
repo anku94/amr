@@ -30,6 +30,8 @@ class Logger {
 
   void Aggregate();
 
+  void LogToFile(double send_bw, double recv_bw);
+
  private:
   uint64_t Now() const {
     // https://stackoverflow.com/questions/31255486/c-how-do-i-convert-a-stdchronotime-point-to-long-and-back

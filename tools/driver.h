@@ -12,7 +12,9 @@
 
 class Driver {
  public:
-  Driver(const DriverOpts& opts) : opts_(opts) {}
+  Driver(const DriverOpts& opts) : opts_(opts) {
+    Globals::driver_opts = opts;
+  }
 
   Status Setup(int argc, char* argv[]) {
     if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
