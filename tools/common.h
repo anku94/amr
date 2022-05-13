@@ -36,15 +36,16 @@ enum class Status {
   InvalidPtr
 };
 
-namespace Globals {
-extern int my_rank, nranks;
-};
 enum class NeighborTopology { Ring,
                               AllToAll };
-
 struct DriverOpts {
   NeighborTopology topology;
   size_t blocks_per_rank;
   size_t size_per_msg;
   size_t comm_rounds;
+};
+
+namespace Globals {
+extern int my_rank, nranks;
+extern DriverOpts driver_opts;
 };

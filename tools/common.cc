@@ -11,6 +11,7 @@
 
 namespace Globals {
 int my_rank, nranks;
+DriverOpts driver_opts;
 }
 
 int logf(int lvl, const char* fmt, ...) {
