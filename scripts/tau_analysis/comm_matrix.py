@@ -40,7 +40,6 @@ class CommMatrix:
         except IndexError as e:
             print('error: ', phase, timestep, src, dest, msgsz)
 
-
     def SetMsgCount(self, phase, timestep, src, msgcnt):
         self.EnsureFit2D(phase, timestep)
         self.all_rank_msgcnt[phase][timestep][src] = msgcnt
@@ -53,7 +52,8 @@ class CommMatrix:
         print(self.all_matrices)
 
     def Persist(self):
-        persisted_state = [self.nranks, self.all_matrices, self.all_rank_msgcnt, self.all_rank_nbrcnt]
+        persisted_state = [self.nranks, self.all_matrices, self.all_rank_msgcnt,
+                           self.all_rank_nbrcnt]
         with open('.matrix', 'wb+') as f:
             f.write(pickle.dumps(persisted_state))
 
@@ -85,7 +85,7 @@ class CommMatrix:
     def PrintSummary(self):
         #  all_sums = self.GetPhaseSums()
         #  for phase in all_sums:
-            #  print(phase, all_sums[phase])
+        #  print(phase, all_sums[phase])
 
         print(self.all_rank_msgcnt['LoadBalancing'][0])
 
@@ -123,6 +123,26 @@ class CommMatrix:
         print(all_dist)
         return all_dist
 
+    def GetNbrCountStats(self, phase):
+        nbrvec = self.all_rank_nbrcnt[phase]
+        nbrmean = np.mean(nbrvec, axis=1)
+        nbrstd = np.std(nbrvec, axis=1)
+        print(nbrmean)
+        return nbrmean, nbrstd
+
+    def GetNeighborCountStats(self):
+        nbrmean = {}
+        nbrstd = {}
+
+        for phase in self.all_rank_nbrcnt:
+            phasemean, phasestd = self.GetNbrCountStats(phase)
+            phasemean.resize(315)
+            phasestd.resize(315)
+            nbrmean[phase] = phasemean
+            nbrstd[phase] = phasestd
+
+        return nbrmean, nbrstd
+
 
 def generate_matrix_rank(matrix, dpath, rank):
     rank_csv = "{}/log.{}.csv".format(dpath, rank)
@@ -130,13 +150,15 @@ def generate_matrix_rank(matrix, dpath, rank):
     df = df[df['send_or_recv'] == 0]
     df = df[['rank', 'peer', 'timestep', 'phase', 'msg_sz']]
 
-    df_rank_peer = df.groupby(['rank', 'peer', 'timestep', 'phase'], as_index=False).agg(
+    df_rank_peer = df.groupby(['rank', 'peer', 'timestep', 'phase'],
+                              as_index=False).agg(
         ['sum']).reset_index()
     df_rank_peer.columns = df_rank_peer.columns.to_flat_index().str.join('_')
     df_rank_peer.columns = df_rank_peer.columns.str.strip('_')
 
-    df_rank_peer = df_rank_peer.astype({'rank': int, 'peer': int, 'timestep': int, 'phase': str,
-                    'msg_sz_sum': np.int64})
+    df_rank_peer = df_rank_peer.astype(
+        {'rank': int, 'peer': int, 'timestep': int, 'phase': str,
+         'msg_sz_sum': np.int64})
 
     for index, row in df_rank_peer.iterrows():
         rank = row['rank']
@@ -190,13 +212,19 @@ def plot_matrix_phasewise_sums(all_sums, fig_dir) -> None:
         data_x = np.arange(len(data_y))
         ax.plot(data_x, data_y, label=phase)
 
-    ax.legend()
+    basefontsz = 18
+
+    ax.legend(prop={'size': basefontsz - 4})
     ax.yaxis.set_major_formatter(lambda x, pos: '{:.0f} KB'.format(x / 1e6))
-    ax.set_xlabel('Timestep')
-    ax.set_ylabel('Total Communication Per Timestep')
-    ax.set_title('Phase-Wise Communication Breakdown of a 512-Rank Run')
-    # fig.show()
+    ax.set_xlabel('Timestep', fontsize=basefontsz)
+    ax.set_ylabel('Total Communication Per Timestep', fontsize=basefontsz)
+    ax.set_title('Phasewise Communication Breakdown\n(512-Rank AMR Run)', fontsize=basefontsz)
+
+    ax.tick_params(axis='x', labelsize=basefontsz - 2)
+    ax.tick_params(axis='y', labelsize=basefontsz - 2)
+
     fig.tight_layout()
+    # fig.show()
     fig.savefig(fig_dir + '/phasewise_comm.pdf', dpi=600)
 
 
@@ -215,12 +243,50 @@ def plot_matrix_sim_scores(scores, fig_dir) -> None:
     ax.yaxis.set_major_formatter(lambda x, pos: '{:.0f} KB'.format(x / 1e6))
 
     ax.legend()
-    ax.set_title('Similarity Scores Between Adjacent Comm-Matrices (512-Rank AMR)')
+    ax.set_title(
+        'Similarity Scores Between Adjacent Comm-Matrices (512-Rank AMR)')
     ax.set_xlabel('Timestep')
     ax.set_ylabel('L1 Norm of Comm-Matrix')
     # fig.show()
     fig.tight_layout()
     fig.savefig(fig_dir + '/comm_matrix_sim.pdf', dpi=600)
+
+
+def plot_matrix_neighbors(nbrmean, nbrstd, fig_path):
+    fig, ax = plt.subplots(1, 1)
+
+    phases = list(nbrmean.keys())
+    data_x = np.arange(len(nbrmean[phases[0]]))
+
+    for phase in phases:
+        ax.plot(data_x, nbrmean[phase], label='Mean {}'.format(phase))
+
+    phase = 'BoundaryComm'
+    ax.fill_between(data_x, nbrmean[phase] - nbrstd[phase],
+                    nbrmean[phase] + nbrstd[phase],
+                    facecolor='green', alpha=0.2,
+                    label='+/- 1STD {}'.format(phase))
+
+    phase = 'LoadBalancing'
+    ax.fill_between(data_x, nbrmean[phase] - nbrstd[phase],
+                    nbrmean[phase] + nbrstd[phase],
+                    facecolor='yellow', alpha=0.6,
+                    label='+/- 1STD {}'.format(phase))
+
+    phase = 'FluxExchange'
+    ax.fill_between(data_x, nbrmean[phase] - nbrstd[phase],
+                    nbrmean[phase] + nbrstd[phase],
+                    facecolor='purple', alpha=0.2,
+                    label='+/- 1STD {}'.format(phase))
+
+    ax.set_title('Mean Neighbor Count For A 512-Rank AMR')
+    ax.set_xlabel('Timestep')
+    ax.set_ylabel('Count')
+    ax.legend()
+
+    # fig.show()
+    fig.savefig(fig_path + '/neighbor_count.pdf', dpi=600)
+    pass
 
 
 def analyze_matrix():
@@ -230,16 +296,18 @@ def analyze_matrix():
     matrix = CommMatrix(0)
     matrix.LoadPersisted()
     # matrix.PrintSummary()
-    # matrix_sums = matrix.GetPhaseSums()
-    # plot_matrix_phasewise_sums(matrix_sums, 'figures')
-    scores = matrix.GetCommMatrixSimilarityScores('BoundaryComm')
-    plot_matrix_sim_scores(scores, fig_path)
+    matrix_sums = matrix.GetPhaseSums()
+    plot_matrix_phasewise_sums(matrix_sums, 'figures')
+    # scores = matrix.GetCommMatrixSimilarityScores('BoundaryComm')
+    # plot_matrix_sim_scores(scores, fig_path)
+    # nbrmean, nbrstd = matrix.GetNeighborCountStats()
+    # plot_matrix_neighbors(nbrmean, nbrstd, fig_path)
 
 
 def run():
     dpath = "/mnt/lt20ad2/parthenon-topo/profile"
-    generate_matrix(dpath)
-    #  analyze_matrix()
+    # generate_matrix(dpath)
+    analyze_matrix()
 
 
 if __name__ == '__main__':
