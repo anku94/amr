@@ -21,7 +21,7 @@ class AMRTracer {
     PMPI_Comm_rank(MPI_COMM_WORLD, &rank_);
     PMPI_Comm_size(MPI_COMM_WORLD, &size_);
 
-    const char* dir = "/mnt/lt20ad2/parthenon-topo/profile";
+    const char* dir = "/mnt/lt20ad2/parthenon-topo/profile2";
     char fpath[1024];
     snprintf(fpath, 1024, "%s/log.%d.csv", dir, rank_);
 
@@ -96,11 +96,19 @@ class AMRTracer {
 
   void RegisterSend(uint64_t msg_tag, uint64_t dest, uint64_t msg_sz,
                     uint64_t timestamp) {
+    if (rank_ == 0) {
+      logf(LOG_DBUG, "SendMsg, Src: %" PRIu64 ", Dest: %" PRIu64, rank_, dest);
+    }
+
     LogCSV(dest, msg_tag, 0, msg_sz, timestamp);
   }
 
   void RegisterRecv(uint64_t msg_tag, uint64_t src, uint64_t msg_sz,
                     uint64_t timestamp) {
+    if (rank_ == 0) {
+      logf(LOG_DBUG, "RecvMsg, Src: %" PRIu64 ", Dest: %" PRIu64, src, rank_);
+    }
+
     LogCSV(src, msg_tag, 1, msg_sz, timestamp);
   }
 
