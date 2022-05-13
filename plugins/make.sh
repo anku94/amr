@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-mpich-2004
+TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004
+
 PLUGIN=amr
 PLUGIN_OUT=$(echo $PLUGIN | sed 's/_/-/g')
 
@@ -10,7 +13,7 @@ g++ \
   -L/usr/lib/x86_64-linux-gnu \
   -lmpichcxx \
   -lmpich \
-  -I/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/include \
+  -I$TAU_ROOT/tau-2.31/include \
   -DPROFILING_ON \
   -DTAU_GNU \
   -DTAU_DOT_H_LESS_HEADERS \
@@ -36,18 +39,18 @@ g++ \
   -DTAU_STRSIGNAL_OK \
   -DTAU_UNWIND \
   -DTAU_USE_LIBUNWIND \
-  -I/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/libunwind-1.3.1-gcc/include \
+  -I$TAU_ROOT/tau-2.31/x86_64/libunwind-1.3.1-gcc/include \
   -DTAU_TRACK_LD_LOADER \
   -DTAU_OPENMP_NESTED \
   -DTAU_USE_OMPT_5_0 \
   -DTAU_USE_TLS \
   -DTAU_MPICH3 \
   -DTAU_MPI_EXTENSIONS \
-  -I/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/otf2-gcc/include \
+  -I$TAU_ROOT/tau-2.31/x86_64/otf2-gcc/include \
   -DTAU_OTF2 \
   -DTAU_ELF_BFD \
   -DTAU_DWARF \
-  -I/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/libdwarf-gcc/include \
+  -I$TAU_ROOT/tau-2.31/x86_64/libdwarf-gcc/include \
   -fopenmp \
   -DTAU_OPENMP \
   -DTAU_UNIFY \
@@ -61,9 +64,9 @@ g++ \
   -o Tau_plugin_$PLUGIN.o
 
 g++ \
-  -L/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/lib \
+  -L$TAU_ROOT/tau-2.31/x86_64/lib \
   -lTauMpi-ompt-mpi-pdt-openmp \
-  -L/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/lib \
+  -L$TAU_ROOT/tau-2.31/x86_64/lib \
   -lTauMpi-ompt-mpi-pdt-openmp \
   -Wl,-Bsymbolic-functions \
   -Wl,-z,relro \
@@ -73,10 +76,10 @@ g++ \
   -lmpich \
   -L/usr/lib \
   -Wl,-rpath,/usr/lib \
-  -L/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp \
-  -Wl,-rpath,/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp \
+  -L$TAU_ROOT/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp \
+  -Wl,-rpath,$TAU_ROOT/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp \
   -lTAU \
   -shared \
   -o libTAU-$PLUGIN_OUT.so Tau_plugin_$PLUGIN.o
 
-/bin/cp libTAU-$PLUGIN_OUT.so /users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp
+/bin/cp libTAU-$PLUGIN_OUT.so $TAU_ROOT/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp
