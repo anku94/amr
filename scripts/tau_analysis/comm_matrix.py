@@ -19,6 +19,7 @@ class CommMatrix:
             self.all_matrices[phase] = np.zeros(shape_new, dtype=np.int64)
         elif self.all_matrices[phase].shape[0] <= timestep:
             self.all_matrices[phase].resize(shape_new)
+            #  self.all_matrices[phase] = np.resize(self.all_matrices[phase], shape_new)
 
     def EnsureFit2D(self, phase, timestep):
         shape_new = [int(timestep) + 1, self.nranks]
@@ -27,11 +28,13 @@ class CommMatrix:
             self.all_rank_msgcnt[phase] = np.zeros(shape_new)
         elif self.all_rank_msgcnt[phase].shape[0] <= timestep:
             self.all_rank_msgcnt[phase].resize(shape_new)
+            #  self.all_rank_msgcnt[phase] = np.resize(self.all_rank_msgcnt[phase], shape_new)
 
         if phase not in self.all_rank_nbrcnt:
             self.all_rank_nbrcnt[phase] = np.zeros(shape_new)
         elif self.all_rank_nbrcnt[phase].shape[0] <= timestep:
             self.all_rank_nbrcnt[phase].resize(shape_new)
+            #  self.all_rank_nbrcnt[phase] = np.resize(self.all_rank_nbrcnt[phase], shape_new)
 
     def Add(self, phase, timestep, src, dest, msgsz):
         self.EnsureFit(phase, timestep)
@@ -39,6 +42,57 @@ class CommMatrix:
             self.all_matrices[phase][timestep][src][dest] += msgsz
         except IndexError as e:
             print('error: ', phase, timestep, src, dest, msgsz)
+
+    def AddMatrix(self, other):
+        assert (self.nranks == other.nranks)
+        nranks = self.nranks
+
+        def Add2D(a, b):
+            a_sh = a.shape
+            b_sh = b.shape
+            sum_sh = [max(a_sh[0], b_sh[0]), a_sh[1]]
+            assert (a_sh[1] == b_sh[1])
+            return np.resize(a, sum_sh) + np.resize(b, sum_sh)
+
+        def Add3D(a, b):
+            a_sh = a.shape
+            b_sh = b.shape
+            sum_sh = [max(a_sh[0], b_sh[0]), a_sh[1], a_sh[2]]
+            assert (a_sh[1] == b_sh[1])
+            assert (a_sh[2] == b_sh[2])
+            return np.resize(a, sum_sh) + np.resize(b, sum_sh)
+
+        def GetDefault2D(d, key):
+            if key in d:
+                return d[key]
+            else:
+                dflt_2d = np.zeros([1, nranks], dtype=np.int64)
+                return dflt_2d
+
+        def GetDefault3D(d, key):
+            if key in d:
+                return d[key]
+            else:
+                dflt_3d = np.zeros([1, nranks, nranks], dtype=np.int64)
+                return dflt_3d
+
+        all_phases = list(set(list(self.all_matrices.keys()) + list(other.all_matrices.keys())))
+        for phase in all_phases:
+            # copy all_matrices[phase][timestep][nranks][nranks]
+            mat_a = GetDefault3D(self.all_matrices, phase)
+            mat_b = GetDefault3D(other.all_matrices, phase)
+            self.all_matrices[phase] = Add3D(mat_a, mat_b)
+
+            # copy all_rank_msgcnt[phase][timestep][nranks]
+            mat_a = GetDefault2D(self.all_rank_msgcnt, phase)
+            mat_b = GetDefault2D(other.all_rank_msgcnt, phase)
+            self.all_rank_msgcnt[phase] = Add2D(mat_a, mat_b)
+
+            # copy all_rank_nbrcnt[phase][timestep][nranks]
+            mat_a = GetDefault2D(self.all_rank_nbrcnt, phase)
+            mat_b = GetDefault2D(other.all_rank_nbrcnt, phase)
+            self.all_rank_nbrcnt[phase] = Add2D(mat_a, mat_b)
+
 
     def SetMsgCount(self, phase, timestep, src, msgcnt):
         self.EnsureFit2D(phase, timestep)
@@ -87,7 +141,7 @@ class CommMatrix:
         #  for phase in all_sums:
         #  print(phase, all_sums[phase])
 
-        print(self.all_rank_msgcnt['LoadBalancing'][0])
+        print(self.all_rank_msgcnt['LoadBalancing'][13001])
 
     @staticmethod
     def GetMatrixSimilarityScores(a, b):
@@ -190,17 +244,74 @@ def generate_matrix_rank(matrix, dpath, rank):
         matrix.SetNbrCount(phase, timestep, rank, nbrcnt)
 
 
+def generate_matrix_rank_min(matrix, dpath, rank):
+    rank_csv = "{}.min/log.{}.csv".format(dpath, rank)
+    df = pd.read_csv(rank_csv, on_bad_lines='skip')
+
+    df = df.astype({'rank': int, 'peer': int, 'timestep': int, 'phase': str,
+                    'msg_sz_count': int})
+
+    #  for index, row in df.iterrows():
+        #  rank = row['rank']
+        #  peer = row['peer']
+        #  timestep = row['timestep']
+        #  phase = row['phase']
+        #  msgsz = np.int64(row['msg_sz_count'] * row['msg_sz_mean'])
+
+        #  matrix.Add(phase, timestep, rank, peer, msgsz)
+    print(df)
+    return
+
+    df_rank = df.groupby(['rank', 'timestep', 'phase'], as_index=False).agg({
+        'peer': 'nunique',
+        'msg_sz_count': 'sum'
+    })
+
+    df_rank = df_rank.astype({'rank': int, 'timestep': int, 'phase': str,
+                              'peer': int,
+                              'msg_sz_count': int})
+
+    for index, row in df_rank.iterrows():
+        rank = row['rank']
+        timestep = row['timestep']
+        phase = row['phase']
+        msgcnt = row['msg_sz_count']
+        nbrcnt = row['peer']
+
+        #  print(phase, timestep, msgcnt)
+        matrix.SetMsgCount(phase, timestep, rank, msgcnt)
+        matrix.SetNbrCount(phase, timestep, rank, nbrcnt)
+
+
 def generate_matrix(dpath):
     nranks = 512
 
     matrix = CommMatrix(nranks)
 
-    for rank in range(nranks):
+    #  for rank in range(nranks):
+    for rank in range(4):
         print('Reading Rank {}'.format(rank))
-        generate_matrix_rank(matrix, dpath, rank)
+        generate_matrix_rank_min(matrix, dpath, rank)
 
-    matrix.Persist()
-    matrix.LoadPersisted()
+    #  matrix.Persist()
+    #  matrix.LoadPersisted()
+    matrix.PrintSummary()
+
+
+def generate_matrix_parallel(dpath):
+    nranks = 512
+
+    matrix = CommMatrix(nranks)
+
+    #  for rank in range(nranks):
+    for rank in range(4):
+        print('Reading Rank {}'.format(rank))
+        matrix_tmp = CommMatrix(nranks)
+        generate_matrix_rank_min(matrix_tmp, dpath, rank)
+        matrix.AddMatrix(matrix_tmp)
+
+    #  matrix.Persist()
+    #  matrix.LoadPersisted()
     matrix.PrintSummary()
 
 
@@ -306,8 +417,9 @@ def analyze_matrix():
 
 def run():
     dpath = "/mnt/lt20ad2/parthenon-topo/profile"
-    # generate_matrix(dpath)
-    analyze_matrix()
+    #  generate_matrix(dpath)
+    #  generate_matrix_parallel(dpath)
+    #  analyze_matrix()
 
 
 if __name__ == '__main__':
