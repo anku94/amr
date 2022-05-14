@@ -1,10 +1,15 @@
+#pragma once
+
 #include "../tools/common.cc"
 #include "../tools/common.h"
-#include "amr_util.h"
 
 #include <inttypes.h>
 #include <mpi/mpi.h>
 #include <mutex>
+#include <memory>
+
+#include "amr_util.h"
+#include "amr_outputs.h"
 
 enum class AMRPhase { FluxExchange, LoadBalancing, BoundaryComm };
 
@@ -16,83 +21,71 @@ class AMRTracer {
         timestep_(0),
         num_redistrib_(0),
         phase_(AMRPhase::LoadBalancing),
-        csv_out_(nullptr),
         redistribute_ongoing_(false) {
     PMPI_Comm_rank(MPI_COMM_WORLD, &rank_);
     PMPI_Comm_size(MPI_COMM_WORLD, &size_);
-
-    const char* dir = "/mnt/lt20ad2/parthenon-topo/profile2";
-    char fpath[1024];
-    snprintf(fpath, 1024, "%s/log.%d.csv", dir, rank_);
-
-    csv_out_ = fopen(fpath, "w+");
-
-    if (csv_out_ == nullptr) {
-      ABORT("Failed to open CSV");
-    }
-
-    LogCSVHeader();
+    const char* dir = "/mnt/lt20ad2/parthenon-topo/profile3";
+    msglog_ = std::make_unique<MsgLog>(dir, rank_);
+    funclog_ = std::make_unique<FuncLog>(dir, rank_);
   }
 
   int MyRank() const { return rank_; }
 
-#define DEFINE_BLOCK(s)                              \
-  void Mark##s(const char* block_name) {             \
-    amr::AmrFunc func = amr::ParseBlock(block_name); \
-    switch (func) {                                  \
-      case amr::AmrFunc::RedistributeAndRefine:      \
-        MarkRedistribute##s();                       \
-        break;                                       \
-      case amr::AmrFunc::SendBoundBuf:               \
-        MarkSendBoundBuf##s();                       \
-        break;                                       \
-      case amr::AmrFunc::RecvBoundBuf:               \
-        MarkRecvBoundBuf##s();                       \
-        break;                                       \
-      case amr::AmrFunc::SendFluxCor:                \
-        MarkSendFluxCor##s();                        \
-        break;                                       \
-      case amr::AmrFunc::RecvFluxCor:                \
-        MarkRecvFluxCor##s();                        \
-        break;                                       \
-      case amr::AmrFunc::MakeOutputs:                \
-        MarkMakeOutputs##s();                        \
-        break;                                       \
-      default:                                       \
-        break;                                       \
-    }                                                \
+  void MarkBegin(const char* block_name, uint64_t ts) {
+    funclog_->LogFunc(block_name, ts, true);
+
+    amr::AmrFunc func = amr::ParseBlock(block_name);
+    switch (func) {
+      case amr::AmrFunc::RedistributeAndRefine:
+        MarkRedistributeBegin();
+        break;
+      case amr::AmrFunc::SendBoundBuf:
+        MarkSendBoundBufBegin();
+        break;
+      case amr::AmrFunc::RecvBoundBuf:
+        MarkRecvBoundBufBegin();
+        break;
+      case amr::AmrFunc::SendFluxCor:
+        MarkSendFluxCorBegin();
+        break;
+      case amr::AmrFunc::RecvFluxCor:
+        MarkRecvFluxCorBegin();
+        break;
+      case amr::AmrFunc::MakeOutputs:
+        MarkMakeOutputsBegin();
+        break;
+      default:
+        break;
+    }
   }
 
-  DEFINE_BLOCK(Begin)
-  DEFINE_BLOCK(End)
+  void MarkEnd(const char* block_name, uint64_t ts) {
+    funclog_->LogFunc(block_name, ts, false);
 
-  // void MarkBegin(const char* block_name) {
-  // amr::AmrFunc func = amr::ParseBlock(block_name);
-  // switch(func) {
-  // case amr::AmrFunc::RedistributeAndRefine:
-  // MarkRedistributeBegin();
-  // break;
-  // case amr::AmrFunc::MakeOutputs:
-  // MarkMakeOutputsBegin();
-  // break;
-  // default:
-  // break;
-  // }
-  // }
-
-  // void MarkEnd(const char* block_name) {
-  // amr::AmrFunc func = amr::ParseBlock(block_name);
-  // switch(func) {
-  // case amr::AmrFunc::RedistributeAndRefine:
-  // MarkRedistributeEnd();
-  // break;
-  // case amr::AmrFunc::MakeOutputs:
-  // MarkMakeOutputsBegin();
-  // break;
-  // default:
-  // break;
-  // }
-  // }
+    amr::AmrFunc func = amr::ParseBlock(block_name);
+    switch (func) {
+      case amr::AmrFunc::RedistributeAndRefine:
+        MarkRedistributeEnd();
+        break;
+      case amr::AmrFunc::SendBoundBuf:
+        MarkSendBoundBufEnd();
+        break;
+      case amr::AmrFunc::RecvBoundBuf:
+        MarkRecvBoundBufEnd();
+        break;
+      case amr::AmrFunc::SendFluxCor:
+        MarkSendFluxCorEnd();
+        break;
+      case amr::AmrFunc::RecvFluxCor:
+        MarkRecvFluxCorEnd();
+        break;
+      case amr::AmrFunc::MakeOutputs:
+        MarkMakeOutputsEnd();
+        break;
+      default:
+        break;
+    }
+  }
 
   void RegisterSend(uint64_t msg_tag, uint64_t dest, uint64_t msg_sz,
                     uint64_t timestamp) {
@@ -100,7 +93,8 @@ class AMRTracer {
       logf(LOG_DBUG, "SendMsg, Src: %" PRIu64 ", Dest: %" PRIu64, rank_, dest);
     }
 
-    LogCSV(dest, msg_tag, 0, msg_sz, timestamp);
+    msglog_->LogMsg(dest, timestep_, PhaseToStr(), msg_tag, 0, msg_sz,
+                    timestamp);
   }
 
   void RegisterRecv(uint64_t msg_tag, uint64_t src, uint64_t msg_sz,
@@ -109,14 +103,8 @@ class AMRTracer {
       logf(LOG_DBUG, "RecvMsg, Src: %" PRIu64 ", Dest: %" PRIu64, src, rank_);
     }
 
-    LogCSV(src, msg_tag, 1, msg_sz, timestamp);
-  }
-
-  ~AMRTracer() {
-    if (csv_out_ != nullptr) {
-      fclose(csv_out_);
-      csv_out_ = nullptr;
-    }
+    msglog_->LogMsg(src, timestep_, PhaseToStr(), msg_tag, 1, msg_sz,
+                    timestamp);
   }
 
   void PrintStats() {
@@ -201,23 +189,6 @@ class AMRTracer {
 
   void MarkMakeOutputsEnd() { timestep_++; }
 
-  void LogCSVHeader() {
-    const char* const header =
-        "rank,peer,timestep,phase,msg_id,send_or_recv,msg_sz,timestamp\n";
-    fprintf(csv_out_, header);
-  }
-
-  void LogCSV(uint64_t peer, uint64_t msg_id, int send_or_recv, uint64_t msg_sz,
-              uint64_t timestamp) {
-    if (paranoid_) mutex_.lock();
-
-    const char* fmt = "%d,%d,%d,%s,%" PRIu64 ",%d,%" PRIu64 ",%" PRIu64 "\n";
-    fprintf(csv_out_, fmt, rank_, peer, timestep_, /* phase */ PhaseToStr(),
-            msg_id, send_or_recv, msg_sz, timestamp);
-
-    if (paranoid_) mutex_.unlock();
-  }
-
   int rank_;
   int size_;
 
@@ -225,7 +196,8 @@ class AMRTracer {
   int num_redistrib_;
   AMRPhase phase_;
 
-  FILE* csv_out_;
+  std::unique_ptr<MsgLog> msglog_;
+  std::unique_ptr<FuncLog> funclog_;
 
   bool redistribute_ongoing_;
 
