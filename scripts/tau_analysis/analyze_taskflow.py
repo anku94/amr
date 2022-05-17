@@ -85,10 +85,10 @@ def aggregate_phases(df, phases):
 
     return phase_total, total_phasewise, total_ts
 
-def log_event(f, ts, evt_name, evt_val):
-    f.write('{:d},{},{:d}\n'.format(ts, evt_name, evt_val))
+def log_event(f, rank, ts, evt_name, evt_val):
+    f.write('{:d},{:d},{},{:d}\n'.format(rank, ts, evt_name, evt_val))
 
-def process_df_for_ts(ts, df_ts, f):
+def process_df_for_ts(rank, ts, df_ts, f):
     phases = classify_phases(df_ts)
     phase_total, total_phasewise, total_ts = aggregate_phases(df_ts, phases)
 
@@ -98,15 +98,15 @@ def process_df_for_ts(ts, df_ts, f):
     cur_output_ts = output_call[0][1]
 
     for phase, phase_time in phase_total.items():
-        log_event(f, ts, phase, phase_time)
+        log_event(f, rank, ts, phase, phase_time)
 
-    log_event(f, ts, 'TIME_CLASSIFIEDPHASES', total_phasewise)
-    log_event(f, ts, 'TIME_FROMCURBEGIN', total_ts)
-    log_event(f, ts, 'TIME_FROMPREVEND', cur_output_ts - prev_output_ts)
+    log_event(f, rank, ts, 'TIME_CLASSIFIEDPHASES', total_phasewise)
+    log_event(f, rank, ts, 'TIME_FROMCURBEGIN', total_ts)
+    log_event(f, rank, ts, 'TIME_FROMPREVEND', cur_output_ts - prev_output_ts)
 
     prev_output_ts = cur_output_ts
 
-def analyze_trace(in_path, out_path):
+def analyze_trace(rank, in_path, out_path):
     df = pd.read_csv(in_path, usecols=range(4), lineterminator='\n')
     df['group'] = np.where((df['func'] == 'MakeOutputs') & (df['enter_or_exit'] == '1'), 1, 0)
     df['group'] = df['group'].shift(1).fillna(0).astype(int)
@@ -114,11 +114,11 @@ def analyze_trace(in_path, out_path):
     all_dfs = df.groupby('group', as_index=False)
 
     with open(out_path, 'w+') as f:
-        header = 'ts,evtname,evtval\n'
+        header = 'rank,ts,evtname,evtval\n'
         f.write(header)
         for ts, df_ts in all_dfs:
             print(ts)
-            process_df_for_ts(ts, df_ts, f)
+            process_df_for_ts(rank, ts, df_ts, f)
         #  cur_ts = 101
         #  df = all_dfs.get_group(cur_ts)
         #  process_df_for_ts(cur_ts, df, f)
@@ -126,12 +126,14 @@ def analyze_trace(in_path, out_path):
 def analyze_worker(args):
     trace_in = args['in']
     trace_out = args['out']
+    rank = args['rank']
     print('Parsing {} into {}...'.format(trace_in, trace_out))
 
 def run_parallel(dpath, num_ranks):
     all_args = []
     for rank in range(num_ranks):
         cur_arg = {}
+        cur_arg['rank'] = rank
         cur_arg['in'] = '{}/funcs.{}.csv'.format(dpath, rank)
         cur_arg['out'] = '{}/phases.{}.csv'.format(dpath, rank)
         all_args.append(cur_arg)
@@ -141,9 +143,10 @@ def run_parallel(dpath, num_ranks):
 
 
 def run():
+    rank = 400
     in_path = '/mnt/lustre/parthenon-topo/tmp/tmp.csv'
     out_path = '/mnt/lustre/parthenon-topo/tmp/tmp.phase.csv'
-    analyze_trace(in_path, out_path)
+    analyze_trace(rank, in_path, out_path)
 
     #  dpath = '/root/profile3'
     #  run_parallel(dpath, 16)
