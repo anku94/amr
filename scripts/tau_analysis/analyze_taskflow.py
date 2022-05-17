@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import IPython
 
+prev_output_ts = 0
+
 def find_func(df, func_name):
     ts_begin = df[(df['func'] == func_name) & (df['enter_or_exit'] == '0')]['timestep']
     ts_end = df[(df['func'] == func_name) & (df['enter_or_exit'] == '1')]['timestep']
@@ -86,16 +88,23 @@ def aggregate_phases(df, phases):
 def log_event(f, ts, evt_name, evt_val):
     f.write('{:d},{},{:d}\n'.format(ts, evt_name, evt_val))
 
-def write_out(f, ts, phase_total, total_phasewise, total_ts):
-    for phase, phase_time in phase_total.items():
-        log_event(f, ts, phase, phase_time)
-    log_event(f, ts, 'PHASE_TOTAL', total_phasewise)
-    log_event(f, ts, 'ACTUAL_TOTAL', total_ts)
-
 def process_df_for_ts(ts, df_ts, f):
     phases = classify_phases(df_ts)
-    phase_total, total_phases, total_ts = aggregate_phases(df_ts, phases)
-    write_out(f, ts, phase_total, total_phases, total_ts)
+    phase_total, total_phasewise, total_ts = aggregate_phases(df_ts, phases)
+
+    global prev_output_ts
+
+    output_call = find_func(df_ts, 'MakeOutputs')
+    cur_output_ts = output_call[0][1]
+
+    for phase, phase_time in phase_total.items():
+        log_event(f, ts, phase, phase_time)
+
+    log_event(f, ts, 'TIME_CLASSIFIEDPHASES', total_phasewise)
+    log_event(f, ts, 'TIME_FROMCURBEGIN', total_ts)
+    log_event(f, ts, 'TIME_FROMPREVEND', cur_output_ts - prev_output_ts)
+
+    prev_output_ts = cur_output_ts
 
 def analyze_trace(in_path, out_path):
     df = pd.read_csv(in_path, usecols=range(4), lineterminator='\n')
@@ -107,12 +116,12 @@ def analyze_trace(in_path, out_path):
     with open(out_path, 'w+') as f:
         header = 'ts,evtname,evtval\n'
         f.write(header)
-        #  for ts, df_ts in all_dfs:
-            #  print(ts)
-            #  process_df_for_ts(ts, df_ts, f)
-        cur_ts = 101
-        df = all_dfs.get_group(cur_ts)
-        process_df_for_ts(cur_ts, df, f)
+        for ts, df_ts in all_dfs:
+            print(ts)
+            process_df_for_ts(ts, df_ts, f)
+        #  cur_ts = 101
+        #  df = all_dfs.get_group(cur_ts)
+        #  process_df_for_ts(cur_ts, df, f)
 
 def analyze_worker(args):
     trace_in = args['in']
