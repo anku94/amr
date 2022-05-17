@@ -1,13 +1,16 @@
+import glob
+import IPython
 import multiprocessing
 import numpy as np
 import pandas as pd
-import IPython
+import sys
+import traceback
 
 prev_output_ts = 0
 
 def find_func(df, func_name):
-    ts_begin = df[(df['func'] == func_name) & (df['enter_or_exit'] == '0')]['timestep']
-    ts_end = df[(df['func'] == func_name) & (df['enter_or_exit'] == '1')]['timestep']
+    ts_begin = df[(df['func'] == func_name) & (df['enter_or_exit'] == 0)]['timestep']
+    ts_end = df[(df['func'] == func_name) & (df['enter_or_exit'] == 1)]['timestep']
     assert(ts_begin.size == ts_end.size)
     all_invocations =  list(zip(ts_begin.array, ts_end.array))
 
@@ -73,7 +76,7 @@ def aggregate_phases(df, phases):
             cur_phase = phase[:-4]
             cur_phase_begin = phase_ts
 
-    print(phase_total)
+    #  print(phase_total)
     total_phasewise = 0
     for key in ['AR1', 'AR2', 'AR3', 'SR']:
         if key in phase_total:
@@ -81,7 +84,7 @@ def aggregate_phases(df, phases):
 
     total_ts = df['timestep'].max() - df['timestep'].min()
 
-    print('Phases: {}, Total: {}, Accounted: {:.0f}%'.format(total_phasewise, total_ts, total_phasewise * 100.0 / total_ts))
+    #  print('Phases: {}, Total: {}, Accounted: {:.0f}%'.format(total_phasewise, total_ts, total_phasewise * 100.0 / total_ts))
 
     return phase_total, total_phasewise, total_ts
 
@@ -107,7 +110,7 @@ def process_df_for_ts(rank, ts, df_ts, f):
     prev_output_ts = cur_output_ts
 
 def analyze_trace(rank, in_path, out_path):
-    df = pd.read_csv(in_path, usecols=range(4), lineterminator='\n')
+    df = pd.read_csv(in_path, usecols=range(4), lineterminator='\n', low_memory=False)
     df['group'] = np.where((df['func'] == 'MakeOutputs') & (df['enter_or_exit'] == '1'), 1, 0)
     df['group'] = df['group'].shift(1).fillna(0).astype(int)
     df['group'] = df['group'].cumsum()
@@ -117,8 +120,21 @@ def analyze_trace(rank, in_path, out_path):
         header = 'rank,ts,evtname,evtval\n'
         f.write(header)
         for ts, df_ts in all_dfs:
-            print(ts)
-            process_df_for_ts(rank, ts, df_ts, f)
+            #  print(ts)
+            try:
+                df_ts = df_ts[df_ts['enter_or_exit'].isin(['0', '1'])]
+                df_ts = df_ts.dropna().astype({
+                    'rank': 'int32',
+                    'timestep': 'int64',
+                    'func': str,
+                    'enter_or_exit': int
+                })
+                process_df_for_ts(rank, ts, df_ts, f)
+            except Exception as e:
+                print(rank, ts)
+                print(df_ts.to_string())
+                print(e)
+                print(traceback.format_exc())
         #  cur_ts = 101
         #  df = all_dfs.get_group(cur_ts)
         #  process_df_for_ts(cur_ts, df, f)
@@ -128,28 +144,75 @@ def analyze_worker(args):
     trace_out = args['out']
     rank = args['rank']
     print('Parsing {} into {}...'.format(trace_in, trace_out))
+    analyze_trace(rank, trace_in, trace_out)
 
-def run_parallel(dpath, num_ranks):
+def run_parallel(dpath, all_ranks):
+    print('Processing ranks {} to {}'.format(all_ranks[0], all_ranks[-1]))
+
     all_args = []
-    for rank in range(num_ranks):
+    for rank in all_ranks:
         cur_arg = {}
         cur_arg['rank'] = rank
         cur_arg['in'] = '{}/funcs.{}.csv'.format(dpath, rank)
-        cur_arg['out'] = '{}/phases.{}.csv'.format(dpath, rank)
+        cur_arg['out'] = '{}/phases/phases.{}.csv'.format(dpath, rank)
         all_args.append(cur_arg)
 
-    with multiprocessing.Pool(4) as pool:
+    with multiprocessing.Pool(16) as pool:
         pool.map(analyze_worker, all_args)
 
 
-def run():
-    rank = 400
-    in_path = '/mnt/lustre/parthenon-topo/tmp/tmp.csv'
-    out_path = '/mnt/lustre/parthenon-topo/tmp/tmp.phase.csv'
-    analyze_trace(rank, in_path, out_path)
+def construct_phases(hidx):
+    #  rank = 59
+    #  in_path = '/mnt/lustre/parthenon-topo/profile3.min/funcs.{}.csv'.format(59)
+    #  out_path = '/mnt/lustre/parthenon-topo/tmp/tmp.phase.csv'
+    #  analyze_trace(rank, in_path, out_path)
 
-    #  dpath = '/root/profile3'
-    #  run_parallel(dpath, 16)
+    dpath = '/mnt/lustre/parthenon-topo/profile3.min'
+    ranks_per_node = 16
+    rbeg = ranks_per_node * hidx
+    rend = rbeg + ranks_per_node
+    ranks_to_process = list(range(rbeg, rend))
+    run_parallel(dpath, ranks_to_process)
+
+def run_construct():
+    host_idx = int(sys.argv[1][1:])
+    run(host_idx)
+
+def read_phases(pdir):
+    all_phase_csvs = glob.glob(pdir + '/phases*.csv')
+    #  all_phase_csvs = all_phase_csvs[8:12]
+    def read_phase_df(x):
+        df = pd.read_csv(x).astype({
+            'rank': 'int32',
+            'ts': 'int32',
+            'evtname': str,
+            'evtval': 'int64'
+        })
+        return df
+    all_dfs = map(read_phase_df, all_phase_csvs)
+    aggr_df = pd.concat(all_dfs).dropna()
+    return aggr_df
+
+def percentile(n):
+    def percentile_(x):
+        return np.percentile(x, n)
+    percentile_.__name__ = 'percentile_%s' % n
+    return percentile_
+
+def analyze_phase_df(pdf, pdf_out):
+    pdf = pdf.groupby(['ts','evtname'], as_index=False).agg({
+        'evtval': ['count', 'mean', 'min', 'max', percentile(50), percentile(75), percentile(99)]
+    })
+    pdf.columns = ['_'.join(col).strip('_') for col in pdf.columns.values]
+    pdf.to_csv(pdf_out, index=None)
+
+def run_aggregate():
+    phase_dir = '/mnt/lustre/parthenon-topo/profile3.min/phases'
+    phase_df = read_phases(phase_dir)
+    print(phase_df)
+    analysis_df_path = '{}/aggregate.csv'.format(phase_dir)
+    analyze_phase_df(phase_df, analysis_df_path)
 
 if __name__ == '__main__':
-    run()
+    #  run_construct()
+    run_aggregate()
