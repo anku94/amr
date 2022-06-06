@@ -1,22 +1,67 @@
 import glob
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
 import multiprocessing
 import numpy as np
 import pandas as pd
+import subprocess
 import sys
 import traceback
+from typing import Tuple
 
 prev_output_ts = 0
 
+def find_func_remove_mismatch(ts_begin, ts_end):
+    all_inv = []
+
+    for ts in ts_begin:
+        all_inv.append((ts, 0))
+
+    for ts in ts_end:
+        all_inv.append((ts, 1))
+
+    all_inv = sorted(all_inv)
+
+    all_begin_clean = []
+    all_end_clean = []
+
+    prev_type = 1
+    prev_ts = None
+
+    for ts, ts_type in all_inv:
+        assert(prev_type in [0, 1])
+        assert(ts_type in [0, 1])
+
+        if ts_type == 0:
+            prev_type = 0
+            prev_ts = ts
+
+        if prev_type == 0 and ts_type == 1:
+            all_begin_clean.append(prev_ts)
+            all_end_clean.append(ts)
+            prev_type = 1
+            prev_ts = None
+
+    return all_begin_clean, all_end_clean
 
 def find_func(df, func_name):
+    #  print('finding {}'.format(func_name))
+
     ts_begin = df[(df['func'] == func_name) & (df['enter_or_exit'] == 0)][
         'timestep']
     ts_end = df[(df['func'] == func_name) & (df['enter_or_exit'] == 1)][
         'timestep']
-    assert (ts_begin.size == ts_end.size)
-    all_invocations = list(zip(ts_begin.array, ts_end.array))
+    #  print(ts_begin)
+    #  print(ts_end)
+
+    all_invocations = []
+
+    try:
+        assert (ts_begin.size == ts_end.size)
+        all_invocations = list(zip(ts_begin.array, ts_end.array))
+    except AssertionError as e:
+        print(func_name, ts_begin.size, ts_end.size)
+        print(traceback.format_exc())
+        ts_begin, ts_end = find_func_remove_mismatch(ts_begin.array, ts_end.array)
+        all_invocations = list(zip(ts_begin, ts_end))
 
     #  print(func_name)
     #  print(all_invocations)
@@ -34,6 +79,141 @@ def add_to_ts_end(all_phases, phase_ts, phase_label):
         all_phases.append((pend, phase_label + '.END'))
 
 
+def filter_phases(phases):
+    phases = sorted(phases)
+
+    prev_begin = False
+    prev_name = None
+    prev_ts = None
+    
+    lb_active = False
+    lb_start_ts = None
+
+    filtered_phases = []
+
+    for phase_ts, phase_name in phases:
+        cur_begin = False
+        cur_name = phase_name.split('.')[0]
+
+        if phase_name.endswith('.BEGIN'):
+            cur_begin = True
+        elif phase_name.endswith('.END'):
+            cur_begin = False
+
+        if lb_active and not cur_name.startswith('AR3'):
+            continue
+        elif cur_name == 'SR' and cur_begin == True:
+            if prev_name == 'SR' and prev_begin == True:
+                continue
+
+        if cur_begin == False:
+            if lb_active and cur_name == 'AR3':
+                #  filtered_phases.append((lb_start_ts, 'AR3.BEGIN'))
+                filtered_phases.append((phase_ts, 'AR3.END'))
+
+                lb_active = False
+                lb_start_ts = None
+                continue
+
+            if prev_begin == True:
+                filtered_phases.append((prev_ts, prev_name + '.BEGIN'))
+                filtered_phases.append((phase_ts, cur_name + '.END'))
+
+            prev_begin = False
+            prev_name = None
+            prev_ts = None
+        else:
+            if prev_begin == True and prev_name == cur_name:
+                continue
+
+            if prev_begin == True:
+                filtered_phases.append((prev_ts, prev_name + '.BEGIN'))
+
+            prev_begin = True
+            prev_name = cur_name
+            prev_ts = phase_ts
+
+            if cur_name == 'AR3':
+                lb_active = True
+                lb_start_ts = phase_ts
+
+    return filtered_phases
+
+
+def filter_phases_insert_missing(phases):
+    new_phases = []
+
+    lb_active = False
+
+    prev_begin = False
+    prev_phase = None
+    prev_ts = None
+
+    for phase_ts, phase_name in phases:
+        cur_begin = False
+        cur_name = phase_name.split('.')[0]
+
+        if phase_name.endswith('.BEGIN'):
+            cur_begin = True
+        elif phase_name.endswith('.END'):
+            cur_begin = False
+        else:
+            assert(False)
+
+        if cur_begin == True:
+            if prev_begin and prev_phase == 'AR1':
+                new_phases.append((prev_ts, 'AR1.BEGIN'))
+                new_phases.append((phase_ts - 1, 'AR1.END'))
+
+            prev_begin = True
+            prev_phase = cur_name
+            prev_ts = phase_ts
+        elif cur_begin == False:
+            if prev_begin == True and prev_phase == cur_name:
+                new_phases.append((prev_ts, cur_name + '.BEGIN'))
+                new_phases.append((phase_ts, cur_name + '.END'))
+            else:
+                # prev_end and cur_begin both missing?
+                # OR just cur_begin missing. Both not handled yet
+                pass
+
+            prev_begin = False
+            prev_phase = None
+            prev_ts = False
+        else:
+            assert(False)
+
+
+    return new_phases
+
+
+def validate_phases(phases):
+    phases = sorted(phases)
+
+    cur_stack = []
+
+    for phase_ts, phase_name in phases:
+        cur_begin = False
+        cur_name = phase_name.split('.')[0]
+
+        if phase_name.endswith('.BEGIN'):
+            cur_begin = True
+        elif phase_name.endswith('.END'):
+            cur_begin = False
+        else:
+            assert(False)
+
+        if cur_begin:
+            cur_stack.append(cur_name)
+        else:
+            assert(len(cur_stack) > 0)
+            cur_open_name = cur_stack.pop()
+            assert(cur_open_name == cur_name)
+
+    assert(len(cur_stack) == 0)
+
+
+        
 def classify_phases(df):
     phases = []
 
@@ -45,6 +225,16 @@ def classify_phases(df):
         'SR': [None, 'Task_SetBoundaries_MeshData']
     }
 
+    phase_boundaries = {
+        'AR1': ['Reconstruct', 'Task_ReceiveFluxCorrection'],
+        'AR2': ['Task_ClearBoundary', 'Task_FillDerived'],
+        'AR3': ['LoadBalancingAndAdaptiveMeshRefinement',
+                'LoadBalancingAndAdaptiveMeshRefinement'],
+        'AR3_UMBT': ['UpdateMeshBlockTree',
+                'UpdateMeshBlockTree'],
+        'SR': ['Task_SendBoundaryBuffers_MeshData', 'Task_SetBoundaries_MeshData']
+    }
+
     for phase, bounds in phase_boundaries.items():
         if bounds[0] is not None:
             ret = find_func(df, bounds[0])
@@ -53,11 +243,32 @@ def classify_phases(df):
             ret = find_func(df, bounds[1])
             add_to_ts_end(phases, ret, phase)
 
+    
     phases = sorted(phases)
-    #  for phase in phases:
-    #  print(phase)
 
-    return phases
+    #  print('='*10)
+    #  for phase in phases:
+        #  print(phase)
+
+    #  print('-'*10)
+
+    phases = filter_phases(phases)
+    phases = filter_phases_insert_missing(phases)
+
+    #  for phase in phases:
+        #  print(phase)
+    #  print('='*10)
+
+    validation_passed = True
+
+    try:
+        validate_phases(phases)
+    except AssertionError as e:
+        print(traceback.format_exc())
+        validation_passed = False
+        print('VALIDATION FAILED!!!!')
+
+    return phases, validation_passed
 
 
 def aggregate_phases(df, phases):
@@ -103,7 +314,17 @@ def log_event(f, rank, ts, evt_name, evt_val):
 
 
 def process_df_for_ts(rank, ts, df_ts, f):
-    phases = classify_phases(df_ts)
+    phases, validation_passed = classify_phases(df_ts)
+
+    if validation_passed == False:
+        print('Validation Failed: Rank {}, TS {}'.format(rank, ts))
+        print(df_ts.to_string())
+        sys.exit(-1)
+
+    #  if (validation_passed == False):
+        #  print(df_ts.to_string())
+    #  print(df_ts.to_string())
+
     phase_total, total_phasewise, total_ts = aggregate_phases(df_ts, phases)
 
     global prev_output_ts
@@ -121,9 +342,16 @@ def process_df_for_ts(rank, ts, df_ts, f):
     prev_output_ts = cur_output_ts
 
 
-def analyze_trace(rank, in_path, out_path):
+def classify_trace(rank, in_path, out_path):
     df = pd.read_csv(in_path, usecols=range(4), lineterminator='\n',
                      low_memory=False)
+    df = df.dropna().astype({
+        'rank': 'int32',
+        'timestep': 'int64',
+        'func': str,
+        'enter_or_exit': str
+    })
+
     df['group'] = np.where(
         (df['func'] == 'MakeOutputs') & (df['enter_or_exit'] == '1'), 1, 0)
     df['group'] = df['group'].shift(1).fillna(0).astype(int)
@@ -135,6 +363,8 @@ def analyze_trace(rank, in_path, out_path):
         f.write(header)
         for ts, df_ts in all_dfs:
             #  print(ts)
+            #  print(df_ts.to_string())
+            #  df_ts = all_dfs.get_group(30)
             try:
                 df_ts = df_ts[df_ts['enter_or_exit'].isin(['0', '1'])]
                 df_ts = df_ts.dropna().astype({
@@ -143,57 +373,70 @@ def analyze_trace(rank, in_path, out_path):
                     'func': str,
                     'enter_or_exit': int
                 })
+                #  df_ts = df_ts[df_ts['func'] != 'Task_ReceiveFluxCorrection']
+                #  df_ts = df_ts[df_ts['func'] != 'ReceiveFluxCorrection_x1']
                 process_df_for_ts(rank, ts, df_ts, f)
             except Exception as e:
                 print(rank, ts)
-                print(df_ts.to_string())
+                #  print(df_ts.to_string())
                 print(e)
                 print(traceback.format_exc())
-        #  cur_ts = 101
-        #  df = all_dfs.get_group(cur_ts)
-        #  process_df_for_ts(cur_ts, df, f)
+                sys.exit(-1)
+            #  if ts > 1000: break
 
 
-def analyze_worker(args):
+def classify_trace_parworker(args):
     trace_in = args['in']
     trace_out = args['out']
     rank = args['rank']
     print('Parsing {} into {}...'.format(trace_in, trace_out))
-    analyze_trace(rank, trace_in, trace_out)
+    classify_trace(rank, trace_in, trace_out)
 
 
-def run_parallel(dpath, all_ranks):
+def classify_parallel(dpath, all_ranks):
     print('Processing ranks {} to {}'.format(all_ranks[0], all_ranks[-1]))
 
     all_args = []
     for rank in all_ranks:
         cur_arg = {}
         cur_arg['rank'] = rank
-        cur_arg['in'] = '{}/funcs.{}.csv'.format(dpath, rank)
+        cur_arg['in'] = '{}/trace/funcs.{}.csv'.format(dpath, rank)
         cur_arg['out'] = '{}/phases/phases.{}.csv'.format(dpath, rank)
         all_args.append(cur_arg)
 
     with multiprocessing.Pool(16) as pool:
-        pool.map(analyze_worker, all_args)
+        pool.map(classify_trace_parworker, all_args)
 
 
-def construct_phases(hidx):
-    #  rank = 59
-    #  in_path = '/mnt/lustre/parthenon-topo/profile3.min/funcs.{}.csv'.format(59)
-    #  out_path = '/mnt/lustre/parthenon-topo/tmp/tmp.phase.csv'
-    #  analyze_trace(rank, in_path, out_path)
+def run_classify_serial():
+    rank = 147
+    basedir = '/mnt/ltio/parthenon-topo/profile6.wtau'
+    in_path = '{}/trace/funcs.{}.csv'.format(basedir, rank)
+    in_path = '{}/trace/tmp2.csv'.format(basedir)
+    out_path = '{}/phases/phases.{}.csv'.format(basedir, rank)
+    classify_trace(rank, in_path, out_path)
+
+
+def run_classify_parallel():
+    host_idx, num_hosts = get_exp_stats()
+    print ('Node {} of {}'.format(host_idx, num_hosts))
+    if host_idx > 31:
+        print('Nothing to do')
+        return
+    #  host_idx = int(sys.argv[1][1:])
 
     dpath = '/mnt/lustre/parthenon-topo/profile3.min'
+    dpath = '/mnt/lustre/parthenon-topo/profile4/trace'
+    dpath = '/mnt/ltio/parthenon-topo/profile6.wtau'
     ranks_per_node = 16
-    rbeg = ranks_per_node * hidx
+    rbeg = ranks_per_node * host_idx
     rend = rbeg + ranks_per_node
+
     ranks_to_process = list(range(rbeg, rend))
-    run_parallel(dpath, ranks_to_process)
 
+    print('Processing: {}'.format(', '.join([str(i) for i in ranks_to_process])))
 
-def run_construct():
-    host_idx = int(sys.argv[1][1:])
-    construct_phases(host_idx)
+    classify_parallel(dpath, ranks_to_process)
 
 
 def read_phases(pdir):
@@ -239,315 +482,20 @@ def run_aggregate():
     analyze_phase_df(phase_df, analysis_df_path)
 
 
-def plot_init():
-    SMALL_SIZE = 12
-    MEDIUM_SIZE = 14
-    BIGGER_SIZE = 16
-
-    plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
-    plt.rc('axes', titlesize=SMALL_SIZE)  # fontsize of the axes title
-    plt.rc('axes', labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
-    plt.rc('ytick', labelsize=SMALL_SIZE)  # fontsize of the tick labels
-    plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
-    plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
-
-
-def plot_neighbors(df, plot_dir):
-    fig, ax = plt.subplots(1, 1)
-    print(df.describe())
-    print(df.columns)
-
-    df = df.groupby('ts', as_index=False).agg({
-        'evtval_count': ['mean']
-    })
-
-    data_x = df['ts']
-    data_y = df['evtval_count']['mean']
-
-    ax.plot(data_x, data_y)
-    ax.set_title('Datapoints Salvaged (Out of 512) For Each AMR TS')
-    ax.set_xlabel('Timestep')
-    ax.set_ylabel('Number Of Datapoints (= Ranks) Parseable')
-    # fig.show()
-    fig.savefig('{}/taskflow_nbrcnt.pdf'.format(plot_dir), dpi=300)
-
-
-def get_data(df, evt, col):
-    df = df[df['evtname'] == evt]
-    data_x = df['ts']
-    data_y = df[col]
-    return data_x, data_y
-
-
-def plot_event(event_name, df, plot_dir, plot_tail=False, save=False):
-    fig, ax = plt.subplots(1, 1)
-    cm = plt.cm.get_cmap('tab20c')
-
-    dx, dy = get_data(df, event_name, 'evtval_mean')
-    ax.plot(dx, dy, color=cm(0), label='Mean ({})'.format(event_name))
-
-    dx, dy = get_data(df, event_name, 'evtval_percentile_50')
-    ax.plot(dx, dy, '--', color=cm(4),
-            label='50th %-ile ({})'.format(event_name))
-
-    dx, dy = get_data(df, event_name, 'evtval_percentile_75')
-    ax.plot(dx, dy, '--', color=cm(8),
-            label='75th %-ile ({})'.format(event_name))
-
-    if plot_tail:
-        dx, dy = get_data(df, event_name, 'evtval_percentile_99')
-        ax.plot(dx, dy, '--', color=cm(12),
-                label='99th %-ile ({})'.format(event_name))
-
-    ax.set_title('Statistics for Event {}'.format(event_name))
-    ax.set_xlabel('Timestep')
-    ax.set_ylabel('Time (s)')
-
-    ax.legend()
-    ax.yaxis.set_major_formatter(lambda x, pos: '{:.1f}s'.format(x / 1e6))
-
-    ax.set_xlim([4000, 6000])
-
-    event_key = event_name.lower()
-    event_key = '{}_zoomed'.format(event_name.lower())
-
-    plot_fname = None
-    if plot_tail:
-        plot_fname = 'taskflow_{}_w99.pdf'.format(event_key)
-    else:
-        plot_fname = 'taskflow_{}_wo99.pdf'.format(event_key)
-
-    fig.tight_layout()
-    if save:
-        fig.savefig('{}/{}'.format(plot_dir, plot_fname), dpi=300)
-    else:
-        fig.show()
-
-
-def plot_all_events(df, plot_dir):
-    for event in (['AR1', 'AR2', 'AR3', 'SR']):
-        plot_event(event, df, plot_dir, plot_tail=False, save=True)
-        plot_event(event, df, plot_dir, plot_tail=True, save=True)
-
-
-def plot_amr_log(log_df, plot_dir, save=False):
-    print(log_df)
-
-    fig, ax = plt.subplots(1, 1)
-
-    key_y = 'wtime_step_other'
-    label_y = 'Walltime (Non-AMR/LB)'
-    data_x = log_df['cycle']
-    data_y = log_df[key_y]
-    ax.plot(data_x, data_y, label=label_y)
-
-    key_y = 'wtime_step_amr'
-    label_y = 'Walltime (AMR/LB)'
-    data_x = log_df['cycle']
-    data_y = log_df[key_y]
-    ax.plot(data_x, data_y, label=label_y)
-
-    ax.set_title('Wall Time for AMR Run (512 Timesteps)')
-    ax.set_xlabel('Timestep')
-    ax.set_ylabel('Walltime (seconds)')
-
-    ax.legend()
-
-    plot_fname = 'amr_steptimes.pdf'
-
-    # ax.set_xlim([3750, 4250])
-    # plot_fname = 'amr_steptimes_zoomed.pdf'
-
-    fig.tight_layout()
-
-    if save:
-        fig.savefig('{}/{}'.format(plot_dir, plot_fname), dpi=300)
-    else:
-        fig.show()
-
-
-def calc_amr_log_stats(log_df):
-    def calc_key_stats(key):
-        print('Analyzing {}'.format(key))
-        data_y = log_df[key]
-        med_val = np.median(data_y)
-        sum_val = data_y.sum()
-        print('Median: {:.2f}, Sum: {:.2f}'.format(med_val, sum_val))
-
-        first_half = sum([i for i in data_y if i < med_val])
-        second_half = sum([i for i in data_y if i > med_val])
-
-        print('Sums: {:.1f}/{:.1f} (First 50%, Last 50%)'.format(first_half,
-                                                                 second_half))
-
-    data_y = log_df['wtime_step_other']
-    calc_key_stats('wtime_step_other')
-    calc_key_stats('wtime_step_amr')
-
-
-def plot_amr_log_distrib(log_df, plot_dir, save=False):
-    fig, ax = plt.subplots(1, 1)
-
-    data_y = log_df['wtime_step_other']
-    plt.hist(data_y, bins=100, density=0, histtype='step', cumulative=True,
-             label='Non-AMR/LB (Cumul.)')
-    # plt.hist(data_y, bins=100, density=0, histtype='step', cumulative=False, label='Non-AMR/LB')
-    data_y = log_df['wtime_step_amr']
-    plt.hist(data_y, bins=100, density=0, histtype='step', cumulative=True,
-             label='AMR/LB (Cumul)')
-    # plt.hist(data_y, bins=100, density=0, histtype='step', cumulative=False, label='AMR/LB')
-
-    ax.legend()
-
-    noncum_profile = True
-    zoomed_profile = False
-    save = False
-
-    if noncum_profile:
-        ax.set_xlim([0, 3])
-        ax.set_title('Wall Time for AMR Run (512 Timesteps)')
-        ax.set_xlabel('Walltime (seconds)')
-        ax.set_ylabel('Num Times')
-        plot_fname = 'amr_steptimes_distrib_noncumul.pdf'
-    else:
-        ax.set_title('Wall Time for AMR Run (512 Timesteps)')
-        ax.set_xlabel('Walltime (seconds)')
-        ax.set_ylabel('Number Of Timesteps > X')
-
-        ax.yaxis.set_major_formatter(
-            lambda x, pos: max(round(30000 * (1 - x)), 0))
-
-        ax.xaxis.set_major_locator(MultipleLocator(2))
-        ax.xaxis.set_minor_locator(MultipleLocator(1))
-
-        if zoomed_profile:
-            ax.set_ylim([0.99, 1.001])
-            plot_fname = 'amr_steptimes_distrib.pdf'
-            ax.yaxis.set_major_locator(MultipleLocator(0.002))
-            ax.yaxis.set_minor_locator(MultipleLocator(0.001))
-        else:
-            plot_fname = 'amr_steptimes_distrib.pdf'
-            ax.yaxis.set_major_locator(MultipleLocator(0.1))
-            ax.yaxis.set_minor_locator(MultipleLocator(0.05))
-
-    plt.grid(visible=True, which='major', color='#999')
-    plt.grid(visible=True, which='minor', color='#ddd')
-    fig.tight_layout()
-
-    if save:
-        fig.savefig('{}/{}'.format(plot_dir, plot_fname), dpi=300)
-    else:
-        fig.show()
-
-
-def plot_amr_comp(all_dfs, plot_dir, save=False):
-    fig, ax = plt.subplots(1, 1)
-
-    cm = plt.cm.get_cmap('Set1')
-
-    for idx, df in enumerate(all_dfs):
-        data_x = df['cycle']
-        data_y1 = df['wtime_step_other']
-        data_y2 = df['wtime_step_amr']
-
-        label_1 = 'Run{}-Kernel'.format(idx)
-        label_2 = 'Run{}-AMR'.format(idx)
-        ax.plot(data_x, data_y1.cumsum(), label=label_1, color=cm(idx))
-        ax.plot(data_x, data_y2.cumsum(), label=label_2, linestyle='--',
-                color=cm(idx))
-
-    ax.set_title('AMR Runs (512 Ranks) Phasewise Cumul. Times')
-    ax.set_xlabel('Timestep')
-    ax.set_xlabel('Total Time (seconds)')
-
-    ax.legend()
-    plt.grid(visible=True, which='major', color='#999')
-    plt.grid(visible=True, which='minor', color='#ddd')
-    fig.tight_layout()
-
-    plot_fname = 'amr_steptimes_comp.pdf'
-    plot_fname = 'amr_steptimes_comp_zoomed.pdf'
-    ax.set_xlim([0000, 10000])
-
-    # save = True
-
-    if save:
-        fig.savefig('{}/{}'.format(plot_dir, plot_fname), dpi=300)
-    else:
-        fig.show()
-    pass
-
-
-def run_plot_amr_comp():
-    plot_dir = 'figures_bigrun'
-    log_dirs = [
-        '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log.times.csv',
-        '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log2.csv',
-        '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log3.csv',
-        '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log4.csv'
-    ]
-
-    log_dfs = map(pd.read_csv, log_dirs)
-    plot_amr_comp(log_dfs, plot_dir, save=False)
-
-
-def plot_profile():
-    pass
-
-
-def run_profile():
-    df_path = '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/profile.log.csv'
-    df = pd.read_csv(df_path)
-    df = df.astype({
-        'rank': 'int32',
-        'event': str,
-        'timepct': float
-    })
-    events = df['event'].unique()
-
-    fig, ax = plt.subplots(1, 1)
-
-    for event in events:
-        dfe = df[df['event'] == event]
-        data_x = dfe['rank']
-        data_y = dfe['timepct']
-        print(data_x)
-        print(data_y)
-        ax.plot(dfe['rank'], dfe['timepct'], label=event)
-
-    ax.set_title('Function-Wise Times (Pct Of Process Time)')
-    ax.set_xlabel('Rank Index')
-    ax.set_ylabel('Time Taken (%)')
-    ax.legend()
-    # fig.tight_layout()
-    ax.yaxis.set_major_formatter(lambda x, pos: '{:.0f}%'.format(x))
-    fig.show()
-    plot_dir = 'figures_bigrun'
-    plot_fname = 'amr_profile_phases.pdf'
-    fig.savefig('{}/{}'.format(plot_dir, plot_fname), dpi=300)
-
-
-def run_plot():
-    # aggr_fpath = '/Users/schwifty/repos/amr-data/20220517-phase-analysis/aggregate.csv'
-    # df = pd.read_csv(aggr_fpath)
-    plot_init()
-    plot_dir = 'figures_bigrun'
-    # # plot_neighbors(df, plot_dir)
-    # plot_all_events(df, plot_dir)
-
-    # phoebus_log = '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log.times.csv'
-    # phoebus_log2 = '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log2.csv'
-    # log_df = pd.read_csv(phoebus_log)
-    # log_df2 = pd.read_csv(phoebus_log2)
-    # plot_amr_log(log_df, plot_dir, save=True)
-    # plot_amr_log_distrib(log_df, plot_dir, save=False)
-    # calc_amr_log_stats(log_df)
-    # run_plot_amr_comp()
-    run_profile()
+def get_exp_stats() -> Tuple[int, int]:
+    result = subprocess.run(['/share/testbed/bin/emulab-listall'], stdout=subprocess.PIPE)
+    hoststr = str(result.stdout.decode('ascii'))
+    hoststr = hoststr.strip().split(',')
+    num_hosts = len(hoststr)
+    our_id = open('/var/emulab/boot/nickname', 'r').read().split('.')[0][1:]
+    our_id = int(our_id)
+
+    #  print(our_id, num_hosts)
+
+    return (our_id, num_hosts)
 
 
 if __name__ == '__main__':
-    #  run_construct()
+    #  run_classify_serial()
+    run_classify_parallel()
     # run_aggregate()
-    run_plot()
