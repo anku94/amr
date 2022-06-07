@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
+import numpy as np
+import pandas as pd
+import pickle
 
 def plot_init():
     SMALL_SIZE = 12
@@ -290,6 +293,279 @@ def run_profile():
     fig.savefig('{}/{}'.format(plot_dir, plot_fname), dpi=300)
 
 
+def strtols(list_str):
+    ls = list_str.strip('[]').split(',')
+    ls = np.array([float(i) for i in ls])
+    ls /= 1e6
+    return ls
+
+
+def plot_timestep(df_ts, df_log, fpath):
+    get_data_y = lambda x: strtols(df_ts[df_ts['evtname'] == x]['evtval'].iloc[0])
+
+    timestep  = df_ts['ts'].unique()[0]
+    print(timestep)
+    nranks = 512
+
+    cmap = plt.cm.get_cmap('tab20b')
+
+    fig, ax = plt.subplots(1, 1)
+    data_x = range(nranks)
+
+    data_pt = df_log['wsec_step'] + df_log['wsec_AMR']
+    ax.plot([0, nranks - 1], [data_pt, data_pt], linestyle='--', label='Internal (Total)', color=cmap(0))
+
+    data_y = get_data_y('TIME_CLASSIFIEDPHASES') - get_data_y('AR3_UMBT')
+    ax.plot(data_x, data_y, label='TauClassified', color=cmap(1))
+
+    data_y = get_data_y('AR1')
+    ax.plot(data_x, data_y, label='Tau AR1', color=cmap(8))
+    data_y = get_data_y('AR2')
+    ax.plot(data_x, data_y, label='Tau AR2', color=cmap(9))
+
+    data_pt = df_log['wsec_AMR']
+    ax.plot([0, nranks - 1], [data_pt, data_pt], linestyle='--', label='Internal (AMR)', color=cmap(17))
+    data_y = get_data_y('AR3')
+    ax.plot(data_x, data_y, linestyle=':', label='Tau AR3', color=cmap(13))
+    data_y = get_data_y('AR3_UMBT')
+    ax.plot(data_x, data_y, label='Tau AR3_AllGather', color=cmap(12))
+
+    #  data_y = get_data_y('TIME_FROMPREVEND')
+    #  ax.plot(data_x, data_y, label='Tau StepTimeFromPrevEnd')
+
+    ax.legend(ncol=3, prop={'size': 10})
+
+    ax.set_xlabel('Rank #')
+    ax.set_ylabel('Time (s)')
+    ax.set_title('Rankwise Time Breakdown For Step {}'.format(timestep))
+    ax.yaxis.set_major_formatter(lambda x, pos: '{:.2f}'.format(x))
+    fig.tight_layout()
+    fig.savefig('{}/plot_step/plot_step{}.pdf'.format(fpath, timestep), dpi=300)
+
+
+def plot_logstats(df_logstats, plot_dir: str) -> None:
+    fig, ax = plt.subplots(1, 1)
+
+    data_x = range(len(df_logstats))
+
+    dy_compute = np.array(df_logstats['wsec_step'])
+    dy_amr = np.array(df_logstats['wsec_AMR'])
+
+    print('Total Phases: {:.0f}/{:.0f}'.format(sum(dy_compute), sum(dy_amr)))
+
+    ax.plot(data_x, dy_compute, label='Internal (Compute+BC)')
+    #  ax.plot(data_x, dy_amr, label='Internal (AMR)')
+    #  ax.plot(data_x, dy_compute + dy_amr, label='Internal (Total)')
+
+    ax.set_xlim([9500,10500])
+
+    ax.set_xlabel('Timestep')
+    ax.set_ylabel('Time (s)')
+
+    ax.set_title('Time Taken For Two Phases As Per Internal Timers')
+    ax.legend()
+    fig.savefig('{}/timeline_a_zoomed.pdf'.format(plot_dir), dpi=300)
+
+
+def get_all_and_aggr(df, key, aggr_f):
+    df = df[df['evtname'] == key]
+    mapobj = map(lambda x: aggr_f(strtols(x)), df['evtval'])
+    mapobj = list(mapobj)
+    print(len(mapobj))
+    return np.array(mapobj)
+
+
+def plot_umbt_stats(df_phases, df_log, plot_dir) -> None:
+    fig, ax = plt.subplots(1, 1)
+
+    get_data_y = lambda x: strtols(df_phases[df_phases['evtname'] == x]['evtval'].iloc[0])
+
+    min5 = lambda x: sorted(x)[5]
+
+    data_y1 = get_all_and_aggr(df_phases, 'AR3', max)
+    data_y1a = get_all_and_aggr(df_phases, 'AR3_UMBT', max)
+    data_y1b = get_all_and_aggr(df_phases, 'AR3_UMBT', min)
+    data_y1c = get_all_and_aggr(df_phases, 'AR3_UMBT', min5)
+    data_y1d = get_all_and_aggr(df_phases, 'AR3_UMBT', np.median)
+    data_y2 = df_log['wsec_AMR']
+    data_x = range(len(data_y2))
+
+    common_len = min([len(i) for i in [data_y1, data_y1a, data_y1b, data_y1c, data_y1d, data_y2]])
+    data_y1 = data_y1[:common_len]
+    data_y1a = data_y1a[:common_len]
+    data_y1b = data_y1b[:common_len]
+    data_y1c = data_y1c[:common_len]
+    data_y1d = data_y1d[:common_len]
+    data_y2 = data_y2[:common_len]
+
+
+    print(data_y1)
+    print(data_y2)
+    assert (len(data_y1) == len(data_y2))
+    assert (len(data_y1a) == len(data_y2))
+
+    ax.plot(data_x, data_y1, label='TAU (AR3)')
+    ax.plot(data_x, data_y1a, label='TAU (AR3_UMBT)')
+    ax.plot(data_x, data_y2, label='Internal (AMR)')
+
+    ax.legend()
+    ax.set_title('Times For Different AMR Phases')
+    ax.set_xlabel('Timestep')
+    ax.set_ylabel('Time (s)')
+    ax.yaxis.set_major_formatter(lambda x, pos: '{:.2f}s'.format(x))
+    
+    fig.tight_layout()
+    fig.savefig('{}/amr_stats.pdf'.format(plot_dir), dpi=300)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(data_x, data_y1a/data_y1, label = 'TAU_UMBT/TAU_AR3')
+    ax.plot(data_x, data_y1a/data_y2, label = 'TAU_UMBT/INT_AMR')
+
+    ax.legend()
+    ax.set_title('Ratio Of Collective Time To Total AMR-LB Time')
+    ax.set_xlabel('Timestep')
+    ax.set_ylabel('Time Ratio')
+    ax.yaxis.set_major_formatter(lambda x, pos: '{:.1f}%'.format(x*100))
+    
+    fig.tight_layout()
+    fig.savefig('{}/amr_timerat.pdf'.format(plot_dir), dpi=300)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(data_x, data_y1a/data_y1, label = 'TAU_UMBT/TAU_AR3')
+    ax.plot(data_x, data_y1a/data_y2, label = 'TAU_UMBT/INT_AMR')
+
+    ax.legend()
+    ax.set_title('Ratio Of Collective Time To Total AMR-LB Time')
+    ax.set_xlabel('Timestep')
+    ax.set_ylabel('Time Ratio')
+    ax.yaxis.set_major_formatter(lambda x, pos: '{:.1f}%'.format(x*100))
+
+    ax.set_ylim([0, 1.5])
+    
+    fig.tight_layout()
+    fig.savefig('{}/amr_timerat_clipped.pdf'.format(plot_dir), dpi=300)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(data_x, data_y1a, label = 'TAU_UMBT_MAX')
+    ax.plot(data_x, data_y1b, label = 'TAU_UMBT_MIN')
+    ax.plot(data_x, data_y1c, label = 'TAU_UMBT_MIN5')
+    ax.plot(data_x, data_y1d, label = 'TAU_UMBT_MED')
+
+    ax.legend()
+    ax.set_title('Min And Max Collective Times Across All Ranks')
+    ax.set_xlabel('Timestep')
+    ax.set_ylabel('Time (s)')
+    ax.yaxis.set_major_formatter(lambda x, pos: '{:.2f}s'.format(x))
+
+    fig.tight_layout()
+    fig.savefig('{}/amr_umbt_min_max.pdf'.format(plot_dir), dpi=300)
+
+    fig, ax = plt.subplots(1, 1)
+    data_y1amb = data_y1a - data_y1b
+    data_y1amc = data_y1a - data_y1c
+    data_y1amd = data_y1a - data_y1d
+
+    ax.plot(data_x, data_y1amb, label = 'TAU_UMBT_MAX-MIN')
+    ax.plot(data_x, data_y1amc, label = 'TAU_UMBT_MAX-MIN5')
+    ax.plot(data_x, data_y1amd, label = 'TAU_UMBT_MAX-MED')
+
+    ax.legend()
+    ax.set_title('Min And Max Collective Times Across All Ranks')
+    ax.set_xlabel('Timestep')
+    ax.set_ylabel('Time (s)')
+    ax.yaxis.set_major_formatter(lambda x, pos: '{:.2f}s'.format(x))
+
+    fig.tight_layout()
+    fig.savefig('{}/amr_umbt_minmax_delta.pdf'.format(plot_dir), dpi=300)
+
+    print('Sum UMBT_MAX: {:.0f}'.format(sum(data_y1a)))
+    print('Sum UMBT_MAX-MIN: {:.0f}'.format(sum(data_y1amb)))
+    print('Sum UMBT_MAX-MIN5: {:.0f}'.format(sum(data_y1amc)))
+    print('Sum UMBT_MAX-MED: {:.0f}'.format(sum(data_y1amd)))
+
+
+def plot_umbt_rankgrid(df_phases, imevent, plot_dir, cached=False):
+    def sort_xargs(ls):
+        ls_widx = [(ls[i], i) for i in range(len(ls))]
+        ls_widx = sorted(ls_widx)
+        ls_idx = [i[1] for i in ls_widx]
+        #  ls_idx = np.array(ls_idx)
+        return ls_idx
+
+    CACHE_FNAME = '.rankgrid.{}'.format(imevent)
+    data_ranks = None
+
+    if not cached:
+        data_ranks = get_all_and_aggr(df_phases, imevent, sort_xargs)
+        with open(CACHE_FNAME, 'wb+') as f:
+            f.write(pickle.dumps(data_ranks))
+    else:
+        with open(CACHE_FNAME, 'rb') as f:
+            data_ranks = pickle.loads(f.read())
+
+    data_ranks = list(data_ranks[:-1])
+    data_ranks = np.vstack(data_ranks)
+    #  print(data_ranks.shape)
+
+    fig, ax = plt.subplots(1, 1)
+    im = ax.imshow(data_ranks, aspect='auto', cmap='plasma')
+
+    ax.set_title('Rank Order For Event {}'.format(imevent))
+    ax.set_ylabel('Timestep')
+    ax.xaxis.set_ticks([])
+    ax.set_xlabel('Ranks In Increasing Order Of Phase Time')
+
+    plt.subplots_adjust(left=0.15, right=0.8)
+    cax = plt.axes([0.85, 0.1, 0.075, 0.8])
+    fig.colorbar(im, cax=cax)
+
+    fig.savefig('{}/umbt_rankgrid_{}.pdf'.format(plot_dir, imevent.lower()), dpi=600)
+
+
+def run_plot_timestep():
+    trace_dir = '/mnt/ltio/parthenon-topo/profile6.wtau'
+    plot_dir = '/users/ankushj/repos/amr/scripts/tau_analysis/figures'
+    ts_to_plot = 1
+
+    cached = False
+
+    df_phases = None
+
+    if not cached:
+        df_phases = pd.read_csv('{}/aggregate.csv'.format(trace_dir))
+
+    df_log = pd.read_csv('{}/logstats.csv'.format(trace_dir)).astype({
+        'cycle': int
+    })
+
+    #  plot_umbt_rankgrid(df_phases, 'AR1', plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, 'AR2', plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, 'AR3', plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, 'AR3_UMBT', plot_dir, cached=cached)
+    #  #  plot_umbt_stats(df_phases, df_log, plot_dir)
+    #  return
+
+    ts_selected = df_log[df_log['wsec_AMR'] > 0.6]['cycle']
+    ts_to_plot = []
+    for ts in ts_selected:
+        ts_to_plot.append(ts - 1)
+        ts_to_plot.append(ts)
+        ts_to_plot.append(ts + 1)
+    print(ts_to_plot)
+
+    for ts in ts_to_plot:
+        print(ts)
+        df_ts = df_phases[df_phases['ts'] == ts]
+        df_logts = df_log[df_log['cycle'] == ts]
+        print(df_ts)
+        print(df_logts)
+        plot_timestep(df_ts, df_logts, plot_dir)
+
+
+    #  plot_logstats(df_log, plot_dir)
+    return
+
+
 def run_plot():
     # aggr_fpath = '/Users/schwifty/repos/amr-data/20220517-phase-analysis/aggregate.csv'
     # df = pd.read_csv(aggr_fpath)
@@ -306,7 +582,8 @@ def run_plot():
     # plot_amr_log_distrib(log_df, plot_dir, save=False)
     # calc_amr_log_stats(log_df)
     # run_plot_amr_comp()
-    run_profile()
+    #  run_profile()
+    run_plot_timestep()
 
 
 if __name__ == '__main__':

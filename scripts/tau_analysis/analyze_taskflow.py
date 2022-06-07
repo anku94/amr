@@ -160,6 +160,10 @@ def filter_phases_insert_missing(phases):
         else:
             assert(False)
 
+        if cur_name == 'AR3':
+            new_phases.append((phase_ts, phase_name))
+            continue
+
         if cur_begin == True:
             if prev_begin and prev_phase == 'AR1':
                 new_phases.append((prev_ts, 'AR1.BEGIN'))
@@ -246,18 +250,18 @@ def classify_phases(df):
     
     phases = sorted(phases)
 
-    #  print('='*10)
-    #  for phase in phases:
-        #  print(phase)
+    def print_phases(phases, sep1, sep2):
+        print(sep1 * 20)
+        for phase in phases:
+            print(phase)
+        print(sep2 * 20)
 
-    #  print('-'*10)
 
+    #  print_phases(phases, '=', '-')
     phases = filter_phases(phases)
+    #  print_phases(phases, '-', '-')
     phases = filter_phases_insert_missing(phases)
-
-    #  for phase in phases:
-        #  print(phase)
-    #  print('='*10)
+    #  print_phases(phases, '-', '=')
 
     validation_passed = True
 
@@ -282,23 +286,22 @@ def aggregate_phases(df, phases):
         else:
             phase_total[phase] = phase_time
 
+    active_phases = {}
+
     for phase_ts, phase in phases:
+        phase_name = phase.split('.')[0]
+
         if phase.endswith('.BEGIN'):
-            if cur_phase is not None:
-                cur_phase_time = phase_ts - cur_phase_begin
-                add_phase(cur_phase, cur_phase_time)
-            cur_phase = phase[:-6]
-            cur_phase_begin = phase_ts
+            active_phases[phase_name] = phase_ts
         elif phase.endswith('.END'):
-            if cur_phase is not None:
-                cur_phase_time = phase_ts - cur_phase_begin
-                add_phase(cur_phase, cur_phase_time)
-            cur_phase = phase[:-4]
-            cur_phase_begin = phase_ts
+            if phase_name in active_phases:
+                phase_time = phase_ts - active_phases[phase_name]
+                del active_phases[phase_name]
+                add_phase(phase_name, phase_time)
 
     #  print(phase_total)
     total_phasewise = 0
-    for key in ['AR1', 'AR2', 'AR3', 'SR']:
+    for key in ['AR1', 'AR2', 'AR3', 'AR3_UMBT', 'SR']:
         if key in phase_total:
             total_phasewise += phase_total[key]
 
@@ -382,6 +385,7 @@ def classify_trace(rank, in_path, out_path):
                 print(e)
                 print(traceback.format_exc())
                 sys.exit(-1)
+            #  if ts == 1: break
             #  if ts > 1000: break
 
 
@@ -414,6 +418,7 @@ def run_classify_serial():
     in_path = '{}/trace/funcs.{}.csv'.format(basedir, rank)
     in_path = '{}/trace/tmp2.csv'.format(basedir)
     out_path = '{}/phases/phases.{}.csv'.format(basedir, rank)
+    out_path = '{}/tmp.{}.csv'.format(basedir, rank)
     classify_trace(rank, in_path, out_path)
 
 
@@ -440,7 +445,8 @@ def run_classify_parallel():
 
 
 def read_phases(pdir):
-    all_phase_csvs = glob.glob(pdir + '/phases*.csv')
+    all_phase_csvs = glob.glob(pdir + '/phases/phases.*.csv')
+    print(len(all_phase_csvs))
 
     #  all_phase_csvs = all_phase_csvs[8:12]
     def read_phase_df(x):
@@ -466,16 +472,41 @@ def percentile(n):
 
 
 def analyze_phase_df(pdf, pdf_out):
-    pdf = pdf.groupby(['ts', 'evtname'], as_index=False).agg({
-        'evtval': ['count', 'mean', 'min', 'max', percentile(50),
-                   percentile(75), percentile(99)]
-    })
-    pdf.columns = ['_'.join(col).strip('_') for col in pdf.columns.values]
+    #  pdf = pdf.groupby(['ts', 'evtname'], as_index=False).agg({
+        #  'evtval': ['count', 'mean', 'min', 'max', percentile(50),
+                   #  percentile(75), percentile(99)]
+    #  })
+    #  pdf = pdf[pdf['ts'] < 10]
+
+    pdf = (
+        pdf.sort_values(['ts', 'evtname', 'rank'])
+        .groupby(['ts', 'evtname'], as_index=False)
+        .agg({
+        'evtval': list
+    }))
+    print(pdf)
+    #  pdf.columns = ['_'.join(col).strip('_') for col in pdf.columns.values]
     pdf.to_csv(pdf_out, index=None)
 
 
+def run_parse_log(dpath: str):
+    f = open('{}/run/log.txt'.format(dpath)).read().split('\n')
+    data = [line for line in f if 'cycle' in line]
+
+    keys = [i.split('=')[0] for i in data[0].split(' ')]
+    vals = [[float(i.split('=')[1]) for i in data[k].split(' ')]
+            for k in range(len(data))]
+    print(keys)
+    df = pd.DataFrame.from_records(vals, columns=keys)
+    print(df)
+    df.to_csv('{}/logstats.csv'.format(dpath), index=None)
+
+
 def run_aggregate():
-    phase_dir = '/mnt/lustre/parthenon-topo/profile3.min/phases'
+    phase_dir = '/mnt/ltio/parthenon-topo/profile6.wtau'
+    #  run_parse_log(phase_dir)
+    #  return
+
     phase_df = read_phases(phase_dir)
     print(phase_df)
     analysis_df_path = '{}/aggregate.csv'.format(phase_dir)
@@ -497,5 +528,5 @@ def get_exp_stats() -> Tuple[int, int]:
 
 if __name__ == '__main__':
     #  run_classify_serial()
-    run_classify_parallel()
-    # run_aggregate()
+    #  run_classify_parallel()
+    run_aggregate()
