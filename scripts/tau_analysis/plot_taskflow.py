@@ -522,6 +522,32 @@ def plot_umbt_rankgrid(df_phases, imevent, plot_dir, cached=False):
     fig.savefig('{}/umbt_rankgrid_{}.pdf'.format(plot_dir, imevent.lower()), dpi=600)
 
 
+def print_taskflow_trace_stats(df_phases, df_log):
+    ar1 = get_all_and_aggr(df_phases, 'AR1', np.median)
+    ar2 = get_all_and_aggr(df_phases, 'AR2', np.median)
+    sr1 = get_all_and_aggr(df_phases, 'SR', np.median)
+
+    ar3_med = get_all_and_aggr(df_phases, 'AR3', np.median)
+    ar3_umbt_med = get_all_and_aggr(df_phases, 'AR3_UMBT', np.median)
+    ar3_max = get_all_and_aggr(df_phases, 'AR3', max)
+    ar3_umbt_max = get_all_and_aggr(df_phases, 'AR3_UMBT', max)
+
+    int_ts = df_log['wsec_step']
+    int_amr = df_log['wsec_AMR']
+
+    print('Sum, AR1 Median: {:.1f}s'.format(sum(ar1)))
+    print('Sum, AR2 Median: {:.1f}s'.format(sum(ar2)))
+    print('Sum, SR1 Median: {:.1f}s'.format(sum(sr1)))
+    print('---')
+    print('Sum, AR3 Median: {:.1f}s'.format(sum(ar3_med)))
+    print('Sum, AR3_UMBT Median: {:.1f}s'.format(sum(ar3_umbt_med)))
+    print('Sum, AR3 Max: {:.1f}s'.format(sum(ar3_max)))
+    print('Sum, AR3_UMBT Max: {:.1f}s'.format(sum(ar3_umbt_max)))
+    print('---')
+    print('Sum, Int TS: {:.1f}s'.format(sum(int_ts)))
+    print('Sum, Int AMR: {:.1f}s'.format(sum(int_amr)))
+
+
 def run_plot_timestep():
     trace_dir = '/mnt/ltio/parthenon-topo/profile6.wtau'
     plot_dir = '/users/ankushj/repos/amr/scripts/tau_analysis/figures'
@@ -544,6 +570,8 @@ def run_plot_timestep():
     #  plot_umbt_rankgrid(df_phases, 'AR3_UMBT', plot_dir, cached=cached)
     #  #  plot_umbt_stats(df_phases, df_log, plot_dir)
     #  return
+    print_taskflow_trace_stats(df_phases, df_log)
+    return
 
     ts_selected = df_log[df_log['wsec_AMR'] > 0.6]['cycle']
     ts_to_plot = []
