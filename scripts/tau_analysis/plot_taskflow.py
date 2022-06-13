@@ -232,11 +232,11 @@ def plot_amr_comp(all_dfs, plot_dir, save=False):
     plt.grid(visible=True, which='minor', color='#ddd')
     fig.tight_layout()
 
-    plot_fname = 'amr_steptimes_comp.updated.pdf'
-    # plot_fname = 'amr_steptimes_comp_zoomed.pdf'
-    # ax.set_xlim([0000, 10000])
+    plot_fname = 'amr_steptimes_comp.pdf'
+    plot_fname = 'amr_steptimes_comp_zoomed.pdf'
+    ax.set_xlim([0000, 10000])
 
-    save = True
+    # save = True
 
     if save:
         fig.savefig('{}/{}'.format(plot_dir, plot_fname), dpi=300)
@@ -251,8 +251,7 @@ def run_plot_amr_comp():
         '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log.times.csv',
         '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log2.csv',
         '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log3.csv',
-        '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log4.csv',
-        '/Users/schwifty/Repos/amr-data/20220517-phase-analysis/logstats.6.wtau.csv'
+        '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log4.csv'
     ]
 
     log_dfs = map(pd.read_csv, log_dirs)
@@ -526,38 +525,74 @@ def plot_umbt_rankgrid(df_phases, imevent, plot_dir, cached=False):
     cax = plt.axes([0.85, 0.1, 0.075, 0.8])
     fig.colorbar(im, cax=cax)
 
+    fig.savefig('{}/umbt_rankgrid_{}.pdf'.format(plot_dir, imevent.lower()),
+                dpi=600)
+
+
+def plot_umbt_rankgrid_wcompare(df_phases, imevent, plot_dir, cached=False):
+    def sort_xargs(ls):
+        ls_widx = [(ls[i], i) for i in range(len(ls))]
+        ls_widx = sorted(ls_widx)
+        ls_idx = [i[1] for i in ls_widx]
+        #  ls_idx = np.array(ls_idx)
+        return ls_idx
+
+    CACHE_FNAME = '.rankgrid.{}'.format(imevent)
+    data_ranks = None
+
+    if not cached:
+        data_ranks = get_all_and_aggr(df_phases, imevent, sort_xargs)
+        with open(CACHE_FNAME, 'wb+') as f:
+            f.write(pickle.dumps(data_ranks))
+    else:
+        with open(CACHE_FNAME, 'rb') as f:
+            data_ranks = pickle.loads(f.read())
+
+    data_ranks = list(data_ranks[:-1])
+    data_ranks = np.vstack(data_ranks)
+    #  print(data_ranks.shape)
+
+    fig, axes = plt.subplots(1, 3, gridspec_kw={'width_ratios': [3, 1, 1]})
+
+    ax_im = axes[0]
+    im = ax_im.imshow(data_ranks, aspect='auto', cmap='plasma')
+
+    num_ts = data_ranks.shape[0]
+    data_y = range(num_ts)
+    data_ax1_x = [100] * num_ts
+    data_ax2_x = [200] * num_ts
+    axes[1].plot(data_ax1_x, data_y)
+    axes[2].plot(data_ax2_x, data_y)
+
+    # ax.set_title('Rank Order For Event {}'.format(imevent))
+    # ax.set_ylabel('Timestep')
+    # ax.xaxis.set_ticks([])
+    # ax.set_xlabel('Ranks In Increasing Order Of Phase Time')
+    axes[0].xaxis.set_ticks([])
+    axes[0].set_title('Something')
+    axes[1].xaxis.set_ticks([])
+    axes[1].yaxis.set_ticks([])
+    axes[1].set_title('Something')
+    axes[2].xaxis.set_ticks([])
+    axes[2].yaxis.set_ticks([])
+    axes[2].set_title('Something')
+
+    fig.suptitle('Something')
+    # fig.supxlabel('Something')
+    fig.supylabel('Timesteps')
+
+    # plt.subplots_adjust(left=0.15, right=0.8)
+    plt.subplots_adjust(wspace=0.03, left=0.15)
+    # cax = plt.axes([0.85, 0.1, 0.075, 0.8])
+    # fig.colorbar(im, cax=cax)
+    fig.colorbar(im, ax=axes[2])
+
     save = False
     if save:
         fig.savefig('{}/umbt_rankgrid_{}.pdf'.format(plot_dir, imevent.lower()),
                     dpi=600)
     else:
         fig.show()
-
-
-def print_taskflow_trace_stats(df_phases, df_log):
-    ar1 = get_all_and_aggr(df_phases, 'AR1', np.median)
-    ar2 = get_all_and_aggr(df_phases, 'AR2', np.median)
-    sr1 = get_all_and_aggr(df_phases, 'SR', np.median)
-
-    ar3_med = get_all_and_aggr(df_phases, 'AR3', np.median)
-    ar3_umbt_med = get_all_and_aggr(df_phases, 'AR3_UMBT', np.median)
-    ar3_max = get_all_and_aggr(df_phases, 'AR3', max)
-    ar3_umbt_max = get_all_and_aggr(df_phases, 'AR3_UMBT', max)
-
-    int_ts = df_log['wsec_step']
-    int_amr = df_log['wsec_AMR']
-
-    print('Sum, AR1 Median: {:.1f}s'.format(sum(ar1)))
-    print('Sum, AR2 Median: {:.1f}s'.format(sum(ar2)))
-    print('Sum, SR1 Median: {:.1f}s'.format(sum(sr1)))
-    print('---')
-    print('Sum, AR3 Median: {:.1f}s'.format(sum(ar3_med)))
-    print('Sum, AR3_UMBT Median: {:.1f}s'.format(sum(ar3_umbt_med)))
-    print('Sum, AR3 Max: {:.1f}s'.format(sum(ar3_max)))
-    print('Sum, AR3_UMBT Max: {:.1f}s'.format(sum(ar3_umbt_max)))
-    print('---')
-    print('Sum, Int TS: {:.1f}s'.format(sum(int_ts)))
-    print('Sum, Int AMR: {:.1f}s'.format(sum(int_amr)))
 
 
 def run_plot_timestep():
@@ -576,15 +611,14 @@ def run_plot_timestep():
     #     'cycle': int
     # })
 
-    plot_umbt_rankgrid(df_phases, 'AR1', plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, 'AR1', plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, 'AR1', plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, 'AR2', plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, 'AR3', plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, 'AR3_UMBT', plot_dir, cached=cached)
     #  #  plot_umbt_stats(df_phases, df_log, plot_dir)
     return
-    #  return
-    print_taskflow_trace_stats(df_phases, df_log)
-    return
+
 
     ts_selected = df_log[df_log['wsec_AMR'] > 0.6]['cycle']
     ts_to_plot = []
