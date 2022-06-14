@@ -3,6 +3,7 @@ from matplotlib.ticker import MultipleLocator
 import numpy as np
 import pandas as pd
 import pickle
+import IPython
 
 
 def plot_init():
@@ -529,7 +530,7 @@ def plot_umbt_rankgrid(df_phases, imevent, plot_dir, cached=False):
                 dpi=600)
 
 
-def plot_umbt_rankgrid_wcompare(df_phases, imevent, plot_dir, cached=False):
+def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, plot_dir, cached=False):
     def sort_xargs(ls):
         ls_widx = [(ls[i], i) for i in range(len(ls))]
         ls_widx = sorted(ls_widx)
@@ -537,47 +538,66 @@ def plot_umbt_rankgrid_wcompare(df_phases, imevent, plot_dir, cached=False):
         #  ls_idx = np.array(ls_idx)
         return ls_idx
 
-    CACHE_FNAME = '.rankgrid.{}'.format(imevent)
+    CACHE_FNAME = '.phasetimegrid.{}'.format(imevent)
     data_ranks = None
 
     if not cached:
-        data_ranks = get_all_and_aggr(df_phases, imevent, sort_xargs)
+        data_ranks = get_all_and_aggr(df_phases, imevent, lambda x: x)
         with open(CACHE_FNAME, 'wb+') as f:
             f.write(pickle.dumps(data_ranks))
     else:
         with open(CACHE_FNAME, 'rb') as f:
             data_ranks = pickle.loads(f.read())
 
-    data_ranks = list(data_ranks[:-1])
-    data_ranks = np.vstack(data_ranks)
+    data_times = list(data_ranks[:-1])
+    data_times = np.vstack(data_times)
     #  print(data_ranks.shape)
 
-    fig, axes = plt.subplots(1, 3, gridspec_kw={'width_ratios': [3, 1, 1]})
+    def smoothen(data):
+        kernel_size = 20
+        kernel = np.ones(kernel_size) / kernel_size
+        data_convolved_20 = np.convolve(data, kernel, mode='same')
+        return data_convolved_20
+
+    data_time_med = np.median(data_times, axis=1)
+    data_time_max = np.max(data_times, axis=1)
+    data_time_log = df_log['wsec_step']
+
+    print(data_time_med.shape)
+
+    fig, axes = plt.subplots(1, 4, gridspec_kw={'width_ratios': [4, 1, 1, 1]})
 
     ax_im = axes[0]
-    im = ax_im.imshow(data_ranks, aspect='auto', cmap='plasma')
+    im = ax_im.imshow(data_times, aspect='auto', cmap='plasma')
 
-    num_ts = data_ranks.shape[0]
+    num_ts = data_times.shape[0]
     data_y = range(num_ts)
-    data_ax1_x = [100] * num_ts
-    data_ax2_x = [200] * num_ts
-    axes[1].plot(data_ax1_x, data_y)
-    axes[2].plot(data_ax2_x, data_y)
+
+    axes[1].plot(data_time_med, data_y)
+    axes[2].plot(data_time_max, data_y)
+    axes[3].plot(data_time_log[:num_ts], data_y)
 
     # ax.set_title('Rank Order For Event {}'.format(imevent))
     # ax.set_ylabel('Timestep')
     # ax.xaxis.set_ticks([])
     # ax.set_xlabel('Ranks In Increasing Order Of Phase Time')
     axes[0].xaxis.set_ticks([])
-    axes[0].set_title('Something')
-    axes[1].xaxis.set_ticks([])
-    axes[1].yaxis.set_ticks([])
-    axes[1].set_title('Something')
-    axes[2].xaxis.set_ticks([])
-    axes[2].yaxis.set_ticks([])
-    axes[2].set_title('Something')
+    axes[0].set_title('Rankwise Phase Times')
 
-    fig.suptitle('Something')
+    #  axes[1].xaxis.set_ticks([])
+    axes[1].yaxis.set_ticks([])
+    axes[1].set_title('TauMed')
+    axes[1].set_ylim([num_ts, 0])
+
+    #  axes[2].xaxis.set_ticks([])
+    axes[2].yaxis.set_ticks([])
+    axes[2].set_title('TauMax')
+    axes[2].set_ylim([num_ts, 0])
+
+    axes[3].yaxis.set_ticks([])
+    axes[2].set_ylim([num_ts, 0])
+
+    fig.suptitle('Time Distributions For Event {}'.format(imevent))
     # fig.supxlabel('Something')
     fig.supylabel('Timesteps')
 
@@ -585,12 +605,198 @@ def plot_umbt_rankgrid_wcompare(df_phases, imevent, plot_dir, cached=False):
     plt.subplots_adjust(wspace=0.03, left=0.15)
     # cax = plt.axes([0.85, 0.1, 0.075, 0.8])
     # fig.colorbar(im, cax=cax)
-    fig.colorbar(im, ax=axes[2])
+    fig.colorbar(im, ax=axes[-1])
 
-    save = False
+    save = True
     if save:
-        fig.savefig('{}/umbt_rankgrid_{}.pdf'.format(plot_dir, imevent.lower()),
+        fig.savefig('{}/umbt_phasetimegrid_{}.pdf'.format(plot_dir, imevent.lower()),
                     dpi=600)
+    else:
+        fig.show()
+
+
+def plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=False):
+    def sort_xargs(ls):
+        ls_widx = [(ls[i], i) for i in range(len(ls))]
+        ls_widx = sorted(ls_widx)
+        ls_idx = [i[1] for i in ls_widx]
+        #  ls_idx = np.array(ls_idx)
+        return ls_idx
+
+    CACHE_FNAME = '.phasetimegrid.amr'
+    data_ranks = None
+
+    if not cached:
+        data_ranks = get_all_and_aggr(df_phases, 'AR3', lambda x: x)
+        with open(CACHE_FNAME, 'wb+') as f:
+            f.write(pickle.dumps(data_ranks))
+    else:
+        with open(CACHE_FNAME, 'rb') as f:
+            data_ranks = pickle.loads(f.read())
+
+    data_times = list(data_ranks[:-1])
+    data_times = np.vstack(data_times)
+    #  print(data_ranks.shape)
+
+    def smoothen(data):
+        kernel_size = 20
+        kernel = np.ones(kernel_size) / kernel_size
+        data_convolved_20 = np.convolve(data, kernel, mode='same')
+        return data_convolved_20
+
+    data_time_med = np.median(data_times, axis=1)
+    data_time_max = np.max(data_times, axis=1)
+    data_time_log_comp = df_log['wsec_step']
+    data_time_log_amr = df_log['wsec_AMR']
+
+    print(data_time_med.shape)
+
+    fig, axes = plt.subplots(1, 5, gridspec_kw={'width_ratios': [4, 1, 1, 1, 1]})
+
+    ax_im = axes[0]
+    im = ax_im.imshow(data_times, aspect='auto', cmap='plasma')
+
+    num_ts = data_times.shape[0]
+    data_y = range(num_ts)
+
+    axes[1].plot(data_time_med, data_y)
+    axes[2].plot(data_time_max, data_y)
+    axes[3].plot(data_time_log_comp[:num_ts], data_y)
+    axes[4].plot(data_time_log_amr[:num_ts], data_y)
+
+    # ax.set_title('Rank Order For Event {}'.format(imevent))
+    # ax.set_ylabel('Timestep')
+    # ax.xaxis.set_ticks([])
+    # ax.set_xlabel('Ranks In Increasing Order Of Phase Time')
+    axes[0].xaxis.set_ticks([])
+    axes[0].set_title('Rankwise Phase Times')
+
+    #  axes[1].xaxis.set_ticks([])
+    axes[1].yaxis.set_ticks([])
+    axes[1].set_title('T_Med')
+    axes[1].set_ylim([num_ts, 0])
+
+    #  axes[2].xaxis.set_ticks([])
+    axes[2].yaxis.set_ticks([])
+    axes[2].set_title('T_Max')
+    axes[2].set_ylim([num_ts, 0])
+
+    axes[3].yaxis.set_ticks([])
+    axes[3].set_title('I_Comp')
+    axes[3].set_ylim([num_ts, 0])
+
+    axes[4].yaxis.set_ticks([])
+    axes[4].set_title('I_Amr')
+    axes[4].set_ylim([num_ts, 0])
+
+    fig.suptitle('Time Distributions For AR3=AMR')
+    # fig.supxlabel('Something')
+    fig.supylabel('Timesteps')
+
+    # plt.subplots_adjust(left=0.15, right=0.8)
+    plt.subplots_adjust(wspace=0.03, left=0.15)
+    # cax = plt.axes([0.85, 0.1, 0.075, 0.8])
+    # fig.colorbar(im, cax=cax)
+    fig.colorbar(im, ax=axes[-1])
+
+    save = True
+    if save:
+        fig.savefig('{}/umbt_phasetimegrid_amr.pdf'.format(plot_dir), dpi=600)
+    else:
+        fig.show()
+
+
+def plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=False):
+    def sort_xargs(ls):
+        ls_widx = [(ls[i], i) for i in range(len(ls))]
+        ls_widx = sorted(ls_widx)
+        ls_idx = [i[1] for i in ls_widx]
+        #  ls_idx = np.array(ls_idx)
+        return ls_idx
+
+    CACHE_FNAME = '.phasetimegrid.nonamr'
+    data_ranks = None
+
+    if not cached:
+        data = map(lambda key: get_all_and_aggr(df_phases, key, lambda x: x),
+                   ['AR1', 'AR2', 'SR'])
+        #  IPython.embed()
+        data = list(data)
+        dims = [i.shape for i in data]
+        dim_min = min([i[0] for i in dims]) - 1
+        print('Dims: ', dims)
+        print('Dim Min: ', dim_min)
+
+        data_minned = [i[:dim_min] for i in data]
+        data_ranks = np.sum(data_minned, axis=0)
+
+        print('Data Shape: ', data_ranks.shape)
+
+
+        with open(CACHE_FNAME, 'wb+') as f:
+            f.write(pickle.dumps(data_ranks))
+    else:
+        with open(CACHE_FNAME, 'rb') as f:
+            data_ranks = pickle.loads(f.read())
+
+    data_times = list(data_ranks[:-1])
+    data_times = np.vstack(data_times)
+    print(data_ranks.shape)
+
+    def smoothen(data):
+        kernel_size = 20
+        kernel = np.ones(kernel_size) / kernel_size
+        data_convolved_20 = np.convolve(data, kernel, mode='same')
+        return data_convolved_20
+
+    data_time_med = np.median(data_times, axis=1)
+    data_time_max = np.max(data_times, axis=1)
+    data_time_log_comp = df_log['wsec_step']
+    data_time_log_amr = df_log['wsec_AMR']
+
+    print(data_time_med.shape)
+
+    fig, axes = plt.subplots(1, 5, gridspec_kw={'width_ratios': [4, 1, 1, 1, 1]})
+
+    ax_im = axes[0]
+    im = ax_im.imshow(data_times, aspect='auto', cmap='plasma')
+
+    num_ts = data_times.shape[0]
+    data_y = range(num_ts)
+
+    axes[1].plot(data_time_med, data_y)
+    axes[2].plot(data_time_max, data_y)
+    axes[3].plot(data_time_log_comp[:num_ts], data_y)
+    axes[4].plot(data_time_log_amr[:num_ts], data_y)
+
+    axes[0].xaxis.set_ticks([])
+    axes[0].set_title('Rankwise Phase Times')
+
+    axes[1].yaxis.set_ticks([])
+    axes[1].set_title('T_Med')
+    axes[1].set_ylim([num_ts, 0])
+
+    axes[2].yaxis.set_ticks([])
+    axes[2].set_title('T_Max')
+    axes[2].set_ylim([num_ts, 0])
+
+    axes[3].yaxis.set_ticks([])
+    axes[3].set_title('I_Comp')
+    axes[3].set_ylim([num_ts, 0])
+
+    axes[4].yaxis.set_ticks([])
+    axes[4].set_title('I_AMR')
+    axes[4].set_ylim([num_ts, 0])
+
+    fig.suptitle('Time Distributions For AR1+AR2+SR=NonAMR')
+    fig.supylabel('Timesteps')
+
+    plt.subplots_adjust(wspace=0.03, left=0.15)
+    fig.colorbar(im, ax=axes[-1])
+
+    save = True
+    if save:
+        fig.savefig('{}/umbt_phasetimegrid_nonamr.pdf'.format(plot_dir), dpi=600)
     else:
         fig.show()
 
@@ -600,19 +806,21 @@ def run_plot_timestep():
     plot_dir = '/users/ankushj/repos/amr/scripts/tau_analysis/figures'
     ts_to_plot = 1
 
-    cached = True
+    cached = False
 
     df_phases = None
 
     if not cached:
         df_phases = pd.read_csv('{}/aggregate.csv'.format(trace_dir))
 
-    # df_log = pd.read_csv('{}/logstats.csv'.format(trace_dir)).astype({
-    #     'cycle': int
-    # })
+    df_log = pd.read_csv('{}/logstats.csv'.format(trace_dir)).astype({
+       'cycle': int
+    })
 
     #  plot_umbt_rankgrid(df_phases, 'AR1', plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare(df_phases, 'AR1', plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR1', plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, 'AR2', plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, 'AR3', plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, 'AR3_UMBT', plot_dir, cached=cached)
