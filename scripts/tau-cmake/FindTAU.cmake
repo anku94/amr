@@ -1,7 +1,6 @@
 include (FindPackageHandleStandardArgs)
 
 find_package(Threads REQUIRED)
-find_package(OpenMP REQUIRED)
 find_package(MPI MODULE REQUIRED)
 
 set(TAU_ROOT "${TAU_ROOT}"
@@ -185,6 +184,7 @@ if (TAU_FOUND)
   add_library(TAU::OpenMP UNKNOWN IMPORTED)
   set_target_properties(TAU::OpenMP PROPERTIES
     IMPORTED_LOCATION ${OMP_LIBRARY})
+  target_link_options(TAU::OpenMP INTERFACE -fopenmp)
 
   add_library(TAU::core UNKNOWN IMPORTED)
   set_target_properties(TAU::core PROPERTIES 
@@ -204,6 +204,8 @@ if (TAU_FOUND)
   set_property(TARGET TAU::TAU PROPERTY
     INTERFACE_COMPILE_DEFINITIONS ${TAU_COMPILE_DEFS})
   target_compile_options(TAU::TAU INTERFACE -g -O0)
+  # Make executable symbols available to dlopen'ed libs
+  target_link_options(TAU::TAU INTERFACE LINKER:--export-dynamic)
 else()
   message(FATAL "TAU not found")
 endif ()
