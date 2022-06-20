@@ -51,10 +51,12 @@ class FuncLog {
     WriteHeader();
   }
 
+#define DONOTLOG(s) if (strncmp(func_name, s, strlen(s)) == 0) return;
+
   void LogFunc(const char* func_name, uint64_t timestamp, bool enter_or_exit) {
-    if (strncmp(func_name, "Task_ReceiveBoundaryBuffers_MeshBlockData", 41) ==
-        0)
-      return;
+    // DONOTLOG("Task_ReceiveBoundaryBuffers_MeshBlockData");
+    // DONOTLOG("Task_ReceiveBoundaryBuffers_MeshData");
+    DONOTLOG("Task_ReceiveBoundaryBuffers_Mesh");
 
     const char* fmt = "%d,%" PRIu64 ",%s,%c\n";
     fprintf(file_, fmt, rank_, timestamp, func_name, enter_or_exit ? '0' : '1');
@@ -62,7 +64,7 @@ class FuncLog {
 
  private:
   void WriteHeader() {
-    const char* const header = "rank,timestep,func,enter_or_exit";
+    const char* const header = "rank,timestep,func,enter_or_exit\n";
     fprintf(file_, header);
   }
 
@@ -70,5 +72,5 @@ class FuncLog {
   FILE* file_;
 
   std::mutex mutex_;
-  static const bool paranoid_ = false;
+  static const bool paranoid_ = true;
 };

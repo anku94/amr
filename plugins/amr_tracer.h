@@ -24,7 +24,7 @@ class AMRTracer {
         redistribute_ongoing_(false) {
     PMPI_Comm_rank(MPI_COMM_WORLD, &rank_);
     PMPI_Comm_size(MPI_COMM_WORLD, &size_);
-    const char* dir = "/mnt/lt20ad2/parthenon-topo/profile3";
+    const char* dir = "/mnt/ltio/parthenon-topo/profile6.wtau/trace";
     msglog_ = std::make_unique<MsgLog>(dir, rank_);
     funclog_ = std::make_unique<FuncLog>(dir, rank_);
   }
