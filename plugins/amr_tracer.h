@@ -4,10 +4,32 @@
 #include "amr_outputs.h"
 #include "amr_util.h"
 
+#include <dirent.h>
 #include <inttypes.h>
 #include <memory>
 #include <mpi/mpi.h>
 #include <mutex>
+#include <sys/types.h>
+
+namespace {
+  const char* GetLogDir() {
+    const char* dir = getenv("TAU_AMR_LOGDIR");
+
+    if (dir == nullptr) {
+      ABORT("TAU_AMR_LOGDIR not set!");
+    }
+
+    DIR* dir_handle = opendir(dir);
+    if (dir_handle) {
+      closedir(dir_handle);
+    } else {
+      logf(LOG_ERRO, "Unable to verify TAU_AMR_LOGDIR: %s", strerror(errno));
+      ABORT("Unable to verify TAU_AMR_LOGDIR");
+    }
+
+    return dir;
+  }
+}
 
 namespace tau {
 
@@ -24,15 +46,18 @@ class AMRTracer {
         redistribute_ongoing_(false) {
     PMPI_Comm_rank(MPI_COMM_WORLD, &rank_);
     PMPI_Comm_size(MPI_COMM_WORLD, &size_);
-    const char* dir = "/mnt/ltio/parthenon-topo/profile6.wtau/trace";
+
+    const char* dir = GetLogDir();
+
     msglog_ = std::make_unique<MsgLog>(dir, rank_);
     funclog_ = std::make_unique<FuncLog>(dir, rank_);
+    statelog_ = std::make_unique<StateLog>(dir, rank_);
   }
 
   int MyRank() const { return rank_; }
 
   void MarkBegin(const char* block_name, uint64_t ts) {
-    funclog_->LogFunc(block_name, ts, true);
+    funclog_->LogFunc(block_name, timestep_, ts, true);
 
     AmrFunc func = ParseBlock(block_name);
     switch (func) {
@@ -60,7 +85,7 @@ class AMRTracer {
   }
 
   void MarkEnd(const char* block_name, uint64_t ts) {
-    funclog_->LogFunc(block_name, ts, false);
+    funclog_->LogFunc(block_name, timestep_, ts, false);
 
     AmrFunc func = ParseBlock(block_name);
     switch (func) {
@@ -191,6 +216,10 @@ class AMRTracer {
 
   void MarkMakeOutputsEnd() { timestep_++; }
 
+  void ProcessTriggerMsgBlockAssignment(void *data);
+
+  void ProcessTriggerMsgTargetCost(void *data);
+
   int rank_;
   int size_;
 
@@ -200,6 +229,7 @@ class AMRTracer {
 
   std::unique_ptr<MsgLog> msglog_;
   std::unique_ptr<FuncLog> funclog_;
+  std::unique_ptr<StateLog> statelog_;
 
   bool redistribute_ongoing_;
 

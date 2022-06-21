@@ -5,7 +5,7 @@
 
 namespace tau {
 
-enum class MsgType { kBlockAssignment };
+enum class MsgType { kBlockAssignment, kTargetCost };
 
 struct TriggerMsg {
   MsgType type;
