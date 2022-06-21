@@ -1,0 +1,16 @@
+profile6.wtau
+-------------
+
+TAU message + func support, but no trigger support. Got overwritten by a run of the trigger plugin variant, before TAU_AMR_LOGDIR support
+
+profile7
+------------
+June 20, 2022
+
+Actual intended run with the trigger support. Got executed with O0, and overwrote profile6 data, and was not allowed to complete.
+
+profile8
+------------
+June 21, 2022
+
+Run with O0 removed from FindTAU.cmake, and support for two trigger messages. Data written to ltio.
