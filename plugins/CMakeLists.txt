@@ -5,12 +5,11 @@ set(CMAKE_CXX_STANDARD 14)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-find_package(TAU REQUIRED)
+find_package(TAU MODULE REQUIRED)
 
-if (TAU_FOUND)
-  set(PLUGIN_SOURCES Tau_plugin_amr.cc)
-  add_library(TAU-amr ${PLUGIN_SOURCES})
-  target_link_libraries(TAU-amr TAU)
-else ()
-  message(FATAL_ERROR "TAU not found")
-endif()
+set(PLUGIN_SOURCES Tau_plugin_amr.cc amr_tracer.cc amr_util.cc ../tools/common.cc)
+add_library(TAU-amr SHARED ${PLUGIN_SOURCES})
+target_link_libraries(TAU-amr TAU::TAU)
+
+install(TARGETS TAU-amr
+  LIBRARY DESTINATION .)

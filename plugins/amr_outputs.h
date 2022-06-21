@@ -1,5 +1,10 @@
 #pragma once
 
+#include <mutex>
+#include <inttypes.h>
+
+namespace tau {
+
 class MsgLog {
  public:
   MsgLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
@@ -51,7 +56,8 @@ class FuncLog {
     WriteHeader();
   }
 
-#define DONOTLOG(s) if (strncmp(func_name, s, strlen(s)) == 0) return;
+#define DONOTLOG(s) \
+  if (strncmp(func_name, s, strlen(s)) == 0) return;
 
   void LogFunc(const char* func_name, uint64_t timestamp, bool enter_or_exit) {
     // DONOTLOG("Task_ReceiveBoundaryBuffers_MeshBlockData");
@@ -74,3 +80,5 @@ class FuncLog {
   std::mutex mutex_;
   static const bool paranoid_ = true;
 };
+
+}  // namespace tau

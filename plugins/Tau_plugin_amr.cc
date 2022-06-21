@@ -19,11 +19,11 @@
 
 int stop_tracing = 0;
 
-AMRTracer* tracer = nullptr;
+tau::AMRTracer* tracer = nullptr;
 
 /* lifecycle begin */
 int Tau_plugin_event_post_init(Tau_plugin_event_post_init_data_t* data) {
-  tracer = new AMRTracer();
+  tracer = new tau::AMRTracer();
   return 0;
 }
 
@@ -89,42 +89,7 @@ int Tau_plugin_event_recv(Tau_plugin_event_recv_data_t* data) {
 /* trigger begin */
 
 int Tau_plugin_event_trigger(Tau_plugin_event_trigger_data_t* data) {
-
-  #ifdef TAU_MPI
-  int rank; int size;
-  int global_min, global_max;
-  int global_sum; float sum_, avg_, min_, max_;
-
-  int local = *((int*)(data->data));
-
-  PMPI_Reduce(&local, &global_sum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  PMPI_Reduce(&local, &global_min, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
-  PMPI_Reduce(&local, &global_max, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
- 
-  PMPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  if(rank == 0) {
-    sum_ = global_sum;
-    PMPI_Comm_size(MPI_COMM_WORLD, &size);
-    fprintf(stderr, "Avg, min, max are %f %d %d \n", (sum_/size), global_min, global_max);
-    avg_ = (sum_ / size);
-    min_ = global_min;
-    max_ = global_max;
-
-    if((max_ - min_) > 0.10 * avg_) {
-      fprintf(stderr, "Should rebalance...\n");
-      local = 1;
-    } else {
-      local = 0;
-    }
-  }
-
-  PMPI_Bcast(&local, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-  *((int*)(data->data)) = local;
-
-  #endif
-
+  tracer->ProcessTriggerMsg(data->data);
   return 0;
 }
 /* trigger end */

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "../tools/common.cc"
 #include "../tools/common.h"
+#include "amr_outputs.h"
+#include "amr_util.h"
 
 #include <inttypes.h>
+#include <memory>
 #include <mpi/mpi.h>
 #include <mutex>
-#include <memory>
 
-#include "amr_util.h"
-#include "amr_outputs.h"
+namespace tau {
 
 enum class AMRPhase { FluxExchange, LoadBalancing, BoundaryComm };
 
@@ -34,24 +34,24 @@ class AMRTracer {
   void MarkBegin(const char* block_name, uint64_t ts) {
     funclog_->LogFunc(block_name, ts, true);
 
-    amr::AmrFunc func = amr::ParseBlock(block_name);
+    AmrFunc func = ParseBlock(block_name);
     switch (func) {
-      case amr::AmrFunc::RedistributeAndRefine:
+      case AmrFunc::RedistributeAndRefine:
         MarkRedistributeBegin();
         break;
-      case amr::AmrFunc::SendBoundBuf:
+      case AmrFunc::SendBoundBuf:
         MarkSendBoundBufBegin();
         break;
-      case amr::AmrFunc::RecvBoundBuf:
+      case AmrFunc::RecvBoundBuf:
         MarkRecvBoundBufBegin();
         break;
-      case amr::AmrFunc::SendFluxCor:
+      case AmrFunc::SendFluxCor:
         MarkSendFluxCorBegin();
         break;
-      case amr::AmrFunc::RecvFluxCor:
+      case AmrFunc::RecvFluxCor:
         MarkRecvFluxCorBegin();
         break;
-      case amr::AmrFunc::MakeOutputs:
+      case AmrFunc::MakeOutputs:
         MarkMakeOutputsBegin();
         break;
       default:
@@ -62,24 +62,24 @@ class AMRTracer {
   void MarkEnd(const char* block_name, uint64_t ts) {
     funclog_->LogFunc(block_name, ts, false);
 
-    amr::AmrFunc func = amr::ParseBlock(block_name);
+    AmrFunc func = ParseBlock(block_name);
     switch (func) {
-      case amr::AmrFunc::RedistributeAndRefine:
+      case AmrFunc::RedistributeAndRefine:
         MarkRedistributeEnd();
         break;
-      case amr::AmrFunc::SendBoundBuf:
+      case AmrFunc::SendBoundBuf:
         MarkSendBoundBufEnd();
         break;
-      case amr::AmrFunc::RecvBoundBuf:
+      case AmrFunc::RecvBoundBuf:
         MarkRecvBoundBufEnd();
         break;
-      case amr::AmrFunc::SendFluxCor:
+      case AmrFunc::SendFluxCor:
         MarkSendFluxCorEnd();
         break;
-      case amr::AmrFunc::RecvFluxCor:
+      case AmrFunc::RecvFluxCor:
         MarkRecvFluxCorEnd();
         break;
-      case amr::AmrFunc::MakeOutputs:
+      case AmrFunc::MakeOutputs:
         MarkMakeOutputsEnd();
         break;
       default:
@@ -106,6 +106,8 @@ class AMRTracer {
     msglog_->LogMsg(src, timestep_, PhaseToStr(), msg_tag, 1, msg_sz,
                     timestamp);
   }
+
+  void ProcessTriggerMsg(void* data);
 
   void PrintStats() {
     if (rank_ == 0) {
@@ -204,3 +206,5 @@ class AMRTracer {
   std::mutex mutex_;
   static const bool paranoid_ = false;
 };
+
+}
