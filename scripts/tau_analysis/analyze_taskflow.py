@@ -4,10 +4,13 @@ import numpy as np
 import pandas as pd
 import subprocess
 import sys
+import ray
 import traceback
 from typing import Tuple
 
 prev_output_ts = 0
+
+ray.init(address="h0:6379")
 
 
 def find_func_remove_mismatch(ts_begin, ts_end):
@@ -514,9 +517,11 @@ def aggr_msgs(trace_dir, rank):
     print(df)
     print(df["phase"].unique())
 
-    df = df.groupby(["rank", "timestamp", "phase", "send_or_recv"], as_index=False).agg(
-        {"msg_sz": ["mean", "sum", "count"]}
+    df = df.groupby(["rank", "timestep", "phase", "send_or_recv"], as_index=False).agg(
+        {"msg_sz": ["mean", "sum", "count"], "peer": "nunique"}
     )
+
+    print(df)
     df.columns = ["_".join(col).strip("_") for col in df.columns.values]
 
     df.to_csv("{}/aggr/msgs.{}.csv".format(trace_dir, rank), index=None)
@@ -544,9 +549,9 @@ def combine_aggred_msgs(trace_dir):
 
     df_concat = pd.concat(all_dfs)
     df_concat = (
-        df_concat.sort_values(["timestamp", "phase", "send_or_recv", "rank"])
-        .groupby(["timestamp", "phase", "send_or_recv"], as_index=False)
-        .agg({"rank": joinstr, "msg_sz_count": joinstr})
+        df_concat.sort_values(["timestep", "phase", "send_or_recv", "rank"])
+        .groupby(["timestep", "phase", "send_or_recv"], as_index=False)
+        .agg({"rank": joinstr, "msg_sz_count": joinstr, "peer_nunique": joinstr})
     )
 
     df_concat.to_csv(concat_csvpath, index=None)
@@ -600,7 +605,6 @@ def get_exp_stats() -> Tuple[int, int]:
     #  print(our_id, num_hosts)
 
     return (our_id, num_hosts)
-
 
 if __name__ == "__main__":
     #  run_classify_serial()

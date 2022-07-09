@@ -2,6 +2,8 @@ import collections
 import numpy as np
 import pandas as pd
 
+from plot_msgs import to_dense_2d
+
 """
 Interesting files:
 - /aggregate.csv
@@ -45,7 +47,17 @@ class TraceReader:
 
     def read_msg_concat(self):
         msg_concat_path = "aggr/msg_concat.csv"
-        return self._read_file(msg_concat_path)
+        df_msg = self._read_file(msg_concat_path)
+        df_msg = df_msg.astype(
+            {
+                "timestep": int,
+                "phase": str,
+                "send_or_recv": int,
+                "rank": str,
+                "msg_sz_count": str,
+            }
+        )
+        return df_msg
 
     def read_logstats(self):
         logstats_path = "run/log.txt.csv"
@@ -56,6 +68,23 @@ class TraceReader:
         df_rel = df[df["evtname"] == event]
         evt_vals = TraceReader._parse_arrays(df_rel["evtval"])
         return evt_vals
+
+    def get_msg_count(self, event: str) -> None:
+        df = self.read_msg_concat()
+        df = df[df["phase"] == event]
+        nsteps = df["timestep"].max()
+        msgcnt_key = "msg_sz_count"
+        dense_mat = TraceReader._to_dense_2d(df, msgcnt_key, nsteps, nranks=512)
+        return dense_mat
+
+    def get_msg_npeers(self, event: str) -> None:
+        df = self.read_msg_concat()
+        df = df[df["phase"] == event]
+        nsteps = df["timestep"].max()
+        npeer_key = "peer_nunique"
+        dense_mat = TraceReader._to_dense_2d(df, npeer_key, nsteps, nranks=512)
+        return dense_mat
+
 
     @staticmethod
     def _parse_arrays(df_col: pd.Series) -> None:
@@ -80,9 +109,54 @@ class TraceReader:
         print("Len Old: {}, New: {}".format(len(parsed_col), len(parsed_col_dropped)))
 
         evtvals = np.array(parsed_col_dropped)
-        print('Nparray Shape: ', evtvals.shape)
+        print("Nparray Shape: ", evtvals.shape)
 
-        return parsed_col_dropped
+        return evtvals
+
+    @staticmethod
+    def _to_dense(idx, cnt, nranks=512):
+        dense_arr = []
+
+        csrint = lambda x: [int(i) for i in x.split(",")]
+        keys = csrint(idx)
+        vals = csrint(cnt)
+        sdict = dict(zip(keys, vals))
+
+        for i in range(nranks):
+            i_val = 0
+            if i in sdict:
+                i_val = sdict[i]
+            dense_arr.append(i_val)
+
+        return np.array(dense_arr)
+
+    @staticmethod
+    def _to_dense_2d(df, key, nts, nranks=512):
+        all_rows = {}
+
+        for idx, row in df.iterrows():
+            ts = row["timestep"]
+            idxes = row["rank"]
+            #  counts = row["msg_sz_count"]
+            counts = row[key]
+            row_dense = TraceReader._to_dense(idxes, counts, nranks)
+
+            if ts in all_rows:
+                all_rows[ts] += row_dense
+            else:
+                all_rows[ts] = row_dense
+
+        all_rows_dense = []
+
+        for ts in range(nts):
+            ts_row = np.zeros(nranks, dtype=int)
+            if ts in all_rows:
+                ts_row = all_rows[ts]
+
+            all_rows_dense.append(ts_row)
+
+        mat_2d = np.stack(all_rows_dense, axis=0)
+        return mat_2d
 
 
 def TraceReaderTest():
