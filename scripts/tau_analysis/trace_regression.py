@@ -5,81 +5,10 @@ import datashader as ds
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import re
 from sklearn import linear_model
 
-from trace_reader import TraceReader
-
-
-class TraceOps:
-    trace = None
-
-    @classmethod
-    def split_eqn(cls, eqn):
-        eqn = "a+b-c-d-e+f"
-        symbols = re.split("\+|-", eqn)
-
-        def sign(eqn, symbol):
-            idx = eqn.find(symbol)
-            symbol = "+"
-            if idx > 0:
-                symbol = eqn[idx - 1]
-            return symbol
-
-        pos = [s for s in symbols if sign(eqn, s) == "+"]
-        neg = [s for s in symbols if sign(eqn, s) == "-"]
-        return [pos, neg]
-
-    @classmethod
-    def cropsum_2d(cls, mats):
-        len_min = min([m.shape[0] for m in mats])
-        mats = [m[:len_min] for m in mats]
-        print([m.shape for m in mats])
-        mat_agg = np.sum(mats, axis=0)
-        print(mat_agg.shape)
-        return mat_agg
-
-    @classmethod
-    def multimat_labels(cls, labels, f):
-        labels = cls.split_eqn(labels)
-        labels_pos = labels[0]
-        labels_neg = labels[1]
-
-        mats_pos = [f(l) for l in labels_pos]
-        mat_pos_agg = cls.cropsum_2d(mat_pos)
-
-        if len(labels_neg) > 0:
-            mats_neg = [f(l) for l in labels_neg]
-            mat_neg_agg = cls.cropsum_2d(mat_neg)
-
-            return mat_pos_agg - mat_neg_agg
-
-        return mat_pos_agg
-
-    @classmethod
-    def multimat_tau(cls, labels):
-        labels = labels.split("+")
-        mats = [cls.trace.get_tau_event(l) for l in labels]
-        mat_agg = cls.cropsum_2d(mats)
-        return mat_agg
-
-    @classmethod
-    def multimat_msg(cls, labels):
-        labels = labels.split("+")
-        mats = [cls.trace.get_msg_count(l) for l in labels]
-        mat_agg = cls.cropsum_2d(mats)
-        return mat_agg
-
-    @classmethod
-    def multimat(cls, label_str):
-        ltype, labels = label_str.split(":")
-        if ltype == "tau":
-            return cls.multimat_labels(labels, cls.trace.get_tau_event)
-        elif ltype == "msgcnt":
-            return cls.multimat_labels(labels, cls.trace.get_msg_count)
-        elif ltype == "npeer":
-            return cls.multimat_labels(labels, cls.trace.get_msg_npeers)
-        else:
-            assert False
+from trace_reader import TraceReader, TraceOps
 
 
 def plot_scatter_ds(data_x, data_y, label_x, label_y, plot_dir) -> None:
@@ -182,50 +111,14 @@ def plot_scatter_standardize(data_x, data_y, label_x, label_y, plot_dir) -> None
 
 def run_plot_evt_vs_msgcnt(trace_dir: str, plot_dir: str) -> None:
     tr = TraceReader(trace_dir)
-
-    def cropsum_2d(mats):
-        len_min = min([m.shape[0] for m in mats])
-        mats = [m[:len_min] for m in mats]
-        print([m.shape for m in mats])
-        mat_agg = np.sum(mats, axis=0)
-        print(mat_agg.shape)
-        return mat_agg
-
-    def multimat_labels(labels, f):
-        labels = labels.split("+")
-        mats = [f(l) for l in labels]
-        mat_agg = cropsum_2d(mats)
-        return mat_agg
-
-    def multimat_tau(labels):
-        labels = labels.split("+")
-        mats = [tr.get_tau_event(l) for l in labels]
-        mat_agg = cropsum_2d(mats)
-        return mat_agg
-
-    def multimat_msg(labels):
-        labels = labels.split("+")
-        mats = [tr.get_msg_count(l) for l in labels]
-        mat_agg = cropsum_2d(mats)
-        return mat_agg
-        pass
-
-    def multimat(label_str):
-        ltype, labels = label_str.split(":")
-        if ltype == "tau":
-            return multimat_labels(labels, tr.get_tau_event)
-        elif ltype == "msgcnt":
-            return multimat_labels(labels, tr.get_msg_count)
-        elif ltype == "npeer":
-            return multimat_labels(labels, tr.get_msg_npeers)
-        else:
-            assert False
+    TraceOps.trace = tr
 
     all_evts = ["AR1", "AR2", "AR3", "AR3_UMBT", "SR"]
 
     evty_label = "tau:AR1+AR2+SR"
+    evty_label = "tau:AR3-AR3_UMBT"
     evty_label = "tau:SR"
-    evty_mat = multimat(evty_label)
+    evty_mat = TraceOps.multimat(evty_label)
     #  evty_label = "AR3_UMBT"
     #  evty_label = "AR3"
     evtx_label = "msgcnt:LoadBalancing"
@@ -253,8 +146,96 @@ def run_plot():
     run_plot_evt_vs_msgcnt(trace_dir, plot_dir)
 
 
+def read_regr_mats(all_labels):
+    all_mats = list(map(TraceOps.multimat, all_labels))
+    all_lens = map(lambda x: x.shape[0], all_mats)
+    min_len = min(all_lens)
+    all_mats_clipped = [i[:min_len] for i in all_mats]
+    all_mats_raveled = [m.ravel() for m in all_mats_clipped]
+    return all_mats_raveled
+
+
+def run_regr_actual(X, y):
+    regr = linear_model.LinearRegression()
+    regr.fit(X, y)
+
+    print(regr.score(X, y))
+    print(np.array(regr.coef_, dtype=int))
+    print(regr.intercept_)
+
+
+def run_regr_raveled(evtx_label, evty_label):
+    rx, ry = read_regr_mats([evtx_label, evty_label])
+
+    #  X = np.array([rx, rx*rx])
+    X = np.array([rx])
+    X = X.transpose()
+    y = ry
+
+    run_regr_actual(X, y)
+
+
+def run_regr_phases():
+    all_labels = [
+        "tau:AR1",
+        "tau:AR2",
+        "tau:SR",
+        "tau:AR3",
+        "tau:AR3_UMBT",
+        "rcnt:",
+        "msgcnt:FluxExchange",
+        "msgcnt:BoundaryComm",
+        "msgcnt:LoadBalancing",
+        "tau:AR3-AR3_UMBT",
+    ]
+
+    all_mats = read_regr_mats(all_labels)
+
+    def run(mat_idx):
+        selected_mats = [all_mats[i] for i in mat_idx]
+        X = np.array(selected_mats[:-1])
+        y = selected_mats[-1]
+
+        run_regr_actual(X.transpose(), y)
+
+    # repeated relations for y are eliminating least correlated
+    # AR1
+    mat_idx = [5, 6, 7, 8, 0]
+    mat_idx = [5, 6, 7, 0]
+
+    # AR2
+    mat_idx = [5, 6, 7, 8, 1]
+    mat_idx = [5, 6, 7, 1]
+
+    # SR
+    mat_idx = [5, 6, 7, 8, 2]
+    mat_idx = [5, 6, 7, 2]
+
+    # AR3
+    mat_idx = [5, 6, 7, 8, 3]
+
+    # AR3_UMBT
+    mat_idx = [5, 6, 7, 8, 4]
+
+    # AR3 - AR3_UMBT
+    mat_idx = [5, 6, 7, 8, 9]
+    mat_idx = [8, 9]
+    run(mat_idx)
+
+
 def run_regression():
-    pass
+    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
+    TraceOps.trace = TraceReader(trace_dir)
+
+    evtx_label = "rcnt:"
+    evty_label = "tau:AR1"
+    evty_label = "tau:AR2"
+    evty_label = "tau:SR"
+    evty_label = "tau:AR3"
+    evty_label = "tau:AR3_UMBT"
+    evty_label = "tau:AR3-AR3_UMBT"
+
+    run_regr_raveled(evtx_label, evty_label)
 
 
 if __name__ == "__main__":
