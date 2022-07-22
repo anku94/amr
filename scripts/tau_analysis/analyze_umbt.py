@@ -209,6 +209,56 @@ def run_analyze(tracedir) -> None:
         )
     )
 
+    print(tsdelta_min)
+
+
+@ray.remote
+def analyze_state(args):
+    tracedir = args["tracedir"]
+    rank = args["rank"]
+
+    df_path = "{}/trace/state.{}.csv".format(tracedir, rank)
+    df = pd.read_csv(df_path, sep="|")
+
+    tc = df[df["key"] == "TC"]["val"].tolist()
+    cl = df[df["key"] == "CL"]["val"].tolist()
+    rl = df[df["key"] == "RL"]["val"].tolist()
+
+    def parse_ls(ls, t):
+        return [t(i) for i in ls.strip(",").split(",")]
+
+    def assert_ones(s):
+        s = parse_ls(s, float)
+        for val in s:
+            assert int(val) == 1
+
+    for cost in cl:
+        assert_ones(cost)
+
+    ranks = [parse_ls(rl_i, int) for rl_i in rl]
+    rank_tc = [len(r)/512.0 for r in ranks]
+    target_costs = [float(i) for i in tc]
+
+    a = np.array(rank_tc)
+    b = np.array(target_costs)
+    assert sum(a - b) < 1e-1
+
+    return target_costs
+
+
+def run_state() -> None:
+    tracedir = "/mnt/ltio/parthenon-topo/profile8"
+    num_ranks = 512
+
+    all_args = [{"tracedir": tracedir, "rank": r} for r in range(num_ranks)]
+    args = all_args[0]
+    analyze_state(args)
+    remote_ret = [analyze_state.remote(arg) for arg in all_args]
+    result = ray.get(remote_ret)
+    tc_mat = np.array(result)
+    sum_var = sum(np.var(tc_mat, axis=0))
+    assert sum_var < 1e-1
+
 
 def run() -> None:
     tracedir = "/mnt/ltio/parthenon-topo/profile8"
@@ -218,3 +268,4 @@ def run() -> None:
 
 if __name__ == "__main__":
     run()
+    run_state()

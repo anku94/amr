@@ -1,6 +1,7 @@
 import collections
 import numpy as np
 import pandas as pd
+import re
 
 from operator import itemgetter
 from plot_msgs import to_dense_2d
@@ -205,7 +206,8 @@ class TraceReader:
 
 
 class TraceOps:
-    trace = None
+    def __init__(self, dir_path):
+        self.trace = TraceReader(dir_path)
 
     @classmethod
     def split_eqn(cls, eqn):
@@ -250,31 +252,29 @@ class TraceOps:
 
         return mat_pos_agg
 
-    @classmethod
-    def multimat_tau(cls, labels):
+    def multimat_tau(self, labels):
         labels = labels.split("+")
-        mats = [cls.trace.get_tau_event(l) for l in labels]
-        mat_agg = cls.cropsum_2d(mats)
+        mats = [self.trace.get_tau_event(l) for l in labels]
+        mat_agg = self.cropsum_2d(mats)
         return mat_agg
 
-    @classmethod
-    def multimat_msg(cls, labels):
+    def multimat_msg(self, labels):
         labels = labels.split("+")
-        mats = [cls.trace.get_msg_count(l) for l in labels]
-        mat_agg = cls.cropsum_2d(mats)
+        mats = [self.trace.get_msg_count(l) for l in labels]
+        mat_agg = self.cropsum_2d(mats)
         return mat_agg
 
-    @classmethod
-    def multimat(cls, label_str):
+    # XXX: some memory usage issues possible?
+    def multimat(self, label_str):
         ltype, labels = label_str.split(":")
         if ltype == "tau":
-            return cls.multimat_labels(labels, cls.trace.get_tau_event)
+            return self.multimat_labels(labels, self.trace.get_tau_event)
         elif ltype == "msgcnt":
-            return cls.multimat_labels(labels, cls.trace.get_msg_count)
+            return self.multimat_labels(labels, self.trace.get_msg_count)
         elif ltype == "npeer":
-            return cls.multimat_labels(labels, cls.trace.get_msg_npeers)
+            return self.multimat_labels(labels, self.trace.get_msg_npeers)
         elif ltype == "rcnt":
-            return np.array(cls.trace.get_rank_alloc())
+            return np.array(self.trace.get_rank_alloc())
         else:
             assert False
 

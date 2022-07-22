@@ -578,7 +578,8 @@ def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, plot_dir, cached=Fal
 
     print(data_time_med.shape)
 
-    fig, axes = plt.subplots(1, 4, gridspec_kw={"width_ratios": [4, 1, 1, 1]})
+    #  fig, axes = plt.subplots(1, 4, gridspec_kw={"width_ratios": [4, 1, 1, 1]})
+    fig, axes = plt.subplots(1, 3, gridspec_kw={"width_ratios": [4, 1, 1]})
 
     ax_im = axes[0]
     im = ax_im.imshow(data_times, aspect="auto", cmap="plasma")
@@ -588,7 +589,7 @@ def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, plot_dir, cached=Fal
 
     axes[1].plot(data_time_med, data_y)
     axes[2].plot(data_time_max, data_y)
-    axes[3].plot(data_time_log[:num_ts], data_y)
+    #  axes[3].plot(data_time_log[:num_ts], data_y)
 
     # ax.set_title('Rank Order For Event {}'.format(imevent))
     # ax.set_ylabel('Timestep')
@@ -607,8 +608,8 @@ def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, plot_dir, cached=Fal
     axes[2].set_title("TauMax")
     axes[2].set_ylim([num_ts, 0])
 
-    axes[3].yaxis.set_ticks([])
-    axes[2].set_ylim([num_ts, 0])
+    #  axes[3].yaxis.set_ticks([])
+    #  axes[3].set_ylim([num_ts, 0])
 
     fig.suptitle("Time Distributions For Event {}".format(imevent))
     # fig.supxlabel('Something')
@@ -834,6 +835,10 @@ def run_plot_timestep():
 
     plot_umbt_rankgrid(df_phases, 'AR1', plot_dir, cached=cached)
     plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR1', plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR2', plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'SR', plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR3', plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR3_UMBT', plot_dir, cached=cached)
     plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
     plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
     plot_umbt_rankgrid(df_phases, 'AR2', plot_dir, cached=cached)
@@ -892,9 +897,9 @@ def run_plot():
     calc_amr_log_stats(log_df)
     #  run_plot_amr_comp()
     #  run_profile()
-    #  run_plot_timestep()
-    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
-    run_analyze(trace_dir)
+    run_plot_timestep()
+    #  trace_dir = "/mnt/ltio/parthenon-topo/profile8"
+    #  run_analyze(trace_dir)
 
 
 if __name__ == "__main__":

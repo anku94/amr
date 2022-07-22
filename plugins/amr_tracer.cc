@@ -69,7 +69,7 @@ void AMRTracer::ProcessTriggerMsgBlockAssignment(void* data) {
   statelog_->LogKV(timestep_, "RL", rlstr.c_str());
 }
 
-void AMRTracer::processTriggerMsgTargetCost(void* data) {
+void AMRTracer::ProcessTriggerMsgTargetCost(void* data) {
   double target_cost = *(double*)data;
   std::string cost_str = std::to_string(target_cost);
   statelog_->LogKV(timestep_, "TC", cost_str.c_str());

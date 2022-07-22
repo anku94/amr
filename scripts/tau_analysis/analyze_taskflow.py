@@ -2,15 +2,27 @@ import glob
 import multiprocessing
 import numpy as np
 import pandas as pd
+import pickle
 import subprocess
 import sys
-import ray
+import time
+
+#  import ray
 import traceback
 from typing import Tuple
 
+from trace_reader import TraceOps
+
 prev_output_ts = 0
 
-ray.init(address="h0:6379")
+#  ray.init(address="h0:6379")
+
+def joinstr(x):
+    return ",".join([str(i) for i in x])
+
+
+def joinstr2(x):
+    return "|".join([str(i) for i in x])
 
 
 def find_func_remove_mismatch(ts_begin, ts_end):
@@ -509,75 +521,6 @@ def run_parse_log(dpath: str):
     df.to_csv("{}/logstats.csv".format(dpath), index=None)
 
 
-def aggr_msgs(trace_dir, rank):
-    rank_msgcsv = "{}/trace/msgs.{}.csv".format(trace_dir, rank)
-    print(rank_msgcsv)
-
-    df = pd.read_csv(rank_msgcsv, sep="|")
-    print(df)
-    print(df["phase"].unique())
-
-    df = df.groupby(["rank", "timestep", "phase", "send_or_recv"], as_index=False).agg(
-        {"msg_sz": ["mean", "sum", "count"], "peer": "nunique"}
-    )
-
-    print(df)
-    df.columns = ["_".join(col).strip("_") for col in df.columns.values]
-
-    df.to_csv("{}/aggr/msgs.{}.csv".format(trace_dir, rank), index=None)
-
-
-def aggr_msgs_wrapper(args):
-    trace_dir = args["trace_dir"]
-    rank = args["rank"]
-    return aggr_msgs(trace_dir, rank)
-
-
-def combine_aggred_msgs(trace_dir):
-    all_csvs = glob.glob(trace_dir + "/aggr/msgs.*")
-    #  all_csvs = all_csvs[:16]
-
-    concat_csvpath = "{}/aggr/msg_concat.csv".format(trace_dir)
-
-    all_dfs = None
-
-    with multiprocessing.Pool(16) as p:
-        all_dfs = p.map(pd.read_csv, all_csvs)
-
-    def joinstr(x):
-        return ",".join([str(i) for i in x])
-
-    df_concat = pd.concat(all_dfs)
-    df_concat = (
-        df_concat.sort_values(["timestep", "phase", "send_or_recv", "rank"])
-        .groupby(["timestep", "phase", "send_or_recv"], as_index=False)
-        .agg({"rank": joinstr, "msg_sz_count": joinstr, "peer_nunique": joinstr})
-    )
-
-    df_concat.to_csv(concat_csvpath, index=None)
-
-
-def run_aggr_msgs():
-    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
-
-    num_threads = 16
-
-    our_id, num_hosts = get_exp_stats()
-    our_beg = our_id * num_threads
-
-    all_args = [
-        {"trace_dir": trace_dir, "rank": rank}
-        for rank in range(our_beg, our_beg + num_threads)
-    ]
-
-    #  with multiprocessing.Pool(num_threads) as p:
-    #  p.map(aggr_msgs_wrapper, all_args)
-
-    combine_aggred_msgs(trace_dir)
-
-    return
-
-
 """ combine runtime values for each timestep + event """
 
 
@@ -606,8 +549,8 @@ def get_exp_stats() -> Tuple[int, int]:
 
     return (our_id, num_hosts)
 
+
 if __name__ == "__main__":
     #  run_classify_serial()
     #  run_classify_parallel()
     run_aggregate()
-    #  run_aggr_msgs()

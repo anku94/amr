@@ -66,7 +66,7 @@ class FuncLog {
     DONOTLOG("Task_ReceiveBoundaryBuffers_Mesh");
 
     const char* fmt = "%d|%d|%" PRIu64 "|%s|%c\n";
-    fprintf(file_, fmt, rank_, timestamp, func_name, enter_or_exit ? '0' : '1');
+    fprintf(file_, fmt, rank_, timestep, timestamp, func_name, enter_or_exit ? '0' : '1');
   }
 
  private:
