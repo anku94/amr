@@ -7,6 +7,8 @@ import subprocess
 import sys
 import time
 
+from memory_profiler import profile
+
 #  import ray
 import traceback
 from typing import Tuple
@@ -16,33 +18,43 @@ from analyze_taskflow import get_exp_stats
 
 from task import Task
 
+
 class MsgAggrTask(Task):
     nworkers = 4
+    cached = True
 
     def __init__(self, trace_dir):
         super().__init__(trace_dir)
 
-    def gen_worker_args(self, rank):
-        args = super().gen_worker_args(rank)
-
+    def gen_worker_fn_args(self):
         self.mgr = multiprocessing.Manager()
         self.ns = self.mgr.Namespace()
 
-        phase_df, max_ts = self.gen_phase_df()
-        self.ns.trace_dir = trace_dir
-        self.ns.phase_df = self.gen_phase_df()
+        phase_df, max_ts = self.get_phase_df(self.cached)
+        self.ns.trace_dir = self._trace_dir
+        self.ns.phase_df = phase_df
         self.ns.max_ts = max_ts
 
-    @staticmethod
-    def worker(args):
-        pass
+        fn_args = {"ns": self.ns}
+        return fn_args
 
-    def gen_phase_df(self, cached=True):
-        phase_map = gen_phase_map(trace_dir, cached=cached)
+    @staticmethod
+    def worker(fn_args):
+        rank = fn_args["rank"]
+        ns = fn_args["ns"]
+
+        def log(msg):
+            print("Rank {}: {}".format(rank, msg))
+
+        return aggr_msgs_map(rank, ns.phase_df, ns.trace_dir, ns.max_ts)
+
+    def get_phase_df(self, cached):
+        phase_map = gen_phase_map(self._trace_dir, cached=cached)
         max_ts = min(map(lambda x: x.shape[0], phase_map.values()))
 
         t0 = time.time()
         phase_df = gen_phase_df(phase_map)
+        #  phase_df = None
         t1 = time.time()
 
         self.log("Phase DF construction: {:.1f}s".format(t1 - t0))
@@ -53,9 +65,9 @@ def joinstr(x):
     return ",".join([str(i) for i in x])
 
 
-def aggr_msgs(args):
-    trace_dir = args["trace_dir"]
-    rank = args["rank"]
+def aggr_msgs(fn_args):
+    trace_dir = fn_args["trace_dir"]
+    rank = fn_args["rank"]
 
     rank_msgcsv = "{}/trace/msgs.rcv.{}.csv".format(trace_dir, rank)
     print(rank_msgcsv)
@@ -104,9 +116,9 @@ def gen_phase_map(trace_dir, cached=False):
     return phase_map
 
 
-def sep_msgs(args):
-    trace_dir = args["trace_dir"]
-    rank = args["rank"]
+def sep_msgs(fn_args):
+    trace_dir = fn_args["trace_dir"]
+    rank = fn_args["rank"]
 
     def log(msg):
         print("Rank {}: {}".format(rank, msg))
@@ -148,6 +160,7 @@ def gen_prev_phase_df():
     return prev_phase_df
 
 
+@profile(precision=3)
 def gen_phase_df(phase_map):
     prev_phase_df = gen_prev_phase_df()
 
@@ -198,16 +211,8 @@ def gen_phase_df(phase_map):
     return phase_df
 
 
-def aggr_msgs_map(args):
-    #  trace_dir = args["trace_dir"]
-    rank = args["rank"]
-    #  phase_df = args["phase_df"]
-    #  max_ts = args["max_ts"]
-    ns = args["ns"]
-    phase_df = ns.phase_df
-    trace_dir = ns.trace_dir
-    max_ts = ns.max_ts
-
+@profile(precision=3)
+def aggr_msgs_map(rank, phase_df, trace_dir, max_ts):
     def log(msg):
         print("Rank {}: {}".format(rank, msg))
 
@@ -319,35 +324,12 @@ def combine_aggred_msgs(trace_dir):
 
 def run_aggr_msgs():
     trace_dir = "/mnt/ltio/parthenon-topo/profile8"
-    cached = True
-    phase_map = gen_phase_map(trace_dir, cached=cached)
-    max_ts = min(map(lambda x: x.shape[0], phase_map.values()))
-
-    t0 = time.time()
-    #  phase_df = gen_phase_df(phase_map)
-    t1 = time.time()
-
-    print("Phase DF construction: {:.1f}s".format(t1 - t0))
-    mgr = multiprocessing.Manager()
-    ns = mgr.Namespace()
-    #  ns.phase_df = phase_df
-    ns.trace_dir = trace_dir
-    ns.max_ts = max_ts
-
-    #  num_ranks = 512
-    #  par_level = 8
-    host_idx, num_hosts = get_exp_stats()
-    ranks_per_node = 16
-    rbeg = ranks_per_node * host_idx
-    rend = rbeg + ranks_per_node
-
-    all_args = [{"ns": ns, "rank": rank} for rank in range(rbeg, rend)]
-
-    #  with multiprocessing.get_context('spawn').Pool(processes=4) as p:
-    #  p.map(aggr_msgs_map, all_args)
-    #  p.map(sep_msgs, all_args)
-    combine_aggred_msgs(trace_dir)
-    return
+    task = MsgAggrTask(trace_dir)
+    task.cached = True
+    task.nperrank = 16
+    task.nworkers = 2
+    task.run_worker()
+    #  combine_aggred_msgs(trace_dir)
 
 
 if __name__ == "__main__":
