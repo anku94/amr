@@ -1,6 +1,10 @@
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import copy
 import multiprocessing
 import subprocess
+import sys
 import time
+import traceback
 from typing import Tuple
 
 """
@@ -37,28 +41,47 @@ class Task:
 
         return (our_id, num_hosts)
 
-    def gen_worker_args(self, rank):
-        args = {"rank": rank}
+    def gen_worker_fn_args(self, rank):
+        fn_args = {"rank": rank}
 
-        return args
+        return fn_args
 
     @staticmethod
-    def worker(args):
-        rank = args["rank"]
-        print("Worker {}: {}".format(rank, args))
+    def worker(fn_args):
+        rank = fn_args["rank"]
+        print("Worker {}: {}".format(rank, fn_args))
         time.sleep(1)
 
-    def run_worker(self, args):
+    def run_worker(self):
         rbeg = self.nperrank * self.hidx
         rend = rbeg + self.nperrank
 
         rend = min(rend, self.nranks)
         self.log("Running workers from {} to {}".format(rbeg, rend))
 
-        all_args = [self.gen_worker_args(rank) for rank in range(rbeg, rend)]
+        base_fn_args = self.gen_worker_fn_args()
+        all_fn_args = []
+        for rank in range(rbeg, rend):
+            fn_args = copy.deepcopy(base_fn_args)
+            fn_args["rank"] = rank
+            all_fn_args.append(fn_args)
 
-        with multiprocessing.Pool(self.nworkers) as p:
-            p.map(self.worker, all_args)
+        self.log("Starting pool with {} workers".format(self.nworkers))
+
+        #  with multiprocessing.Pool(processes=self.nworkers) as p:
+        #  p.map(self.worker, all_fn_args)
+        with ProcessPoolExecutor(max_workers=self.nworkers) as e:
+            #  ret = e.map(self.worker, all_fn_args)
+            #  print(ret)
+            futures = {e.submit(self.worker, fn_arg): fn_arg for fn_arg in all_fn_args}
+            for future in as_completed(futures):
+                try:
+                    data = future.result()
+                    print(data)
+                except Exception as e:
+                    print(futures[future])
+                    print(e)
+                    traceback.print_exc()
 
     def log(self, logstr):
         print("h{}: {}".format(self.hidx, logstr))
@@ -67,4 +90,4 @@ class Task:
 if __name__ == "__main__":
     trace_dir = "/mnt/ltio/parthenon-topo/profile8"
     t = Task(trace_dir)
-    t.run_worker(None)
+    t.run_worker()
