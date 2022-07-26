@@ -101,7 +101,11 @@ def get_umbt_vars(keystr, valstr, nranks=512):
     all_ts = []
 
     ranks_all = list(range(nranks))
+    """
+    The reason this is there is because something is wrong with
+    this node's timestamps. The avg and all get skewed because of that"""
     ranks_to_exclude = list(range(144, 160))
+    ranks_to_exclude = list(range(1000, 1000))
     ranks_filtered = [i for i in ranks_all if i not in ranks_to_exclude]
     for r in ranks_filtered:
         vals = default_vals
@@ -128,7 +132,10 @@ def get_umbt_vars_wrapper(args):
 
 def compute_deltas(ts_mat):
     # ts_mat is 30573*512
-    p = ts_mat
+    rows_winvalid_ts = np.sum(ts_mat < 100, axis=1)
+    ts_mat_mask = (rows_winvalid_ts == 0)
+    ts_mat = ts_mat[ts_mat_mask]
+
     colavg = np.mean(ts_mat, axis=0)  # 512 ranks
     rowavg = np.mean(ts_mat, axis=1)  # 30000 ts
 
@@ -139,17 +146,49 @@ def compute_deltas(ts_mat):
     return deltas
 
 
-def analyze_deltas(deltas):
-    num_nodes = int(len(deltas) / 16)
-    deltas_split = np.split(deltas, num_nodes)
-    all_vars = np.array([np.var(x) for x in deltas_split])
+"""
+The deltas computed will have minor intra-node differences between ranks.
+This function will compute the mean of those intra-node deltas and emit
+the same uniform delta for each rank in a node. It returns a dataframe
+of ranks and deltas.
+"""
+def uniformize_deltas(deltas) -> pd.DataFrame:
+    npernode = 16
+    num_nodes = int(len(deltas) / npernode)
+    deltas_split = np.array(np.split(deltas, num_nodes))
+    all_vars = np.var(deltas_split, axis=1)
     all_stds = np.array(all_vars) ** 0.5
 
-    mean_std = np.mean(all_stds)
+    nodewise_min = np.min(deltas_split, axis=1)
+    nodewise_max = np.max(deltas_split, axis=1)
+    nodewise_delta = nodewise_max - nodewise_min
+    nodewise_mean = np.mean(deltas_split, axis=1)
+    nodewise_delta_pct = nodewise_delta / nodewise_mean * 100
+
+    print('Min Deltas (Nodewise)')
+    print(nodewise_min.astype(int))
+    print('Max Deltas (Nodewise)')
+    print(nodewise_max.astype(int))
+    print('Nodewise Deltas - Spread')
+    print(nodewise_delta.astype(int))
+    print('Nodewise Deltas - Spread Pct')
+    print(nodewise_delta_pct.astype(int))
+    print('Nodewise Deltas - Means')
+    print(nodewise_mean.astype(int))
+
+    dmat = nodewise_mean.astype(int)
+    dmat = np.repeat(dmat, npernode)
+
+    deltas_df = pd.DataFrame({
+        'rank': range(len(dmat)),
+        'delta': dmat
+    })
 
     print(
         "[Delta Analysis] Num nodes: {:d}, Mean Std: {:.1f}".format(num_nodes, mean_std)
     )
+
+    return deltas_df
 
 
 def ray_analyze(df) -> None:
@@ -161,6 +200,7 @@ def ray_analyze(df) -> None:
     #  print(get_umbt_vars_wrapper(arg))
     #  return
 
+    #  remote_ret = [get_umbt_vars_wrapper.remote(arg) for arg in all_args]
     remote_ret = [get_umbt_vars_wrapper.remote(arg) for arg in all_args]
     results = ray.get(remote_ret)
     results = np.array(results, dtype=np.int64)
@@ -178,7 +218,8 @@ def run_analyze(tracedir) -> None:
     tsend_mat = ray_analyze(df_end)
 
     deltas = compute_deltas(tsend_mat)
-    analyze_deltas(deltas)
+    delta_df = uniformize_deltas(deltas)
+    delta_df.to_csv('{}/aggr/deltas.csv'.format(tracedir), index=None)
 
     tsbegin_mat = tsbegin_mat + deltas
     tsend_mat = tsend_mat + deltas
