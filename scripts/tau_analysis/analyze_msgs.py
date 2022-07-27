@@ -326,9 +326,9 @@ def run_aggr_msgs():
     trace_dir = "/mnt/ltio/parthenon-topo/profile8"
     task = MsgAggrTask(trace_dir)
     task.cached = True
-    task.nperrank = 16
+    task.npernode = 16
     task.nworkers = 2
-    task.run_worker()
+    task.run_rankwise()
     #  combine_aggred_msgs(trace_dir)
 
 
