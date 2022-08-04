@@ -2,6 +2,7 @@ import glob
 import multiprocessing
 import numpy as np
 import pandas as pd
+import ipdb
 import pickle
 import subprocess
 import sys
@@ -16,6 +17,8 @@ from trace_reader import TraceOps
 prev_output_ts = 0
 
 #  ray.init(address="h0:6379")
+phase_boundaries = None
+
 
 def joinstr(x):
     return ",".join([str(i) for i in x])
@@ -92,6 +95,61 @@ def add_to_ts_beg(all_phases, phase_ts, phase_label):
 def add_to_ts_end(all_phases, phase_ts, phase_label):
     for _, pend in phase_ts:
         all_phases.append((pend, phase_label + ".END"))
+
+
+"""
+Multiple AR2.BEGINs can appear simultaneously
+Multiple AR2.ENDs can appear intermittently (FillDerived)
+All regions within AR3 are to be ignored, except AR3_ class
+
+What this does:
+
+* Multiple BEGINs for same thing: accept first BEGIN
+* AR2.END - ignore. Multiple AR2.ENDs possible - not a reliable marker.
+* Any BEGIN - END prev active frame on the same level
+"""
+
+
+def check_something(phases):
+    cur_stack = []
+    cur_stack_ts = []
+    filtered_phases = []
+
+    for phase_ts, phase_key in phases:
+        phase_name, beg_or_end = phase_key.split(".")
+
+        if "AR3" in cur_stack and not phase_name.startswith("AR3"):
+            continue
+
+        stack_depth = len(cur_stack)
+        phase_depth = len([i for i in phase_name if "_" in i])
+
+        if beg_or_end == "BEGIN":
+            # Ignore duplicate BEGINs
+            if phase_name in cur_stack:
+                continue
+
+            # END all BEGINs at higher nesting
+            while len(cur_stack) > phase_depth:
+                active_top = cur_stack.pop()
+                active_top_ts = cur_stack_ts.pop()
+                filtered_phases.append((phase_ts, active_top + ".END"))
+
+            cur_stack.append(phase_name)
+            cur_stack_ts.append(phase_ts)
+            filtered_phases.append((phase_ts, phase_key))
+        elif beg_or_end == "END":
+            if phase_name == "AR2":
+                continue
+
+            last_phase = cur_stack.pop()
+            cur_stack_ts.pop()
+            assert last_phase == phase_name
+            filtered_phases.append((phase_ts, phase_key))
+
+    assert len(cur_stack) == 0
+
+    return filtered_phases
 
 
 def filter_phases(phases):
@@ -206,7 +264,7 @@ def filter_phases_insert_missing(phases):
 
 
 def validate_phases(phases):
-    phases = sorted(phases)
+    #  phases = sorted(phases)
 
     cur_stack = []
 
@@ -231,36 +289,60 @@ def validate_phases(phases):
     assert len(cur_stack) == 0
 
 
-def classify_phases(df):
+def classify_phases(df_ts):
     phases = []
 
-    phase_boundaries = {
-        "AR1": ["Task_StartReceiving", "FluxDivergenceBlock"],
-        "AR2": ["Task_ClearBoundary", "Task_FillDerived"],
-        "AR3": ["Task_EstimateTimestep", "LoadBalancingAndAdaptiveMeshRefinement"],
-        "SR": [None, "Task_SetBoundaries_MeshData"],
-    }
+    global phase_boundaries
+
+    #  phase_boundaries = {
+    #  "AR1": ["Task_StartReceiving", "FluxDivergenceBlock"],
+    #  "AR2": ["Task_ClearBoundary", "Task_FillDerived"],
+    #  "AR3": ["Task_EstimateTimestep", "LoadBalancingAndAdaptiveMeshRefinement"],
+    #  "SR": [None, "Task_SetBoundaries_MeshData"],
+    #  }
 
     phase_boundaries = {
         "AR1": ["Reconstruct", "Task_ReceiveFluxCorrection"],
+        "AR1_SEND": ["Task_SendFluxCorrection", "Task_SendFluxCorrection"],
+        "AR1_RECV": ["Task_ReceiveFluxCorrection", "Task_ReceiveFluxCorrection"],
         "AR2": ["Task_ClearBoundary", "Task_FillDerived"],
+        "AR2_FD": ["Task_FillDerived", "Task_FillDerived"],
         "AR3": [
             "LoadBalancingAndAdaptiveMeshRefinement",
             "LoadBalancingAndAdaptiveMeshRefinement",
         ],
         "AR3_UMBT": ["UpdateMeshBlockTree", "UpdateMeshBlockTree"],
         "SR": ["Task_SendBoundaryBuffers_MeshData", "Task_SetBoundaries_MeshData"],
+        "SR_SEND": [
+            "Task_SendBoundaryBuffers_MeshData",
+            "Task_SendBoundaryBuffers_MeshData",
+        ],
+        "SR_SET": ["Task_SetBoundaries_MeshData", "Task_SetBoundaries_MeshData"],
     }
+    #  "SR_RECV": ["", ""]
 
     for phase, bounds in phase_boundaries.items():
         if bounds[0] is not None:
-            ret = find_func(df, bounds[0])
+            ret = find_func(df_ts, bounds[0])
             add_to_ts_beg(phases, ret, phase)
         if bounds[1] is not None:
-            ret = find_func(df, bounds[1])
+            ret = find_func(df_ts, bounds[1])
             add_to_ts_end(phases, ret, phase)
 
-    phases = sorted(phases)
+    def phase_sort_key(k):
+        kt = [0, 0]
+        kt[0] = k[0]
+        kt[1] = 0 if "_" in k[1] else 1
+
+        pn = k[1]
+        if pn.endswith(".BEGIN"):
+            kt[1] = 1 if "_" in pn else 0
+        elif pn.endswith(".END"):
+            kt[1] = 0 if "_" in pn else 1
+
+        return kt
+
+    phases = sorted(phases, key=phase_sort_key)
 
     def print_phases(phases, sep1, sep2):
         print(sep1 * 20)
@@ -268,10 +350,14 @@ def classify_phases(df):
             print(phase)
         print(sep2 * 20)
 
+
     #  print_phases(phases, '=', '-')
-    phases = filter_phases(phases)
+    phases = check_something(phases)
+    #  print_phases(phases, '-', '=')
+
+    #  phases = filter_phases(phases)
     #  print_phases(phases, '-', '-')
-    phases = filter_phases_insert_missing(phases)
+    #  phases = filter_phases_insert_missing(phases)
     #  print_phases(phases, '-', '=')
 
     validation_passed = True
@@ -279,9 +365,11 @@ def classify_phases(df):
     try:
         validate_phases(phases)
     except AssertionError as e:
+        ipdb.set_trace()
         print(traceback.format_exc())
         validation_passed = False
         print("VALIDATION FAILED!!!!")
+        sys.exit(-1)
 
     return phases, validation_passed
 
@@ -312,7 +400,9 @@ def aggregate_phases(df, phases):
 
     #  print(phase_total)
     total_phasewise = 0
-    for key in ["AR1", "AR2", "AR3", "AR3_UMBT", "SR"]:
+    all_phases = phase_boundaries.keys()
+    #  for key in ["AR1", "AR2", "AR3", "AR3_UMBT", "SR"]:
+    for key in all_phases:
         if key in phase_total:
             total_phasewise += phase_total[key]
 
@@ -328,6 +418,17 @@ def log_event(f, rank, ts, evt_name, evt_val):
 
 
 def process_df_for_ts(rank, ts, df_ts, f):
+    df_ts = df_ts[df_ts["enter_or_exit"].isin([0, 1])]
+    df_ts = df_ts.dropna().astype(
+        {
+            "rank": "int32",
+            "timestep": "int64",
+            "timestamp": "int64",
+            "func": str,
+            "enter_or_exit": int,
+        }
+    )
+
     phases, validation_passed = classify_phases(df_ts)
 
     if validation_passed == False:
@@ -384,20 +485,8 @@ def classify_trace(rank, in_path, out_path):
         for ts, df_ts in all_dfs:
             #  print(rank, ts)
             #  print(df_ts.to_string())
-            #  df_ts = all_dfs.get_group(30)
+            #  df_ts = all_dfs.get_group(1)
             try:
-                df_ts = df_ts[df_ts["enter_or_exit"].isin([0, 1])]
-                df_ts = df_ts.dropna().astype(
-                    {
-                        "rank": "int32",
-                        "timestep": "int64",
-                        "timestamp": "int64",
-                        "func": str,
-                        "enter_or_exit": int,
-                    }
-                )
-                #  df_ts = df_ts[df_ts['func'] != 'Task_ReceiveFluxCorrection']
-                #  df_ts = df_ts[df_ts['func'] != 'ReceiveFluxCorrection_x1']
                 process_df_for_ts(rank, ts, df_ts, f)
             except Exception as e:
                 print(rank, ts)
@@ -406,7 +495,33 @@ def classify_trace(rank, in_path, out_path):
                 print(traceback.format_exc())
                 sys.exit(-1)
             #  if ts == 1: break
-            #  if ts > 1000: break
+            #  if ts > 10: break
+
+
+""" only for interactive exps """
+
+
+def temp_func():
+    ts = 10
+    df_ts = all_dfs.get_group(ts)
+    df_ts = df_ts[df_ts["enter_or_exit"].isin([0, 1])]
+    df_ts = df_ts.dropna().astype(
+        {
+            "rank": "int32",
+            "timestep": "int64",
+            "timestamp": "int64",
+            "func": str,
+            "enter_or_exit": int,
+        }
+    )
+    classify_phases(df_ts)
+    pass
+
+
+def analyze_classified_trace(trace_out_path):
+    df = pd.read_csv(trace_out_path)
+    df = df.groupby("evtname").agg({"evtval": "sum"})
+    print(df)
 
 
 def classify_trace_parworker(args):
@@ -437,11 +552,12 @@ def classify_parallel(dpath, all_ranks):
 def run_classify_serial():
     rank = 145
     basedir = "/mnt/ltio/parthenon-topo/profile8"
-    in_path = "{}/trace/funcs.{}.csv".format(basedir, rank)
+    in_path = "{}/trace/funcs/funcs.{}.csv".format(basedir, rank)
     #  in_path = "{}/trace/tmp.csv".format(basedir)
     out_path = "{}/phases/phases.{}.csv".format(basedir, rank)
     out_path = "{}/tmp.{}.csv".format(basedir, rank)
     classify_trace(rank, in_path, out_path)
+    #  analyze_classified_trace(out_path)
 
 
 def run_classify_parallel():
@@ -551,6 +667,6 @@ def get_exp_stats() -> Tuple[int, int]:
 
 
 if __name__ == "__main__":
-    #  run_classify_serial()
+    run_classify_serial()
     #  run_classify_parallel()
-    run_aggregate()
+    #  run_aggregate()
