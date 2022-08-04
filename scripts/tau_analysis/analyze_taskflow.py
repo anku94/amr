@@ -110,7 +110,7 @@ What this does:
 """
 
 
-def check_something(phases):
+def filter_and_add_missing(phases):
     cur_stack = []
     cur_stack_ts = []
     filtered_phases = []
@@ -150,117 +150,6 @@ def check_something(phases):
     assert len(cur_stack) == 0
 
     return filtered_phases
-
-
-def filter_phases(phases):
-    phases = sorted(phases)
-
-    prev_begin = False
-    prev_name = None
-    prev_ts = None
-
-    lb_active = False
-    lb_start_ts = None
-
-    filtered_phases = []
-
-    for phase_ts, phase_name in phases:
-        cur_begin = False
-        cur_name = phase_name.split(".")[0]
-
-        if phase_name.endswith(".BEGIN"):
-            cur_begin = True
-        elif phase_name.endswith(".END"):
-            cur_begin = False
-
-        if lb_active and not cur_name.startswith("AR3"):
-            continue
-        elif cur_name == "SR" and cur_begin == True:
-            if prev_name == "SR" and prev_begin == True:
-                continue
-
-        if cur_begin == False:
-            if lb_active and cur_name == "AR3":
-                #  filtered_phases.append((lb_start_ts, 'AR3.BEGIN'))
-                filtered_phases.append((phase_ts, "AR3.END"))
-
-                lb_active = False
-                lb_start_ts = None
-                continue
-
-            if prev_begin == True:
-                filtered_phases.append((prev_ts, prev_name + ".BEGIN"))
-                filtered_phases.append((phase_ts, cur_name + ".END"))
-
-            prev_begin = False
-            prev_name = None
-            prev_ts = None
-        else:
-            if prev_begin == True and prev_name == cur_name:
-                continue
-
-            if prev_begin == True:
-                filtered_phases.append((prev_ts, prev_name + ".BEGIN"))
-
-            prev_begin = True
-            prev_name = cur_name
-            prev_ts = phase_ts
-
-            if cur_name == "AR3":
-                lb_active = True
-                lb_start_ts = phase_ts
-
-    return filtered_phases
-
-
-def filter_phases_insert_missing(phases):
-    new_phases = []
-
-    lb_active = False
-
-    prev_begin = False
-    prev_phase = None
-    prev_ts = None
-
-    for phase_ts, phase_name in phases:
-        cur_begin = False
-        cur_name = phase_name.split(".")[0]
-
-        if phase_name.endswith(".BEGIN"):
-            cur_begin = True
-        elif phase_name.endswith(".END"):
-            cur_begin = False
-        else:
-            assert False
-
-        if cur_name == "AR3":
-            new_phases.append((phase_ts, phase_name))
-            continue
-
-        if cur_begin == True:
-            if prev_begin and prev_phase == "AR1":
-                new_phases.append((prev_ts, "AR1.BEGIN"))
-                new_phases.append((phase_ts - 1, "AR1.END"))
-
-            prev_begin = True
-            prev_phase = cur_name
-            prev_ts = phase_ts
-        elif cur_begin == False:
-            if prev_begin == True and prev_phase == cur_name:
-                new_phases.append((prev_ts, cur_name + ".BEGIN"))
-                new_phases.append((phase_ts, cur_name + ".END"))
-            else:
-                # prev_end and cur_begin both missing?
-                # OR just cur_begin missing. Both not handled yet
-                pass
-
-            prev_begin = False
-            prev_phase = None
-            prev_ts = False
-        else:
-            assert False
-
-    return new_phases
 
 
 def validate_phases(phases):
@@ -352,12 +241,7 @@ def classify_phases(df_ts):
 
 
     #  print_phases(phases, '=', '-')
-    phases = check_something(phases)
-    #  print_phases(phases, '-', '=')
-
-    #  phases = filter_phases(phases)
-    #  print_phases(phases, '-', '-')
-    #  phases = filter_phases_insert_missing(phases)
+    phases = filter_and_add_missing(phases)
     #  print_phases(phases, '-', '=')
 
     validation_passed = True
