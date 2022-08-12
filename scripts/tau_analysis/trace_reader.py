@@ -61,12 +61,16 @@ class TraceReader:
         )
         return df_msg
 
+    def read_rank_trace(self, rank: int) -> pd.DataFrame:
+        trace_path = "trace/funcs/funcs.{}.csv".format(rank)
+        return self._read_file(trace_path, sep="|")
+
     """
     All ranks emit identical state values, so any arbitrary rank can be read
     """
 
     def read_tau_state(self, rank=0):
-        state_path = "trace/state.{}.csv".format(rank)
+        state_path = "trace/state/state.{}.csv".format(rank)
         return self._read_file(state_path, sep="|")
 
     def read_logstats(self):
@@ -122,6 +126,14 @@ class TraceReader:
         nsteps = df["timestep"].max()
         msgcnt_key = "msg_sz_count"
         dense_mat = TraceReader._to_dense_2d(df, msgcnt_key, nsteps, nranks=512)
+        return dense_mat
+
+    def get_msg_sz(self, event: str) -> None:
+        df = self.read_msg_concat()
+        df = df[df["phase"] == event]
+        nsteps = df["timestep"].max()
+        msgsz_key = "msg_sz_mean"
+        dense_mat = TraceReader._to_dense_2d(df, msgsz_key, nsteps, nranks=512)
         return dense_mat
 
     def get_msg_npeers(self, event: str) -> None:
@@ -271,6 +283,8 @@ class TraceOps:
             return self.multimat_labels(labels, self.trace.get_tau_event)
         elif ltype == "msgcnt":
             return self.multimat_labels(labels, self.trace.get_msg_count)
+        elif ltype == "msgsz":
+            return self.multimat_labels(labels, self.trace.get_msg_sz)
         elif ltype == "npeer":
             return self.multimat_labels(labels, self.trace.get_msg_npeers)
         elif ltype == "rcnt":
