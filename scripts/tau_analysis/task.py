@@ -1,6 +1,7 @@
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import copy
 import multiprocessing
+import ray
 import subprocess
 import sys
 import time
@@ -45,7 +46,38 @@ class Task:
         self.nhosts = nhosts
 
     def gen_worker_fn_args(self):
-        return {}
+        return {"trace_dir": self._trace_dir}
+
+    def gen_worker_fn_args_rank(self, rank):
+        args = self.gen_worker_fn_args()
+        args["rank"] = rank
+
+        return args
+
+    def _get_all_args(self, rbeg=-1, rend=-1):
+        if rbeg < 0:
+            rbeg = self.npernode * self.hidx
+
+        if rend < 0:
+            rend = rbeg + self.npernode
+
+        rend = min(rend, self.nranks)
+
+        self.log("Generating args from {} to {}".format(rbeg, rend))
+
+        all_fn_args = []
+        for rank in range(rbeg, rend):
+            fn_args = self.gen_worker_fn_args_rank(rank)
+            all_fn_args.append(fn_args)
+
+        return all_fn_args
+
+    """ Return all args; for a ray run """
+
+    def run_func_with_ray(self, f):
+        all_args = self._get_all_args(0, self.nranks)
+        all_futures = [f.remote(args) for args in all_args]
+        return ray.get(all_futures)
 
     def _gen_work_map(self):
         nidx = 0
@@ -86,6 +118,14 @@ class Task:
         print("Worker {}: {}".format(rank, fn_args))
         time.sleep(1)
 
+    """ Run any single rank, serially, for testing/debugging """
+
+    def run_rank(self, rank):
+        rank_args = self.gen_worker_fn_args_rank(rank)
+        return self.worker(rank_args)
+
+    """ Run all ranks allocated to node nidx """
+
     def run_node(self, nidx=-1):
         if nidx == -1:
             nidx, _ = get_node_idx()
@@ -93,31 +133,20 @@ class Task:
         node_work_map = self._gen_work_map()
 
         if nidx not in node_work_map:
-            print('Node {} not allocated any work!'.format(nidx))
+            print("Node {} not allocated any work!".format(nidx))
             return
 
         rbeg, rend = node_work_map[nidx]
         return self.run_rankwise(rbeg, rend)
 
+    """ Run ranks specified as parameters """
+
     def run_rankwise(self, rbeg=-1, rend=-1):
-        if rbeg < 0:
-            rbeg = self.npernode * self.hidx
-
-        if rend < 0:
-            rend = rbeg + self.npernode
-            rend = min(rend, self.nranks)
-
         self.log("Running workers from {} to {}".format(rbeg, rend))
-
-        base_fn_args = self.gen_worker_fn_args()
-        all_fn_args = []
-        for rank in range(rbeg, rend):
-            fn_args = copy.deepcopy(base_fn_args)
-            fn_args["rank"] = rank
-            fn_args["trace_dir"] = self._trace_dir
-            all_fn_args.append(fn_args)
-
+        all_fn_args = self._get_all_args(rbeg, rend)
         return self.run_pool(all_fn_args)
+
+    """ Run a set of jobs using Task's thread pool infra """
 
     def run_pool(self, all_fn_args):
         self.log("Starting pool with {} workers".format(self.nworkers))
