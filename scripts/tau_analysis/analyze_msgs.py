@@ -1,4 +1,5 @@
 import glob
+import matplotlib.pyplot as plt
 import multiprocessing
 import numpy as np
 import pandas as pd
@@ -9,14 +10,15 @@ import time
 
 from memory_profiler import profile
 
-#  import ray
+import ray
 import traceback
 from typing import Tuple
 
 from trace_reader import TraceOps
-from analyze_taskflow import get_exp_stats
 
 from task import Task
+
+ray.init(address="h0:6379")
 
 
 class MsgAggrTask(Task):
@@ -322,6 +324,106 @@ def combine_aggred_msgs(trace_dir):
     df_concat.to_csv(concat_csvpath, index=None)
 
 
+def get_npsorted(d, s_or_r):
+    arr = d[d["send_or_recv"] == s_or_r]["timestamp"].to_numpy()
+    arr = np.sort(arr)
+    return arr
+
+
+@ray.remote
+def read_msg_ts(args):
+    trace_dir = args["trace_dir"]
+    rank = args["rank"]
+    hist_bins = args["hist"]
+    timesteps = args["ts"]
+
+    #  msgdf_path = "{}/msgs-shuffled/msgs.all.{}.csv".format(trace_dir, rank)
+    msgdf_path = "{}/trace/msgs/msgs.{}.csv".format(trace_dir, rank)
+    df = pd.read_csv(msgdf_path, sep="|")
+    df = df[df["phase"] == "BoundaryComm"]
+    #  df_aggr = df.groupby("timestep")
+
+    all_snd = []
+    all_rcv = []
+
+    #  for gr_name, gr_df in df_aggr:
+    for ts in timesteps:
+        gr_df = df[df["timestep"] == ts]
+        gr_snd = get_npsorted(gr_df, 0) / 1e3
+        gr_rcv = get_npsorted(gr_df, 1) / 1e3
+
+        gr_min_ts = np.min(gr_snd)
+        gr_snd -= gr_min_ts
+        gr_rcv -= gr_min_ts
+
+        gr_snd = list(gr_snd)
+        gr_rcv = list(gr_rcv)
+
+        all_snd.append(gr_snd)
+        all_rcv.append(gr_rcv)
+
+    all_snd = [item for sublist in all_snd for item in sublist]
+    all_rcv = [item for sublist in all_rcv for item in sublist]
+
+    all_snd_hist, all_snd_bins = np.histogram(all_snd, bins=hist_bins)
+    all_rcv_hist, all_rcv_bins = np.histogram(all_rcv, bins=hist_bins)
+
+    return all_snd_hist, all_rcv_hist
+
+
+class MsgTsReader(Task):
+    nworkers = 4
+
+    def __init__(self, trace_dir, timesteps):
+        super().__init__(trace_dir)
+        self.timesteps = timesteps
+
+    def gen_worker_fn_args(self):
+        args = super().gen_worker_fn_args()
+        args["hist"] = list(range(0, 5000, 2))
+        args["ts"] = self.timesteps
+        return args
+
+    @staticmethod
+    def worker(args):
+        return read_msg_ts(args)
+
+
+def plot_msgtl(ts, bins, hist_snd, hist_rcv, plot_dir):
+    ts_str = [str(i) for i in ts]
+    ts_cs = ",".join(ts_str)
+    ts_ps = ".".join(ts_str)
+
+    fig, ax = plt.subplots(1, 1)
+
+    plt.step(bins[:-1], hist_snd, label="Send")
+    plt.step(bins[:-1], hist_rcv, label="Receive")
+
+    ax.legend()
+    ax.set_xlabel("Time (ms)")
+    ax.set_ylabel("# Messages")
+    ax.set_title(
+        "Send/Receive Latency Distribution (BoundaryComm, ts:{})".format(ts_cs)
+    )
+
+    ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f}K".format(x / 1e3))
+
+    max_idx = np.max(np.nonzero(hist_rcv))
+    max_bin = bins[max_idx]
+
+    ax.plot([max_bin, max_bin], [0, 100000], linestyle='--', color='red')
+
+    xlim_max = int(max_bin/100) * 100 + 100
+    xlim_max = 500
+
+    ax.set_xlim([0, xlim_max])
+
+    fig.tight_layout()
+
+    plot_path = "{}/msgtl_hist_ts{}.pdf".format(plot_dir, ts_ps)
+    fig.savefig(plot_path, dpi=300)
+
+
 def run_aggr_msgs():
     trace_dir = "/mnt/ltio/parthenon-topo/profile8"
     task = MsgAggrTask(trace_dir)
@@ -332,5 +434,28 @@ def run_aggr_msgs():
     #  combine_aggred_msgs(trace_dir)
 
 
+def run_plot_msgtl():
+    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
+
+    def run_plot_msgtl_ts(timesteps):
+        mtr = MsgTsReader(trace_dir, timesteps)
+        #  a, b = mtr.run_rank(0)
+        all_hists = mtr.run_func_with_ray(read_msg_ts)
+        hists_snd, hists_rcv = list(zip(*all_hists))
+        hist_snd = np.sum(hists_snd, axis=0)
+        hist_rcv = np.sum(hists_rcv, axis=0)
+        bins = list(range(0, 5000, 2))
+
+        plot_dir = "figures/20220809"
+        plot_msgtl(timesteps, bins, hist_snd, hist_rcv, plot_dir)
+
+    run_plot_msgtl_ts([1])
+    run_plot_msgtl_ts([50])
+    run_plot_msgtl_ts([500])
+    run_plot_msgtl_ts([5000])
+    run_plot_msgtl_ts([25000])
+
+
 if __name__ == "__main__":
-    run_aggr_msgs()
+    #  run_aggr_msgs()
+    run_plot_msgtl()
