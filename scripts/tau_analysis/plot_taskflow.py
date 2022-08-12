@@ -3,9 +3,9 @@ from matplotlib.ticker import MultipleLocator
 import numpy as np
 import pandas as pd
 import pickle
-import IPython
+import ipdb
 
-from trace_reader import TraceReader
+from trace_reader import TraceReader, TraceOps
 
 
 def plot_init():
@@ -467,10 +467,10 @@ def plot_umbt_stats(df_phases, df_log, plot_dir) -> None:
     fig.savefig("{}/amr_timerat_clipped.pdf".format(plot_dir), dpi=300)
 
     fig, ax = plt.subplots(1, 1)
-    ax.plot(data_x, data_y1a, label="TAU_UMBT_MAX")
-    ax.plot(data_x, data_y1b, label="TAU_UMBT_MIN")
-    ax.plot(data_x, data_y1c, label="TAU_UMBT_MIN5")
-    ax.plot(data_x, data_y1d, label="TAU_UMBT_MED")
+    ax.plot(data_x, data_y1a, label="$AG_{NO}$:Max", alpha=0.7)
+    ax.plot(data_x, data_y1d, label="$AG_{NO}$:Median", alpha=0.7)
+    ax.plot(data_x, data_y1c, label="$AG_{NO}$:Min5", alpha=0.7)
+    ax.plot(data_x, data_y1b, label="$AG_{NO}$:Min", alpha=0.7)
 
     ax.legend()
     ax.set_title("Min And Max Collective Times Across All Ranks")
@@ -821,7 +821,7 @@ def run_plot_timestep():
     trace_dir = "/mnt/ltio/parthenon-topo/profile6.wtau"
     trace_dir = "/mnt/ltio/parthenon-topo/profile8"
     plot_dir = "/users/ankushj/repos/amr/scripts/tau_analysis/figures"
-    plot_dir = "figures/messages"
+    plot_dir = "figures/20220809"
     ts_to_plot = 1
 
     cached = False
@@ -833,17 +833,17 @@ def run_plot_timestep():
 
     df_log = pd.read_csv("{}/run/log.txt.csv".format(trace_dir)).astype({"cycle": int})
 
-    plot_umbt_rankgrid(df_phases, 'AR1', plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR1', plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR2', plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'SR', plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR3', plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare(df_phases, df_log, 'AR3_UMBT', plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
-    plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
-    plot_umbt_rankgrid(df_phases, 'AR2', plot_dir, cached=cached)
-    plot_umbt_rankgrid(df_phases, 'AR3', plot_dir, cached=cached)
-    plot_umbt_rankgrid(df_phases, 'AR3_UMBT', plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, "AR1", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR1", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR2", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "SR", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3_UMBT", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, "AR2", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, "AR3", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, "AR3_UMBT", plot_dir, cached=cached)
     plot_umbt_stats(df_phases, df_log, plot_dir)
     return
 
@@ -867,6 +867,116 @@ def run_plot_timestep():
     return
 
 
+""" Input: trace/taskaggr.csv 
+Output: XX
+"""
+
+
+def run_plot_aggr(trace_dir: str, plot_dir):
+    tr = TraceOps(trace_dir)
+    aggr_df_path = "{}/trace/taskaggr.csv".format(trace_dir)
+    aggr_df = pd.read_csv(aggr_df_path)
+    print(aggr_df)
+
+    def get_data(key):
+        row = aggr_df[aggr_df["evtname"] == key]["evtval"].iloc[0]
+        row = np.array([int(i) for i in row.split(",")], dtype=np.int64)
+        return row
+
+    def plot_total_phasetimes():
+        data_ar1 = get_data("AR1")
+        data_ar2 = get_data("AR2")
+        data_sr = get_data("SR")
+        data_ar3 = get_data("AR3")
+        data_ar3u = get_data("AR3_UMBT")
+
+        nranks = 512
+        data_x = list(range(nranks))
+        fig, ax = plt.subplots(1, 1)
+
+        #  ipdb.set_trace()
+
+        ax.plot(data_x, data_ar1, label="$FC_{CN}$")
+        ax.plot(data_x, data_sr, label="$BC_{NO}$")
+        ax.plot(data_x, data_ar2, label="$FD_{CO}$")
+        ax.plot(data_x, data_ar3u, label="$AG_{NO}$")
+        ax.plot(data_x, data_ar3 - data_ar3u, label="$LB_{NO}$")
+
+        ax.set_xlabel("Rank ID")
+        ax.set_ylabel("Total Time (s)")
+        ax.set_title("Total Time For Each Phase/Rank")
+
+        ax.yaxis.set_major_formatter(lambda x, pos: '{:.0f}s'.format(x/1e6))
+        ax.legend(bbox_to_anchor=(-0.15, 1.08), loc="lower left", ncol=5)
+        fig.tight_layout()
+
+        plot_dest = "{}/phases.aggr.pdf".format(plot_dir)
+        print("Saving plot: {}".format(plot_dest))
+        fig.savefig(plot_dest, dpi=300)
+
+    def plot_lbvsmsgcnt():
+        msg_mat_lb = tr.multimat("msgcnt:LoadBalancing")
+        msg_mat_bc = tr.multimat("msgcnt:BoundaryComm")
+        lbmsg_rwtotals = np.sum(msg_mat_lb, axis=0)
+        bcmsg_rwtotals = np.sum(msg_mat_bc, axis=0)
+
+        data_lb = get_data("AR3") - get_data("AR3_UMBT")
+
+        nranks = 512
+        data_x = list(range(nranks))
+
+        fig, ax = plt.subplots(1, 1)
+        ax2 = ax.twinx()
+
+        ax.plot(data_x, lbmsg_rwtotals, label='Message Count - LB')
+        ax.plot(data_x, bcmsg_rwtotals, label='Message Count - BC')
+        ax2.plot(data_x, data_lb, label='Time', color='orange')
+
+        ax.set_xlabel("Rank ID")
+        ax.set_ylabel("Message Count")
+        ax2.set_ylabel("Time AR3_LB (s)")
+
+        ax.yaxis.set_major_formatter(lambda x, pos: '{:.0f}K'.format(x/1e3))
+        ax2.yaxis.set_major_formatter(lambda x, pos: '{:.0f} s'.format(x/1e6))
+
+        ax.set_ylim([0, ax.get_ylim()[1]])
+        ax2.set_ylim([0, ax2.get_ylim()[1]])
+
+        ax.legend()
+
+        plot_dest = "{}/ar3_vs_msgcnt.pdf".format(plot_dir)
+        fig.tight_layout()
+        fig.savefig(plot_dest, dpi=300)
+
+    def plot_lb_someranks():
+        ranks_to_plot = [367, 368]
+
+        lb_mat = tr.multimat("tau:AR3-AR3_UMBT")
+        data_x = list(range(lb_mat.shape[0]))
+
+        fig, ax = plt.subplots(1, 1)
+
+        for r in ranks_to_plot:
+            data_ry = lb_mat[:, r]
+            ax.plot(data_x, data_ry, label='Rank {}'.format(r))
+
+        ax.legend()
+        ax.set_xlabel('Timestep')
+        ax.set_ylabel('Time ms')
+
+        ax.set_ylim([0, ax.get_ylim()[1]])
+        ax.xaxis.set_major_formatter(lambda x, pos: '{:0.0f} ms'.format(x/1e3))
+
+        plot_dest = "{}/lb_rankwise.pdf".format(plot_dir)
+        fig.tight_layout()
+        fig.savefig(plot_dest, dpi=300)
+
+
+    plot_total_phasetimes()
+    #  plot_lbvsmsgcnt()
+    #  plot_lb_someranks()
+
+
 def run_analyze(trace_dir: str):
     tr = TraceReader(trace_dir)
     all_events = ["AR1", "AR2", "SR", "AR3", "AR3_UMBT"]
@@ -875,31 +985,31 @@ def run_analyze(trace_dir: str):
         mat_ts_mean = np.mean(mat, axis=1)
         print(mat_ts_mean.shape)
         mat_ts_sum = np.sum(mat_ts_mean)
-        print('{}: {:.1f}s'.format(evt, mat_ts_sum / 1e6))
-
+        print("{}: {:.1f}s".format(evt, mat_ts_sum / 1e6))
 
 
 def run_plot():
+    trace_dir = "/mnt/ltio/parthenon-topo/profile9"
     # aggr_fpath = '/Users/schwifty/repos/amr-data/20220517-phase-analysis/aggregate.csv'
     # df = pd.read_csv(aggr_fpath)
     plot_init()
-    plot_dir = "figures/messages"
+    plot_dir = "figures/20220811-profile9"
     # # plot_neighbors(df, plot_dir)
     # plot_all_events(df, plot_dir)
 
     # phoebus_log = '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log.times.csv'
     # phoebus_log2 = '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log2.csv'
-    phoebus_log = "/mnt/ltio/parthenon-topo/profile8/run/log.txt.csv"
-    log_df = pd.read_csv(phoebus_log)
+    phoebus_log = "{}/run/log.txt.csv".format(trace_dir)
+    #  log_df = pd.read_csv(phoebus_log)
     # log_df2 = pd.read_csv(phoebus_log2)
     #  plot_amr_log(log_df, plot_dir, save=True)
     #  plot_amr_log_distrib(log_df, plot_dir, save=True)
-    calc_amr_log_stats(log_df)
+    #  calc_amr_log_stats(log_df)
     #  run_plot_amr_comp()
     #  run_profile()
-    run_plot_timestep()
-    #  trace_dir = "/mnt/ltio/parthenon-topo/profile8"
+    #  run_plot_timestep()
     #  run_analyze(trace_dir)
+    run_plot_aggr(trace_dir, plot_dir)
 
 
 if __name__ == "__main__":
