@@ -3,14 +3,21 @@
 #include <inttypes.h>
 #include <mutex>
 
+#include "amr_util.h"
+
 namespace tau {
 
 class MsgLog {
  public:
   MsgLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
+    const char* logdir_name = "msgs";
+    char logdir_path[4096];
+    snprintf(logdir_path, 4096, "%s/%s", dir, logdir_name);
+    EnsureDirOrDie(logdir_path, rank);
+
     const char* fname = "msgs";
     char fpath[4096];
-    snprintf(fpath, 4096, "%s/%s.%d.csv", dir, fname, rank);
+    snprintf(fpath, 4096, "%s/%s.%d.csv", logdir_path, fname, rank);
     file_ = fopen(fpath, "w+");
     if (file_ == nullptr) {
       ABORT("Failed to open CSV");
@@ -22,14 +29,29 @@ class MsgLog {
               int send_or_recv, uint64_t msg_sz, uint64_t timestamp) {
     if (paranoid_) mutex_.lock();
 
+    const char* phase_mapped = MapPhaseName(phase);
+
     const char* fmt = "%d|%d|%d|%s|%" PRIu64 "|%d|%" PRIu64 "|%" PRIu64 "\n";
-    fprintf(file_, fmt, rank_, peer, timestep, phase, msg_id, send_or_recv,
-            msg_sz, timestamp);
+    fprintf(file_, fmt, rank_, peer, timestep, phase_mapped, msg_id,
+            send_or_recv, msg_sz, timestamp);
 
     if (paranoid_) mutex_.unlock();
   }
 
  private:
+  const char* MapPhaseName(const char* phase_name) {
+#define PHASE_IS(x) (strncmp(phase_name, x, strlen(x)) == 0)
+    if (PHASE_IS("FluxExchange")) {
+      return "FE";
+    } else if (PHASE_IS("BoundaryComm")) {
+      return "BC";
+    } else if (PHASE_IS("LoadBalancing")) {
+      return "LB";
+    } else {
+      return phase_name;
+    }
+  }
+
   void WriteHeader() {
     const char* const header =
         "rank|peer|timestep|phase|msg_id|send_or_recv|msg_sz|timestamp\n";
@@ -46,9 +68,14 @@ class MsgLog {
 class FuncLog {
  public:
   FuncLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
+    const char* logdir_name = "funcs";
+    char logdir_path[4096];
+    snprintf(logdir_path, 4096, "%s/%s", dir, logdir_name);
+    EnsureDirOrDie(logdir_path, rank);
+
     const char* fname = "funcs";
     char fpath[4096];
-    snprintf(fpath, 4096, "%s/%s.%d.csv", dir, fname, rank);
+    snprintf(fpath, 4096, "%s/%s.%d.csv", logdir_path, fname, rank);
     file_ = fopen(fpath, "w+");
     if (file_ == nullptr) {
       ABORT("Failed to open CSV");
@@ -66,7 +93,8 @@ class FuncLog {
     DONOTLOG("Task_ReceiveBoundaryBuffers_Mesh");
 
     const char* fmt = "%d|%d|%" PRIu64 "|%s|%c\n";
-    fprintf(file_, fmt, rank_, timestep, timestamp, func_name, enter_or_exit ? '0' : '1');
+    fprintf(file_, fmt, rank_, timestep, timestamp, func_name,
+            enter_or_exit ? '0' : '1');
   }
 
  private:
@@ -85,9 +113,14 @@ class FuncLog {
 class StateLog {
  public:
   StateLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
+    const char* logdir_name = "state";
+    char logdir_path[4096];
+    snprintf(logdir_path, 4096, "%s/%s", dir, logdir_name);
+    EnsureDirOrDie(logdir_path, rank);
+
     const char* fname = "state";
     char fpath[4096];
-    snprintf(fpath, 4096, "%s/%s.%d.csv", dir, fname, rank);
+    snprintf(fpath, 4096, "%s/%s.%d.csv", logdir_path, fname, rank);
     file_ = fopen(fpath, "w+");
     if (file_ == nullptr) {
       ABORT("Failed to open CSV");

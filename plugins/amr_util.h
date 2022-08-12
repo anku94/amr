@@ -14,4 +14,6 @@ enum class AmrFunc {
 
 AmrFunc ParseBlock(const char* block_name);
 
+void EnsureDirOrDie(const char* dir_path, int rank);
+
 };  // namespace tau
