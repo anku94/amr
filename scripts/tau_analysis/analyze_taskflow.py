@@ -8,15 +8,16 @@ import subprocess
 import sys
 import time
 
-#  import ray
+import ray
 import traceback
 from typing import Tuple
 
+from task import Task
 from trace_reader import TraceOps
 
 prev_output_ts = 0
 
-#  ray.init(address="h0:6379")
+ray.init(address="h0:6379")
 phase_boundaries = None
 
 
@@ -105,7 +106,9 @@ All regions within AR3 are to be ignored, except AR3_ class
 What this does:
 
 * Multiple BEGINs for same thing: accept first BEGIN
+* AR1.END - ignore. Multiple AR1.ENDs possible - not a reliable marker.
 * AR2.END - ignore. Multiple AR2.ENDs possible - not a reliable marker.
+* SR.END - ignore. Multiple SR.ENDs possible - not a reliable marker.
 * Any BEGIN - END prev active frame on the same level
 """
 
@@ -139,8 +142,11 @@ def filter_and_add_missing(phases):
             cur_stack_ts.append(phase_ts)
             filtered_phases.append((phase_ts, phase_key))
         elif beg_or_end == "END":
-            if phase_name == "AR2":
+            if phase_name in ["AR1", "AR2", "SR"]:
                 continue
+
+            if not cur_stack:
+                ipdb.set_trace()
 
             last_phase = cur_stack.pop()
             cur_stack_ts.pop()
@@ -183,13 +189,6 @@ def classify_phases(df_ts):
 
     global phase_boundaries
 
-    #  phase_boundaries = {
-    #  "AR1": ["Task_StartReceiving", "FluxDivergenceBlock"],
-    #  "AR2": ["Task_ClearBoundary", "Task_FillDerived"],
-    #  "AR3": ["Task_EstimateTimestep", "LoadBalancingAndAdaptiveMeshRefinement"],
-    #  "SR": [None, "Task_SetBoundaries_MeshData"],
-    #  }
-
     phase_boundaries = {
         "AR1": ["Reconstruct", "Task_ReceiveFluxCorrection"],
         "AR1_SEND": ["Task_SendFluxCorrection", "Task_SendFluxCorrection"],
@@ -208,7 +207,6 @@ def classify_phases(df_ts):
         ],
         "SR_SET": ["Task_SetBoundaries_MeshData", "Task_SetBoundaries_MeshData"],
     }
-    #  "SR_RECV": ["", ""]
 
     for phase, bounds in phase_boundaries.items():
         if bounds[0] is not None:
@@ -239,15 +237,17 @@ def classify_phases(df_ts):
             print(phase)
         print(sep2 * 20)
 
-
     #  print_phases(phases, '=', '-')
-    phases = filter_and_add_missing(phases)
+    try:
+        phases_cleaned = filter_and_add_missing(phases)
+    except Exception as e:
+        ipdb.set_trace()
     #  print_phases(phases, '-', '=')
 
     validation_passed = True
 
     try:
-        validate_phases(phases)
+        validate_phases(phases_cleaned)
     except AssertionError as e:
         ipdb.set_trace()
         print(traceback.format_exc())
@@ -282,10 +282,9 @@ def aggregate_phases(df, phases):
                 del active_phases[phase_name]
                 add_phase(phase_name, phase_time)
 
-    #  print(phase_total)
     total_phasewise = 0
     all_phases = phase_boundaries.keys()
-    #  for key in ["AR1", "AR2", "AR3", "AR3_UMBT", "SR"]:
+
     for key in all_phases:
         if key in phase_total:
             total_phasewise += phase_total[key]
@@ -320,10 +319,6 @@ def process_df_for_ts(rank, ts, df_ts, f):
         print(df_ts.to_string())
         sys.exit(-1)
 
-    #  if (validation_passed == False):
-    #  print(df_ts.to_string())
-    #  print(df_ts.to_string())
-
     phase_total, total_phasewise, total_ts = aggregate_phases(df_ts, phases)
 
     global prev_output_ts
@@ -334,9 +329,15 @@ def process_df_for_ts(rank, ts, df_ts, f):
     for phase, phase_time in phase_total.items():
         log_event(f, rank, ts, phase, phase_time)
 
+    total_ts_fromprev = cur_output_ts - prev_output_ts
+
+    # for the first time
+    if prev_output_ts == 0:
+        total_ts_fromprev = total_ts
+
     log_event(f, rank, ts, "TIME_CLASSIFIEDPHASES", total_phasewise)
     log_event(f, rank, ts, "TIME_FROMCURBEGIN", total_ts)
-    log_event(f, rank, ts, "TIME_FROMPREVEND", cur_output_ts - prev_output_ts)
+    log_event(f, rank, ts, "TIME_FROMPREVEND", total_ts_fromprev)
 
     prev_output_ts = cur_output_ts
 
@@ -369,7 +370,7 @@ def classify_trace(rank, in_path, out_path):
         for ts, df_ts in all_dfs:
             #  print(rank, ts)
             #  print(df_ts.to_string())
-            #  df_ts = all_dfs.get_group(1)
+            #  df_ts = all_dfs.get_group(3807)
             try:
                 process_df_for_ts(rank, ts, df_ts, f)
             except Exception as e:
@@ -378,108 +379,69 @@ def classify_trace(rank, in_path, out_path):
                 print(e)
                 print(traceback.format_exc())
                 sys.exit(-1)
-            #  if ts == 1: break
             #  if ts > 10: break
+            #  break
 
 
-""" only for interactive exps """
-
-
-def temp_func():
-    ts = 10
-    df_ts = all_dfs.get_group(ts)
-    df_ts = df_ts[df_ts["enter_or_exit"].isin([0, 1])]
-    df_ts = df_ts.dropna().astype(
-        {
-            "rank": "int32",
-            "timestep": "int64",
-            "timestamp": "int64",
-            "func": str,
-            "enter_or_exit": int,
-        }
+def read_classified_trace(args):
+    trace_out = args["out_path"]
+    df = pd.read_csv(trace_out).astype(
+        {"rank": "int32", "ts": "int32", "evtname": str, "evtval": "int64"}
     )
-    classify_phases(df_ts)
-    pass
+    df["rank"] = args["rank"]
+    return df
 
 
-def analyze_classified_trace(trace_out_path):
-    df = pd.read_csv(trace_out_path)
-    df = df.groupby("evtname").agg({"evtval": "sum"})
-    print(df)
-
-
-def classify_trace_parworker(args):
-    trace_in = args["in"]
-    trace_out = args["out"]
+def classify_trace_worker(args):
+    trace_in = args["in_path"]
+    trace_out = args["out_path"]
     rank = args["rank"]
     print("Parsing {} into {}...".format(trace_in, trace_out))
-    classify_trace(rank, trace_in, trace_out)
+    return classify_trace(rank, trace_in, trace_out)
 
 
-def classify_parallel(dpath, all_ranks):
-    print("Processing ranks {} to {}".format(all_ranks[0], all_ranks[-1]))
-
-    all_args = []
-    for rank in all_ranks:
-        cur_arg = {}
-        cur_arg["rank"] = rank
-        cur_arg["in"] = "{}/trace/funcs.{}.csv".format(dpath, rank)
-        cur_arg["out"] = "{}/phases/phases.{}.csv".format(dpath, rank)
-        all_args.append(cur_arg)
-
-    print(all_args)
-
-    with multiprocessing.Pool(16) as pool:
-        pool.map(classify_trace_parworker, all_args)
+@ray.remote
+def classify_trace_parworker(args):
+    return classify_trace_worker(args)
 
 
-def run_classify_serial():
-    rank = 145
-    basedir = "/mnt/ltio/parthenon-topo/profile8"
-    in_path = "{}/trace/funcs/funcs.{}.csv".format(basedir, rank)
-    #  in_path = "{}/trace/tmp.csv".format(basedir)
-    out_path = "{}/phases/phases.{}.csv".format(basedir, rank)
-    out_path = "{}/tmp.{}.csv".format(basedir, rank)
-    classify_trace(rank, in_path, out_path)
-    #  analyze_classified_trace(out_path)
+class TraceClassifier(Task):
+    def __init__(self, trace_dir):
+        super().__init__(trace_dir)
+
+    def gen_worker_fn_args_rank(self, rank):
+        in_path = "{}/trace/funcs/funcs.{}.csv".format(self._trace_dir, rank)
+        out_path = "{}/phases/phases.{}.csv".format(self._trace_dir, rank)
+
+        args = super().gen_worker_fn_args_rank(rank)
+        args["in_path"] = in_path
+        args["out_path"] = out_path
+
+        return args
+
+    @staticmethod
+    def worker(args):
+        ret = classify_trace_worker(args)
+        return ret
 
 
-def run_classify_parallel():
-    host_idx, num_hosts = get_exp_stats()
-    print("Node {} of {}".format(host_idx, num_hosts))
-    if host_idx > 31:
-        print("Nothing to do")
-        return
-    #  host_idx = int(sys.argv[1][1:])
+class ParallelReader(TraceClassifier):
+    def __init__(self, trace_dir):
+        super().__init__(trace_dir)
 
-    dpath = "/mnt/lustre/parthenon-topo/profile3.min"
-    dpath = "/mnt/lustre/parthenon-topo/profile4/trace"
-    dpath = "/mnt/ltio/parthenon-topo/profile8"
-    ranks_per_node = 16
-    rbeg = ranks_per_node * host_idx
-    rend = rbeg + ranks_per_node
-
-    ranks_to_process = list(range(rbeg, rend))
-
-    print("Processing: {}".format(", ".join([str(i) for i in ranks_to_process])))
-
-    classify_parallel(dpath, ranks_to_process)
+    @staticmethod
+    def worker(args):
+        ret = read_classified_trace(args)
+        return ret
 
 
-def read_phases(pdir):
-    all_phase_csvs = glob.glob(pdir + "/phases/phases.*.csv")
-    print(len(all_phase_csvs))
+def run_classify(trace_dir):
+    tc = TraceClassifier(trace_dir)
+    #  tc.run_rank(14)
+    #  tc.run_node()
+    #  tc.run_func_with_ray(classify_trace_parworker)
 
-    #  all_phase_csvs = all_phase_csvs[8:12]
-    def read_phase_df(x):
-        df = pd.read_csv(x).astype(
-            {"rank": "int32", "ts": "int32", "evtname": str, "evtval": "int64"}
-        )
-        return df
-
-    all_dfs = map(read_phase_df, all_phase_csvs)
-    aggr_df = pd.concat(all_dfs).dropna()
-    return aggr_df
+    return
 
 
 def percentile(n):
@@ -490,67 +452,64 @@ def percentile(n):
     return percentile_
 
 
-def analyze_phase_df(pdf, pdf_out):
-    #  pdf = pdf.groupby(['ts', 'evtname'], as_index=False).agg({
-    #  'evtval': ['count', 'mean', 'min', 'max', percentile(50),
-    #  percentile(75), percentile(99)]
-    #  })
-    #  pdf = pdf[pdf['ts'] < 10]
-
-    pdf = (
-        pdf.sort_values(["ts", "evtname", "rank"])
-        .groupby(["ts", "evtname"], as_index=False)
-        .agg({"evtval": list})
-    )
-    print(pdf)
-    #  pdf.columns = ['_'.join(col).strip('_') for col in pdf.columns.values]
-    pdf.to_csv(pdf_out, index=None)
-
-
 def run_parse_log(dpath: str):
-    f = open("{}/run/log.txt".format(dpath)).read().split("\n")
-    data = [line for line in f if "cycle" in line]
+    log_path = "{}/run/log.txt".format(dpath)
+    df_path = "{}/trace/logstats.csv".format(dpath)
+
+    print("Analyzing {}".format(log_path))
+    print("Writing {}".format(df_path))
+
+    f = open(log_path).read().split("\n")
+    data = [line for line in f if "zone-cycles/wsec" in line]
 
     keys = [i.split("=")[0] for i in data[0].split(" ")]
     vals = [
         [float(i.split("=")[1]) for i in data[k].split(" ")] for k in range(len(data))
     ]
-    print(keys)
+
     df = pd.DataFrame.from_records(vals, columns=keys)
-    print(df)
-    df.to_csv("{}/logstats.csv".format(dpath), index=None)
+    df.to_csv(df_path, index=None)
 
 
 """ combine runtime values for each timestep + event """
 
 
-def run_aggregate():
-    phase_dir = "/mnt/ltio/parthenon-topo/profile8"
-    #  run_parse_log(phase_dir)
-    #  return
+def run_aggregate(trace_dir):
+    pr = ParallelReader(trace_dir)
+    all_phase_dfs = pr.run_rankwise(0, 512)
+    phase_df = pd.concat(all_phase_dfs).dropna()
 
-    phase_df = read_phases(phase_dir)
-    print(phase_df)
-    analysis_df_path = "{}/aggregate.csv".format(phase_dir)
-    analyze_phase_df(phase_df, analysis_df_path)
+    # aggr1
+    aggr_df1_path = "{}/trace/phases.aggr.csv".format(trace_dir)
+    print("Writing {}".format(aggr_df1_path))
 
-
-def get_exp_stats() -> Tuple[int, int]:
-    result = subprocess.run(
-        ["/share/testbed/bin/emulab-listall"], stdout=subprocess.PIPE
+    aggr_df1 = phase_df.groupby(["evtname", "rank"], as_index=False).agg(
+        {"evtval": "sum"}
     )
-    hoststr = str(result.stdout.decode("ascii"))
-    hoststr = hoststr.strip().split(",")
-    num_hosts = len(hoststr)
-    our_id = open("/var/emulab/boot/nickname", "r").read().split(".")[0][1:]
-    our_id = int(our_id)
 
-    #  print(our_id, num_hosts)
+    aggr_df1 = (
+        aggr_df1.sort_values(["evtname", "rank"])
+        .groupby("evtname", as_index=False)
+        .agg({"evtval": joinstr, "rank": joinstr})
+    )
 
-    return (our_id, num_hosts)
+    aggr_df1.to_csv(aggr_df1_path, index=None)
+
+    # aggr2
+    aggr_df2_path = "{}/trace/phases.aggr.by_ts.csv".format(trace_dir)
+    print("Writing {}".format(aggr_df2_path))
+
+    aggr_df2 = (
+        phase_df.sort_values(["ts", "evtname", "rank"])
+        .groupby(["ts", "evtname"], as_index=False)
+        .agg({"evtval": list})
+    )
+
+    aggr_df2.to_csv(aggr_df2_path, index=None)
 
 
 if __name__ == "__main__":
-    run_classify_serial()
-    #  run_classify_parallel()
-    #  run_aggregate()
+    trace_dir = "/mnt/ltio/parthenon-topo/profile9"
+    #  run_classify(trace_dir)
+    run_parse_log(trace_dir)
+    run_aggregate(trace_dir)
