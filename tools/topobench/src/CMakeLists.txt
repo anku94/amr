@@ -3,6 +3,7 @@ set(topo-srcs
         block.cc
         common.cc
         driver.cc
+        graph.cc
         logger.cc
         topology.cc)
 

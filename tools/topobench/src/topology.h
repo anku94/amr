@@ -6,6 +6,7 @@
 
 #include "block.h"
 #include "common.h"
+#include "graph.h"
 
 class Topology {
  public:
@@ -13,8 +14,13 @@ class Topology {
     switch (opts.topology) {
       case NeighborTopology::Ring:
         return GenerateMeshRing(opts, mesh);
+        break;
       case NeighborTopology::AllToAll:
         return GenerateMeshAllToAll(opts, mesh);
+        break;
+      case NeighborTopology::Dynamic:
+        return GenerateMeshDynamic(opts, mesh);
+        break;
       default:
         return Status::Error;
     }
@@ -73,7 +79,14 @@ class Topology {
         mesh.AddBlock(mb);
       }
     }
-
     return Status::OK;
+  }
+
+  static Status GenerateMeshDynamic(const DriverOpts& opts, Mesh& mesh) {
+    Status s = Status::OK;
+
+    logf(LOG_INFO, "Generating Mesh: Dynamic");
+
+    return s;
   }
 };

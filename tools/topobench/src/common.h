@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LOG_LEVEL 3
+#define LOG_LEVEL 4
 
 #define LOG_DBG2 5
 #define LOG_DBUG 4
@@ -37,9 +37,10 @@ enum class Status {
 };
 
 enum class NeighborTopology { Ring,
-                              AllToAll };
+                              AllToAll, Dynamic };
 struct DriverOpts {
   NeighborTopology topology;
+  int topology_nbrcnt;
   size_t blocks_per_rank;
   size_t size_per_msg;
   size_t comm_rounds;
