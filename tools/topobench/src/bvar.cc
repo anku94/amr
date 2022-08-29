@@ -120,7 +120,7 @@ void BoundaryVariable::ReceiveBoundaryBuffersWithWait() {
   }
 }
 
-void DestroyBoundaryData(BoundaryData<>& bd) {
+void BoundaryVariable::DestroyBoundaryData(BoundaryData<>& bd) {
   for (int n = 0; n < bd.nbmax; n++) {
     if (bd.req_send[n] != MPI_REQUEST_NULL) MPI_Request_free(&bd.req_send[n]);
     if (bd.req_recv[n] != MPI_REQUEST_NULL) MPI_Request_free(&bd.req_recv[n]);
