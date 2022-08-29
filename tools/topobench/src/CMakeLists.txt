@@ -1,11 +1,12 @@
 #add_executable(topobench topobench.cc block.cc driver.cc logger.cc topology.cc common.cc logger.h logger.cc)
 set(topo-srcs
-        block.cc
+        bvar.cc
         common.cc
         driver.cc
         graph.cc
         logger.cc
-        topology.cc)
+        topology.cc
+        trace_reader.cc)
 
 add_library(topo ${topo-srcs})
 target_include_directories(topo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
