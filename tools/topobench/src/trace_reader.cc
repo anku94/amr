@@ -42,6 +42,8 @@ Status TraceReader::Read() {
 }
 
 Status TraceReader::ParseLine(char* buf, size_t buf_sz) {
+  Status s = Status::OK;
+
   /* rank|peer|ts|phase_name|msg_id|sorr|msg_sz|timestamp */
   int rank, peer, ts, msg_id, s_or_r, msg_sz;
   char phase_name[128];
@@ -58,6 +60,11 @@ Status TraceReader::ParseLine(char* buf, size_t buf_sz) {
     return Status::Error;
   }
 
+  /* XXX: parameterize phase_name maybe */
+  if (strncmp(phase_name, "BoundaryComm", 12)) {
+    return s;
+  }
+
   logf(LOG_DBG2, "TS %d: Msg (%d -> %d), MsgSz: %dB", ts, rank, peer, msg_sz);
 
   if (s_or_r == 0) {
@@ -67,5 +74,5 @@ Status TraceReader::ParseLine(char* buf, size_t buf_sz) {
   }
 
   max_ts_ = std::max(ts, max_ts_);
-  return Status::OK;
+  return s;
 }
