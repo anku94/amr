@@ -12,47 +12,51 @@ void BoundaryVariable::InitBoundaryData(BoundaryData<>& bd) {
     bd.req_recv[n] = MPI_REQUEST_NULL;
   }
 }
-void BoundaryVariable::SetupPersistentMPI(int bufsz) {
+void BoundaryVariable::SetupPersistentMPI() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
-  for (auto nb : pmb->nbrvec_) {
-    logf(LOG_DBG2, "Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
+  for (auto nb : pmb->nbrvec_snd_) {
+    logf(LOG_DBG2, "[SEND] Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
          nb.peer_rank, nb.buf_id);
 
     if (bd_var_.req_send[nb.buf_id] != MPI_REQUEST_NULL)
       MPI_Request_free(&bd_var_.req_send[nb.buf_id]);
 
     // buffer, msgsize, datatype, dest, tag, comm, req
-    MPI_Send_init(bd_var_.sendbuf[nb.buf_id], bufsz, MPI_CHAR, nb.peer_rank, 0,
+    MPI_Send_init(bd_var_.sendbuf[nb.buf_id], nb.msg_sz, MPI_CHAR, nb.peer_rank, 0,
                   MPI_COMM_WORLD, &(bd_var_.req_send[nb.buf_id]));
-    bd_var_.sendbufsz[nb.buf_id] = bufsz;
+    bd_var_.sendbufsz[nb.buf_id] = nb.msg_sz;
+  }
+
+  for (auto nb : pmb->nbrvec_rcv_) {
+    logf(LOG_DBG2, "[RECV] Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
+         nb.peer_rank, nb.buf_id);
 
     if (bd_var_.req_recv[nb.buf_id] != MPI_REQUEST_NULL)
       MPI_Request_free(&bd_var_.req_recv[nb.buf_id]);
 
-    MPI_Recv_init(bd_var_.recvbuf[nb.buf_id], bufsz, MPI_CHAR, nb.peer_rank, 0,
+    MPI_Recv_init(bd_var_.recvbuf[nb.buf_id], nb.msg_sz, MPI_CHAR, nb.peer_rank, 0,
                   MPI_COMM_WORLD, &(bd_var_.req_recv[nb.buf_id]));
-    bd_var_.recvbufsz[nb.buf_id] = bufsz;
+    bd_var_.recvbufsz[nb.buf_id] = nb.msg_sz;
   }
 }
 
 void BoundaryVariable::StartReceiving() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
-  for (auto nb : pmb->nbrvec_) {
+  for (auto nb : pmb->nbrvec_rcv_) {
     int status = MPI_Start(&(bd_var_.req_recv[nb.buf_id]));
     if (status != MPI_SUCCESS) {
       logf(LOG_ERRO, "MPI Start Failed");
     }
 
-    logf(LOG_DBG2, "Rank %d - Receive POSTED %d", Globals::my_rank,
-         nb.buf_id);
+    logf(LOG_DBG2, "Rank %d - Receive POSTED %d", Globals::my_rank, nb.buf_id);
   }
 }
 void BoundaryVariable::ClearBoundary() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
-  for (auto nb : pmb->nbrvec_) {
+  for (auto nb : pmb->nbrvec_snd_) {
     bd_var_.flag[nb.buf_id] = BoundaryStatus::waiting;
     bd_var_.sflag[nb.buf_id] = BoundaryStatus::waiting;
 
@@ -67,23 +71,21 @@ void BoundaryVariable::ClearBoundary() {
 void BoundaryVariable::SendBoundaryBuffers() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
-  for (auto nb : pmb->nbrvec_) {
+  for (auto nb : pmb->nbrvec_snd_) {
     // some fence
-    logf(LOG_DBG2, "Rank %d - Send START %d", Globals::my_rank,
-         nb.buf_id);
+    logf(LOG_DBG2, "Rank %d - Send START %d", Globals::my_rank, nb.buf_id);
 
     int status = MPI_Start(&(bd_var_.req_send[nb.buf_id]));
     MPI_CHECK(status, "MPI Start Failed");
 
-    logf(LOG_DBG2, "Rank %d - Send POSTED %d", Globals::my_rank,
-         nb.buf_id);
+    logf(LOG_DBG2, "Rank %d - Send POSTED %d", Globals::my_rank, nb.buf_id);
   }
 }
 bool BoundaryVariable::ReceiveBoundaryBuffers() {
   bool bflag = true;
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
-  for (auto nb : pmb->nbrvec_) {
+  for (auto nb : pmb->nbrvec_rcv_) {
     if (bd_var_.flag[nb.buf_id] == BoundaryStatus::arrived) continue;
     int test;
 
@@ -109,7 +111,7 @@ bool BoundaryVariable::ReceiveBoundaryBuffers() {
 void BoundaryVariable::ReceiveBoundaryBuffersWithWait() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
-  for (auto nb : pmb->nbrvec_) {
+  for (auto nb : pmb->nbrvec_rcv_) {
     if (bd_var_.flag[nb.buf_id] == BoundaryStatus::arrived) continue;
     int status = MPI_Wait(&(bd_var_.req_recv[nb.buf_id]), MPI_STATUS_IGNORE);
     MPI_CHECK(status, "MPI_Wait failed");
@@ -121,7 +123,7 @@ void BoundaryVariable::ReceiveBoundaryBuffersWithWait() {
 }
 
 void BoundaryVariable::DestroyBoundaryData(BoundaryData<>& bd) {
-  for (int n = 0; n < bd.nbmax; n++) {
+  for (int n = 0; n < bd.kMaxNeighbor; n++) {
     if (bd.req_send[n] != MPI_REQUEST_NULL) MPI_Request_free(&bd.req_send[n]);
     if (bd.req_recv[n] != MPI_REQUEST_NULL) MPI_Request_free(&bd.req_recv[n]);
   }

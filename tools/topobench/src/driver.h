@@ -12,9 +12,7 @@
 
 class Driver {
  public:
-  Driver(const DriverOpts& opts) : opts_(opts) {
-    Globals::driver_opts = opts;
-  }
+  Driver(const DriverOpts& opts) : opts_(opts) { Globals::driver_opts = opts; }
 
   Status Setup(int argc, char* argv[]) {
     if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
@@ -50,10 +48,18 @@ class Driver {
   void Run(int argc, char* argv[]) {
     Setup(argc, argv);
     PrintOpts();
-    Topology::GenerateMesh(opts_, mesh_);
-    mesh_.AllocateBoundaryVariables(opts_.size_per_msg);
-    mesh_.Print();
-    mesh_.DoCommunication(opts_.comm_rounds);
+    Topology topology(opts_);
+
+    int nrounds = topology.GetNumTimesteps();
+
+    for (int rnum = 0; rnum < nrounds; rnum++) {
+      topology.GenerateMesh(opts_, mesh_, rnum);
+      mesh_.AllocateBoundaryVariables();
+      mesh_.Print();
+      mesh_.DoCommunicationRound();
+      mesh_.Reset();
+    }
+
     Destroy();
   }
 

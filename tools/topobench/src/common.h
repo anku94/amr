@@ -32,13 +32,14 @@ void msg_abort(int err, const char* msg, const char* func, const char* file,
 
 enum class Status { OK, MPIError, Error, InvalidPtr };
 
-enum class NeighborTopology { Ring, AllToAll, Dynamic };
+enum class NeighborTopology { Ring, AllToAll, Dynamic, FromTrace };
 struct DriverOpts {
   NeighborTopology topology;
   int topology_nbrcnt;
   size_t blocks_per_rank;
   size_t size_per_msg;
-  size_t comm_rounds;
+  int comm_rounds;
+  const char* trace_root;
 };
 
 namespace Globals {

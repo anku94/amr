@@ -4,7 +4,11 @@
 
 #pragma once
 
+#include "common.h"
+
+#include <memory>
 #include <mpi.h>
+
 #define NMAX_NEIGHBORS 56
 #define MAX_MSGSZ 16384
 
@@ -12,10 +16,13 @@ class MeshBlock;
 
 enum class BoundaryStatus { waiting, arrived, completed };
 
+/* kMaxNeighbor should be set to 2X the actual possible value,
+ * as we don't share BoundaryData indexes for sends and receives
+ * to the same neighbor
+ */
 template <int n = NMAX_NEIGHBORS>
 struct BoundaryData {
   static constexpr int kMaxNeighbor = n;
-  int nbmax;
   BoundaryStatus flag[kMaxNeighbor], sflag[kMaxNeighbor];
   char sendbuf[kMaxNeighbor][MAX_MSGSZ];
   char recvbuf[kMaxNeighbor][MAX_MSGSZ];
@@ -33,7 +40,7 @@ class BoundaryVariable {
   }
 
   void InitBoundaryData(BoundaryData<>& bd);
-  void SetupPersistentMPI(int bufsz);
+  void SetupPersistentMPI();
   void StartReceiving();
   void ClearBoundary();
   void SendBoundaryBuffers();

@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include "bvar.h"
 #include "common.h"
 #include "logger.h"
-#include "bvar.h"
 
 #include <memory>
 #include <mpi.h>
@@ -22,23 +22,47 @@ struct NeighborBlock {
   int block_id;
   int peer_rank;
   int buf_id;
+  int msg_sz;
 };
 
 class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
  public:
   MeshBlock(int block_id) : block_id_(block_id) {}
   MeshBlock(const MeshBlock& other)
-      : block_id_(other.block_id_), nbrvec_(other.nbrvec_) {}
+      : block_id_(other.block_id_),
+        nbrvec_snd_(other.nbrvec_snd_),
+        nbrvec_rcv_(other.nbrvec_rcv_) {}
 
-  Status AddNeighbor(int block_id, int peer_rank) {
-    int buf_id = nbrvec_.size();
-    nbrvec_.push_back({block_id, peer_rank, buf_id});
+  Status AddNeighborSendRecv(int block_id, int peer_rank, int msg_sz) {
+    Status s;
+    s = AddNeighborSend(block_id, peer_rank, msg_sz);
+    if (s != Status::OK) return s;
+    s = AddNeighborRecv(block_id, peer_rank, msg_sz);
+    return s;
+  }
+
+  Status AddNeighborSend(int block_id, int peer_rank, int msg_sz) {
+    int buf_id = nbrvec_snd_.size() + nbrvec_rcv_.size();
+    nbrvec_snd_.push_back({block_id, peer_rank, buf_id, msg_sz});
+    return Status::OK;
+  }
+
+  Status AddNeighborRecv(int block_id, int peer_rank, int msg_sz) {
+    int buf_id = nbrvec_snd_.size() + nbrvec_rcv_.size();
+    nbrvec_rcv_.push_back({block_id, peer_rank, buf_id, msg_sz});
     return Status::OK;
   }
 
   void Print() {
-    std::string nbrstr;
-    for (auto nbr : nbrvec_) {
+    std::string nbrstr = "[Send] ";
+
+    for (auto nbr : nbrvec_snd_) {
+      nbrstr += std::to_string(nbr.block_id) + "/" +
+                std::to_string(nbr.peer_rank) + ",";
+    }
+
+    nbrstr += ", [Recv] ";
+    for (auto nbr : nbrvec_rcv_) {
       nbrstr += std::to_string(nbr.block_id) + "/" +
                 std::to_string(nbr.peer_rank) + ",";
     }
@@ -47,11 +71,16 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
          block_id_, nbrstr.c_str());
   }
 
-  Status AllocateBoundaryVariables(int bufsz) {
+  Status AllocateBoundaryVariables() {
     logf(LOG_DBUG, "Allocating boundary variables");
     pbval_ = std::make_unique<BoundaryVariable>(shared_from_this());
-    pbval_->SetupPersistentMPI(bufsz);
+    pbval_->SetupPersistentMPI();
     logf(LOG_DBUG, "Allocating boundary variables - DONE!");
+    return Status::OK;
+  }
+
+  Status DestroyBoundaryData() {
+    pbval_.release();
     return Status::OK;
   }
 
@@ -75,21 +104,28 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
   friend class BoundaryVariable;
   int block_id_;
   std::unique_ptr<BoundaryVariable> pbval_;
-  std::vector<NeighborBlock> nbrvec_;
+  std::vector<NeighborBlock> nbrvec_snd_;
+  std::vector<NeighborBlock> nbrvec_rcv_;
 };
 
 class Mesh {
  public:
-  Status AddBlock(std::shared_ptr<MeshBlock> block) {
-    blocks_.push_back(block);
+  Status AllocateBoundaryVariables() {
+    for (const auto& b : blocks_) {
+      Status s = b->AllocateBoundaryVariables();
+      if (s != Status::OK) return s;
+    }
+
     return Status::OK;
   }
 
-  Status AllocateBoundaryVariables(int bufsz) {
-    for (auto b : blocks_) {
-      Status s = b->AllocateBoundaryVariables(bufsz);
-      if (!(s == Status::OK)) return s;
+  Status Reset() {
+    for (const auto& b : blocks_) {
+      Status s = b->DestroyBoundaryData();
+      if (s != Status::OK) return s;
     }
+
+    blocks_.clear();
 
     return Status::OK;
   }
@@ -98,22 +134,22 @@ class Mesh {
     logger_.LogBegin();
 
     logf(LOG_DBUG, "Start Receiving...");
-    for (auto b : blocks_) {
+    for (const auto& b : blocks_) {
       b->StartReceiving();
     }
 
     logf(LOG_DBUG, "Sending Boundary Buffers...");
-    for (auto b : blocks_) {
+    for (const auto& b : blocks_) {
       b->SendBoundaryBuffers();
     }
 
     logf(LOG_DBUG, "Receiving Boundary Buffers...");
-    for (auto b : blocks_) {
+    for (const auto& b : blocks_) {
       b->ReceiveBoundaryBuffers();
     }
 
     logf(LOG_DBUG, "Receiving Remaining Boundary Buffers...");
-    for (auto b : blocks_) {
+    for (const auto& b : blocks_) {
       b->ReceiveBoundaryBuffersWithWait();
     }
 
@@ -132,7 +168,7 @@ class Mesh {
     Status s = Status::OK;
     for (size_t cnt = 0; cnt < nrounds; cnt++) {
       s = DoCommunicationRound();
-      if (!(s == Status::OK)) break;
+      if (s != Status::OK) break;
     }
 
     logger_.Aggregate();
@@ -140,12 +176,19 @@ class Mesh {
   }
 
   void Print() {
-    for (auto block : blocks_) {
+    for (const auto& block : blocks_) {
       block->Print();
     }
   }
 
  private:
+  Status AddBlock(const std::shared_ptr<MeshBlock>& block) {
+    blocks_.push_back(block);
+    return Status::OK;
+  }
+
   std::vector<std::shared_ptr<MeshBlock>> blocks_;
   Logger logger_;
+
+  friend class Topology;
 };
