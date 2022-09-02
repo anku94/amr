@@ -38,10 +38,9 @@ class Driver {
   void PrintOpts() {
     if (Globals::my_rank == 0) {
       printf("[Blocks Per Rank] %zu\n", opts_.blocks_per_rank);
-      printf("[Comm Rounds] %zu\n", opts_.comm_rounds);
+      printf("[Comm Rounds] %d\n", opts_.comm_rounds);
       printf("[Size Per Msg] %zu\n", opts_.size_per_msg);
-      printf("[TOPOLOGY] %s\n",
-             (opts_.topology == NeighborTopology::Ring ? "RING" : "ALLTOALL"));
+      printf("[Topology] %s\n", TopologyToStr(opts_.topology).c_str());
     }
   }
 
@@ -55,11 +54,12 @@ class Driver {
     for (int rnum = 0; rnum < nrounds; rnum++) {
       topology.GenerateMesh(opts_, mesh_, rnum);
       mesh_.AllocateBoundaryVariables();
-      mesh_.Print();
+      mesh_.PrintConfig();
       mesh_.DoCommunicationRound();
       mesh_.Reset();
     }
 
+    mesh_.PrintStats();
     Destroy();
   }
 

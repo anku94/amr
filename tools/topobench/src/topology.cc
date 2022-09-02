@@ -17,10 +17,11 @@ Status Topology::GenerateMesh(const DriverOpts& opts, Mesh& mesh, int ts) {
       return GenerateMeshDynamic(mesh, ts);
       break;
     case NeighborTopology::FromTrace:
+      return GenerateMeshFromTrace(mesh, ts);
       break;
-    default:
-      return Status::Error;
   }
+
+  return Status::Error;
 }
 
 Status Topology::GenerateMeshRing(Mesh& mesh, int ts) const {

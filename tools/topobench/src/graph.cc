@@ -6,6 +6,8 @@
 
 #include "common.h"
 
+#include <assert.h>
+#include <limits.h>
 #include <numeric>
 
 void GraphGenerator::GenerateDynamic(int nnodes, int avg_deg) {

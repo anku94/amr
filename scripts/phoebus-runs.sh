@@ -152,11 +152,11 @@ tau_mvapich_run() {
   envstr="-env LD_LIBRARY_PATH /lib64 $TAU_FLAGS"
   envstr="$envstr"
 
-
   # mpirun -f hosts.txt $envstr -np 512 -map-by ppr:16:node $TAU_FLAGS $TAU $AMR_BIN -i $AMR_DECK
   cmd=$(echo $MPIRUN -f hosts.txt $envstr -np 512 -map-by ppr:16:node $TAU $AMR_BIN -i $AMR_DECK)
   # cmd=$(echo $MPIRUN $envstr -np 16 $TAU $AMR_BIN -i $AMR_DECK)
-  rm log.txt; touch log.txt
+  rm log.txt
+  touch log.txt
   echo $cmd | tee -a log.txt
   $cmd 2>&1 | tee -a log.txt
   process_log log.txt
@@ -181,7 +181,7 @@ process_profile() {
   PROFLOG=profile.log.csv
 
   echo rank,event,timepct | tee $PROFLOG
-  for i in `seq 0 511`; do
+  for i in $(seq 0 511); do
     # time_pct=$($PPROF_BIN -a -m $i | grep 'UpdateMeshBlockTree => MPI_Allgather()\s*$' | grep 'Driver_Main' | awk '{ print $1 }')
     time_pct_a=$($PPROF_BIN -a -m $i | grep 'UpdateMeshBlockTree => MPI_Allgather()\s*$' | grep 'Driver_Main' | awk '{ print $1 }')
     time_pct_b=$($PPROF_BIN -a -m $i | grep 'Task_FillDerived => FillDerived => ConToPrim::Solve\s*$' | grep 'Driver_Main' | awk '{ print $1 }')
@@ -202,24 +202,31 @@ tau_linked_build() {
   cd $PHOEBUS_BUILD_DIR
 
   MPI_HOME=$MPI_HOME cmake -DTAU_ROOT=$TAU_ROOT -DHDF5_DIR=$HDF5_DIR ..
-} 
+}
 
 tau_linked_run() {
+  RUN_SUFFIX=profile9
+
   AMR_BIN=/users/ankushj/repos/phoebus/build-psm-wtau/src/phoebus
   # AMR_BIN=/users/ankushj/repos/phoebus/build-psm/src/phoebus
   AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_micro.pin
   AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_64.pin
+  AMR_DECK=/users/ankushj/repos/amr/decks/$RUN_SUFFIX.pin
 
   MPIRUN=/users/ankushj/amr-workspace/install/bin/mpirun
 
-  EXP_ROOT=/mnt/ltio/parthenon-topo/profile8
+  EXP_ROOT=/mnt/ltio/parthenon-topo/$RUN_SUFFIX
   RUN_ROOT=$EXP_ROOT/run
   TRACE_ROOT=$EXP_ROOT/trace
   PROF_ROOT=$EXP_ROOT/profile
 
+
   mkdir -p $RUN_ROOT $TRACE_ROOT $PROF_ROOT
+
+  cp $AMR_DECK $RUN_ROOT
   cp hosts.txt $RUN_ROOT
   cd $RUN_ROOT
+  rm log.txt
 
   TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004
   TAU_REL=tau-2.31/x86_64/bin/tau_exec
@@ -240,7 +247,6 @@ tau_linked_run() {
   # envstr="$envstr -env LD_PRELOAD /usr/lib/x86_64-linux-gnu/libasan.so.5"
   envstr="$envstr"
 
-
   # head -8 hosts.txt > hosts8.txt
   cmd=$(echo $MPIRUN -f hosts.txt $envstr -np 512 -map-by ppr:16:node $TAU_FLAGS $TAU $AMR_BIN -i $AMR_DECK)
   # cmd=$(echo $MPIRUN -f hosts.txt $envstr -np 512 -map-by ppr:16:node $AMR_BIN -i $AMR_DECK)
@@ -249,8 +255,8 @@ tau_linked_run() {
   # rm log.txt; touch log.txt
 
   echo $cmd | tee -a log.txt
-  # $cmd 2>&1 | tee -a log.txt
-  process_log log.txt
+  $cmd 2>&1 | tee -a log.txt
+  # process_log log.txt
 }
 
 # tau_plugin_run
@@ -260,5 +266,5 @@ tau_linked_run() {
 # process_log /mnt/ltio/parthenon-topo/profile5/run/log.txt
 # process_profile
 # tau_linked_build
-# tau_linked_run
-process_log /mnt/ltio/parthenon-topo/profile8/run/log.txt
+tau_linked_run
+# process_log /mnt/ltio/parthenon-topo/profile8/run/log.txt

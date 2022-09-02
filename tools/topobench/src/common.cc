@@ -14,6 +14,21 @@ int my_rank, nranks;
 DriverOpts driver_opts;
 }
 
+std::string TopologyToStr(NeighborTopology t) {
+  switch (t) {
+    case NeighborTopology::Ring:
+      return "RING";
+    case NeighborTopology::AllToAll:
+      return "ALL_TO_ALL";
+    case NeighborTopology::Dynamic:
+      return "DYNAMIC";
+    case NeighborTopology::FromTrace:
+      return "FROM_TRACE";
+  }
+
+  return "UNKNOWN";
+}
+
 int logf(int lvl, const char* fmt, ...) {
   if (lvl < LOG_LEVEL) return 0;
 

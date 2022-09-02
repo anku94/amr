@@ -164,18 +164,11 @@ class Mesh {
     return Status::OK;
   }
 
-  Status DoCommunication(size_t nrounds) {
-    Status s = Status::OK;
-    for (size_t cnt = 0; cnt < nrounds; cnt++) {
-      s = DoCommunicationRound();
-      if (s != Status::OK) break;
-    }
-
+  void PrintStats() {
     logger_.Aggregate();
-    return s;
   }
 
-  void Print() {
+  void PrintConfig() {
     for (const auto& block : blocks_) {
       block->Print();
     }

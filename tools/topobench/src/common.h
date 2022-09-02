@@ -8,7 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LOG_LEVEL 3
+// TODO: log_levels should probably be ordered the other way
+#define LOG_LEVEL 1
 
 #define LOG_ERRO 5
 #define LOG_WARN 4
@@ -33,13 +34,53 @@ void msg_abort(int err, const char* msg, const char* func, const char* file,
 enum class Status { OK, MPIError, Error, InvalidPtr };
 
 enum class NeighborTopology { Ring, AllToAll, Dynamic, FromTrace };
+
+std::string TopologyToStr(NeighborTopology t);
+
 struct DriverOpts {
   NeighborTopology topology;
-  int topology_nbrcnt;
+  int topology_nbrcnt;  // XXX: Is this used anywhere?
   size_t blocks_per_rank;
   size_t size_per_msg;
   int comm_rounds;
   const char* trace_root;
+
+  DriverOpts()
+      : topology(NeighborTopology::Ring),
+        topology_nbrcnt(-1),
+        blocks_per_rank(SIZE_MAX),
+        size_per_msg(SIZE_MAX),
+        comm_rounds(-1),
+        trace_root("") {}
+
+#define NA_IF(x) \
+  if (x) return true;
+#define INVALID_IF(x) \
+  if (x) return false;
+#define IS_VALID() return true;
+
+  /* all constituent Invalid checks return True if N/A.
+   * Therefore all need to pass */
+  bool IsValid() { return IsValidGeneric() && IsValidFromTrace(); }
+
+ private:
+  bool IsValidGeneric() {
+    NA_IF(topology == NeighborTopology::FromTrace);
+    INVALID_IF(blocks_per_rank == SIZE_MAX);
+    INVALID_IF(size_per_msg == SIZE_MAX);
+    INVALID_IF(comm_rounds == -1);
+    IS_VALID();
+  }
+
+  bool IsValidFromTrace() {
+    NA_IF(topology != NeighborTopology::FromTrace);
+    INVALID_IF(trace_root == nullptr);
+    IS_VALID();
+  }
+
+#undef NA_IF
+#undef INVALID_IF
+#undef IS_VALID
 };
 
 namespace Globals {

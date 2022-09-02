@@ -6,7 +6,7 @@
 void PrintHelp() {
   printf(
       "\n\t./prog -b <blocks_per_rank> -r <num_rounds>"
-      " -s <msg_sz> -t <topology>\n");
+      " -s <msg_sz> -t <topology:1234> -p <trace_root>\n");
 }
 
 NeighborTopology parse_topology(int topo_id) {
@@ -15,6 +15,10 @@ NeighborTopology parse_topology(int topo_id) {
       return NeighborTopology::Ring;
     case 2:
       return NeighborTopology::AllToAll;
+    case 3:
+      return NeighborTopology::Dynamic;
+    case 4:
+      return NeighborTopology::FromTrace;
   }
 
   return NeighborTopology::Ring;
@@ -25,14 +29,13 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
   extern char* optarg;
   extern int optind;
 
-  opts.blocks_per_rank = SIZE_MAX;
-  opts.size_per_msg = SIZE_MAX;
-  opts.comm_rounds = SIZE_MAX;
-
-  while ((c = getopt(argc, argv, "b:r:s:t:")) != -1) {
+  while ((c = getopt(argc, argv, "b:p:r:s:t:")) != -1) {
     switch (c) {
       case 'b':
         opts.blocks_per_rank = std::stoi(optarg);
+        break;
+      case 'p':
+        opts.trace_root = optarg;
         break;
       case 'r':
         opts.comm_rounds = std::stoi(optarg);
@@ -49,8 +52,7 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
     }
   }
 
-  if ((opts.blocks_per_rank == SIZE_MAX) || (opts.size_per_msg == SIZE_MAX) ||
-      (opts.comm_rounds == SIZE_MAX)) {
+  if (!opts.IsValid()) {
     PrintHelp();
     exit(-1);
   }
