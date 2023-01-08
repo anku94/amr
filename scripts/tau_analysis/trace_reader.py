@@ -10,6 +10,7 @@ from plot_msgs import to_dense_2d
 Interesting files:
 - /aggregate.csv
 ts,evtname,evtval
+- (renamed) /trace/phases.aggr.by_ts.csv
 - /aggr/msg_concat.csv
 timestep,phase,send_or_recv,rank,msg_sz_count
 - /run/logstats.csv
@@ -44,7 +45,7 @@ class TraceReader:
         return df
 
     def read_aggregate(self):
-        aggr_path = "aggregate.csv"
+        aggr_path = "trace/phases.aggr.by_ts.csv"
         return self._read_file(aggr_path)
 
     def read_msg_concat(self):

@@ -9,8 +9,14 @@ import pandas as pd
 import re
 from sklearn import linear_model
 
-from common import label_map
+#  from common import label_map, plot_init_print
+from common import label_map, plot_init, PlotSaver
+from matplotlib.lines import Line2D
+from matplotlib.ticker import MultipleLocator
 from trace_reader import TraceReader, TraceOps
+
+global trace_dir
+trace_dir = None
 
 
 def plot_scatter_ds(data_x, data_y, label_x, label_y, plot_dir) -> None:
@@ -36,13 +42,13 @@ def plot_scatter_ds(data_x, data_y, label_x, label_y, plot_dir) -> None:
     #  ax.xaxis.set_major_formatter(lambda x, pos: "{:.1f} s".format(x / 1e6))
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.1f} s".format(x / 1e6))
 
-    plot_path = "{}/scatter_{}_vs_{}.pdf".format(
-        plot_dir, label_y.lower(), label_x.lower()
-    )
+    plot_fname = f"scatter_{label_y.lower()}_vs_{label_x.lower()}"
+    plot_path = f"{plot_dir}/{plot_fname}.pdf"
 
     fig.tight_layout()
 
-    fig.savefig(plot_path, dpi=600)
+    #  fig.savefig(plot_path, dpi=600)
+    PlotSaver.save(fig, trace_dir, None, plot_fname)
 
 
 def plot_scatter_ds_msg(data_x, data_y, label_x, label_y, plot_dir) -> None:
@@ -73,13 +79,13 @@ def plot_scatter_ds_msg(data_x, data_y, label_x, label_y, plot_dir) -> None:
     #  ax.xaxis.set_major_formatter(lambda x, pos: "{:.1f} s".format(x / 1e6))
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.1f} s".format(x / 1e6))
 
-    plot_path = "{}/scatter_{}_vs_{}.pdf".format(
-        plot_dir, label_y.lower(), label_x.lower()
-    )
+    plot_fname = f"scatter_{label_y.lower()}_vs_{label_x.lower()}"
+    plot_path = f"{plot_dir}/{plot_fname}.pdf"
 
     fig.tight_layout()
 
-    fig.savefig(plot_path, dpi=600)
+    #  fig.savefig(plot_path, dpi=600)
+    PlotSaver.save(fig, trace_dir, None, plot_fname)
 
 
 def plot_scatter(data_x, data_y, label_x, label_y, plot_dir) -> None:
@@ -90,11 +96,11 @@ def plot_scatter(data_x, data_y, label_x, label_y, plot_dir) -> None:
     ax.set_ylabel("Dependent Variable ({})".format(label_y))
     ax.set_title("{} vs {} for 30568 * 512 tasks".format(label_y, label_x))
 
-    plot_path = "{}/scatter_{}_vs_{}.pdf".format(
-        plot_dir, label_y.lower(), label_x.lower()
-    )
+    plot_fname = f"scatter_{label_y.lower()}_vs_{label_x.lower()}"
+    plot_path = f"{plot_dir}/{plot_fname}.pdf"
 
-    fig.savefig(plot_path, dpi=600)
+    #  fig.savefig(plot_path, dpi=600)
+    PlotSaver.save(fig, trace_dir, None, plot_fname)
 
 
 def plot_scatter_standardize(data_x, data_y, label_x, label_y, plot_dir) -> None:
@@ -180,7 +186,8 @@ def plot_box_load_vs_evt(data_x, evt_x, data_y, evt_y, plot_dir) -> None:
     label_y = evt_to_label(evt_y, evtnice_y)
 
     plot_title = "{} vs {}".format(evtnice_x, evtnice_y)
-    plot_path = "{}/{}_vs_{}.pdf".format(plot_dir, flab_x, flab_y)
+    plot_fname = f"{flab_x}_vs_{flab_y}"
+    plot_path = f"{plot_dir}/{plot_fname}.pdf"
 
     """ manually enable if data_x is something other than rcnt,
     and it needs to be rounded off for a lower number of box plots
@@ -201,7 +208,8 @@ def plot_box_load_vs_evt(data_x, evt_x, data_y, evt_y, plot_dir) -> None:
     ax.set_title(plot_title)
 
     fig.tight_layout()
-    fig.savefig(plot_path, dpi=300)
+    #  fig.savefig(plot_path, dpi=300)
+    PlotSaver.save(fig, trace_dir, None, plot_fname)
 
 
 def plot_load_vs_evt(load, evt, evt_label, plot_dir) -> None:
@@ -216,7 +224,8 @@ def plot_load_vs_evt(load, evt, evt_label, plot_dir) -> None:
     data_y = evt
     label_y = "Phase Time {}".format(evt_label)
     plot_title = "Load vs {}".format(evt_label)
-    plot_path = "{}/load_vs_{}.pdf".format(plot_dir, file_label)
+    plot_fname = f"load_vs_{file_label}"
+    plot_path = f"{plot_dir}/{plot_fname}.pdf"
 
     xmin = min(data_x) - 1
     xmax = max(data_x)
@@ -241,7 +250,8 @@ def plot_load_vs_evt(load, evt, evt_label, plot_dir) -> None:
     ax.set_xticks(range(xmin, xmax))
 
     fig.tight_layout()
-    fig.savefig(plot_path, dpi=600)
+    #  fig.savefig(plot_path, dpi=600)
+    PlotSaver.save(fig, trace_dir, None, plot_fname)
 
 
 def plot_load(load_mat, lb_idxes, plot_dir: str) -> None:
@@ -266,10 +276,33 @@ def plot_load(load_mat, lb_idxes, plot_dir: str) -> None:
     ax.set_xlabel("Timestep")
     ax.set_ylabel("Load (Meshblock Count)")
 
-    ax.legend()
+    handles, labels = ax.get_legend_handles_labels()
+    handles.extend(
+        [
+            Line2D(
+                [0],
+                [0],
+                ls="",
+                marker="o",
+                mfc="red",
+                mec="none",
+                ms=14,
+                label="LB Event",
+            )
+        ]
+    )
+    ax.legend(handles=handles, fontsize=14)
 
-    ax.set_title("Load Distribution Across Timesteps")
-    fig.savefig(plot_path, dpi=600)
+    ax.xaxis.set_major_formatter(lambda x, pos: "{:.0f}K".format(x / 1000.0))
+    ax.yaxis.set_minor_locator(MultipleLocator(1000))
+    ax.yaxis.grid(visible=True, which="major", color="#aaa")
+    ax.yaxis.grid(visible=True, which="minor", color="#ddd")
+
+    ax.set_title("Load Across Ranks For Each Timestep")
+
+    fig.tight_layout()
+    #  fig.savefig(plot_path, dpi=600)
+    PlotSaver.save(fig, trace_dir, None, "load_vs_ts")
     plt.close(fig)
 
 
@@ -286,6 +319,16 @@ def run_plot_load_vs_evt(trace_dir: str, plot_dir: str) -> None:
         "npeer:BoundaryComm",
     ]
 
+    all_labels = [
+        "tau:AR1",
+        "tau:AR2",
+        "tau:SR",
+        "tau:AR3",
+        "tau:AR3_UMBT",
+        "rcnt:",
+    ]
+
+
     tr = TraceOps(trace_dir)
     all_rmats = read_regr_mats(tr, all_labels)
 
@@ -293,9 +336,11 @@ def run_plot_load_vs_evt(trace_dir: str, plot_dir: str) -> None:
     evt_x = load
     evtlab_x = "rcnt:"
 
-    for evt_to_plot in [0, 1, 2, 3, 4, 6, 7, 8]:
+    # simplified due to limited time
+    #  for evt_to_plot in [0, 1, 2, 3, 4, 6, 7, 8]:
+    for evt_to_plot in [0, 1, 2, 3, 4]:
         plot_box_load_vs_evt(
-            load, all_rmats[evt_to_plot], all_labels[evt_to_plot], plot_dir
+            load, evtlab_x, all_rmats[evt_to_plot], all_labels[evt_to_plot], plot_dir
         )
 
     evtidx_x = 6
@@ -305,7 +350,7 @@ def run_plot_load_vs_evt(trace_dir: str, plot_dir: str) -> None:
         all_labels[evtidx_x],
         all_rmats[evtidx_y],
         all_labels[evtidx_y],
-        plot_dir
+        plot_dir,
     )
 
     return
@@ -318,12 +363,14 @@ def run_plot_load_vs_evt(trace_dir: str, plot_dir: str) -> None:
 
     lb_idxes = get_lb_timesteps(tr)
     plot_load(mat_rcnt, lb_idxes, plot_dir)
+    plot_load(m, lb_idxes, plot_dir)
     pass
 
 
 def run_plot():
-    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
-    plot_dir = "figures/20220809"
+    #  trace_dir = "/mnt/ltio/parthenon-topo/profile8"
+    #  plot_dir = "figures/20221103"
+    plot_dir = None
 
     #  run_plot_evt_vs_msgcnt(trace_dir, plot_dir)
     run_plot_load_vs_evt(trace_dir, plot_dir)
@@ -444,7 +491,6 @@ def run_regr_phases():
 
 
 def run_regression():
-    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
     TraceOps.trace = TraceReader(trace_dir)
 
     evtx_label = "rcnt:"
@@ -459,4 +505,8 @@ def run_regression():
 
 
 if __name__ == "__main__":
+    #  global trace_dir
+    trace_dir = "/mnt/ltio/parthenon-topo/profile10"
+
+    plot_init()
     run_plot()

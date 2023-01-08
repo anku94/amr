@@ -205,7 +205,7 @@ tau_linked_build() {
 }
 
 tau_linked_run() {
-  RUN_SUFFIX=profile9
+  RUN_SUFFIX=profile11
 
   AMR_BIN=/users/ankushj/repos/phoebus/build-psm-wtau/src/phoebus
   # AMR_BIN=/users/ankushj/repos/phoebus/build-psm/src/phoebus
@@ -267,4 +267,4 @@ tau_linked_run() {
 # process_profile
 # tau_linked_build
 tau_linked_run
-# process_log /mnt/ltio/parthenon-topo/profile8/run/log.txt
+# process_log /mnt/ltio/parthenon-topo/profile10/run/log.txt

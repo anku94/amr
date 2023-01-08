@@ -12,6 +12,7 @@ import ray
 import traceback
 from typing import Tuple
 
+from pathlib import Path
 from task import Task
 from trace_reader import TraceOps
 
@@ -128,6 +129,7 @@ def filter_and_add_missing(phases):
         phase_depth = len([i for i in phase_name if "_" in i])
 
         if beg_or_end == "BEGIN":
+            #  print(f'BEGIN {phase_name}, {cur_stack} (phase_depth: {phase_depth})')
             # Ignore duplicate BEGINs
             if phase_name in cur_stack:
                 continue
@@ -137,6 +139,7 @@ def filter_and_add_missing(phases):
                 active_top = cur_stack.pop()
                 active_top_ts = cur_stack_ts.pop()
                 filtered_phases.append((phase_ts, active_top + ".END"))
+                #  print(f'Closing phase {active_top}')
 
             cur_stack.append(phase_name)
             cur_stack_ts.append(phase_ts)
@@ -242,7 +245,7 @@ def classify_phases(df_ts):
         phases_cleaned = filter_and_add_missing(phases)
     except Exception as e:
         ipdb.set_trace()
-    #  print_phases(phases, '-', '=')
+    #  print_phases(phases_cleaned, '-', '=')
 
     validation_passed = True
 
@@ -255,7 +258,7 @@ def classify_phases(df_ts):
         print("VALIDATION FAILED!!!!")
         sys.exit(-1)
 
-    return phases, validation_passed
+    return phases_cleaned, validation_passed
 
 
 def aggregate_phases(df, phases):
@@ -368,6 +371,7 @@ def classify_trace(rank, in_path, out_path):
         header = "rank,ts,evtname,evtval\n"
         f.write(header)
         for ts, df_ts in all_dfs:
+            #  if ts < 26: continue
             #  print(rank, ts)
             #  print(df_ts.to_string())
             #  df_ts = all_dfs.get_group(3807)
@@ -379,7 +383,7 @@ def classify_trace(rank, in_path, out_path):
                 print(e)
                 print(traceback.format_exc())
                 sys.exit(-1)
-            #  if ts > 10: break
+            #  if ts > 25: break
             #  break
 
 
@@ -436,10 +440,12 @@ class ParallelReader(TraceClassifier):
 
 
 def run_classify(trace_dir):
+    phase_path = Path(trace_dir) / "phases"
+    phase_path.mkdir(parents=True, exist_ok=True)
     tc = TraceClassifier(trace_dir)
-    #  tc.run_rank(14)
+    #  tc.run_rank(47)
     #  tc.run_node()
-    #  tc.run_func_with_ray(classify_trace_parworker)
+    tc.run_func_with_ray(classify_trace_parworker)
 
     return
 
@@ -509,7 +515,7 @@ def run_aggregate(trace_dir):
 
 
 if __name__ == "__main__":
-    trace_dir = "/mnt/ltio/parthenon-topo/profile9"
+    trace_dir = "/mnt/ltio/parthenon-topo/profile11"
     #  run_classify(trace_dir)
-    run_parse_log(trace_dir)
+    #  run_parse_log(trace_dir)
     run_aggregate(trace_dir)

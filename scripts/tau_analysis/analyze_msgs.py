@@ -406,6 +406,10 @@ def plot_msgtl(ts, bins, hist_snd, hist_rcv, plot_dir):
         "Send/Receive Latency Distribution (BoundaryComm, ts:{})".format(ts_cs)
     )
 
+    ax.set_title(
+        "Message Latency Distribution (TS: 5K of 30K)"
+    )
+
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f}K".format(x / 1e3))
 
     max_idx = np.max(np.nonzero(hist_rcv))
@@ -417,6 +421,7 @@ def plot_msgtl(ts, bins, hist_snd, hist_rcv, plot_dir):
     xlim_max = 500
 
     ax.set_xlim([0, xlim_max])
+    ax.set_ylim([0, 60000])
 
     fig.tight_layout()
 

@@ -817,11 +817,7 @@ def plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=False
         fig.show()
 
 
-def run_plot_timestep():
-    trace_dir = "/mnt/ltio/parthenon-topo/profile6.wtau"
-    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
-    plot_dir = "/users/ankushj/repos/amr/scripts/tau_analysis/figures"
-    plot_dir = "figures/20220809"
+def run_plot_timestep(trace_dir, plot_dir):
     ts_to_plot = 1
 
     cached = False
@@ -829,21 +825,21 @@ def run_plot_timestep():
     df_phases = None
 
     if not cached:
-        df_phases = pd.read_csv("{}/aggregate.csv".format(trace_dir))
+        df_phases = pd.read_csv("{}/trace/phases.aggr.by_ts.csv".format(trace_dir))
 
     df_log = pd.read_csv("{}/run/log.txt.csv".format(trace_dir)).astype({"cycle": int})
 
-    #  plot_umbt_rankgrid(df_phases, "AR1", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR1", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR2", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "SR", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3_UMBT", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
-    #  plot_umbt_rankgrid(df_phases, "AR2", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid(df_phases, "AR3", plot_dir, cached=cached)
-    #  plot_umbt_rankgrid(df_phases, "AR3_UMBT", plot_dir, cached=cached)
+    plot_umbt_rankgrid(df_phases, "AR1", plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR1", plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR2", plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, "SR", plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3", plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3_UMBT", plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
+    plot_umbt_rankgrid(df_phases, "AR2", plot_dir, cached=cached)
+    plot_umbt_rankgrid(df_phases, "AR3", plot_dir, cached=cached)
+    plot_umbt_rankgrid(df_phases, "AR3_UMBT", plot_dir, cached=cached)
     plot_umbt_stats(df_phases, df_log, plot_dir)
     return
 
@@ -867,14 +863,14 @@ def run_plot_timestep():
     return
 
 
-""" Input: trace/taskaggr.csv 
+""" Input: trace/phases.aggr.csv 
 Output: XX
 """
 
 
 def run_plot_aggr(trace_dir: str, plot_dir):
     tr = TraceOps(trace_dir)
-    aggr_df_path = "{}/trace/taskaggr.csv".format(trace_dir)
+    aggr_df_path = "{}/trace/phases.aggr.csv".format(trace_dir)
     aggr_df = pd.read_csv(aggr_df_path)
     print(aggr_df)
 
@@ -989,11 +985,11 @@ def run_analyze(trace_dir: str):
 
 
 def run_plot():
-    trace_dir = "/mnt/ltio/parthenon-topo/profile9"
+    trace_dir = "/mnt/ltio/parthenon-topo/profile10"
     # aggr_fpath = '/Users/schwifty/repos/amr-data/20220517-phase-analysis/aggregate.csv'
     # df = pd.read_csv(aggr_fpath)
     plot_init()
-    plot_dir = "figures/20220811-profile9"
+    plot_dir = "figures/20221214-profile10"
     # # plot_neighbors(df, plot_dir)
     # plot_all_events(df, plot_dir)
 
@@ -1007,7 +1003,7 @@ def run_plot():
     #  calc_amr_log_stats(log_df)
     #  run_plot_amr_comp()
     #  run_profile()
-    #  run_plot_timestep()
+    run_plot_timestep(trace_dir, plot_dir)
     #  run_analyze(trace_dir)
     run_plot_aggr(trace_dir, plot_dir)
 
