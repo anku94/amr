@@ -5,9 +5,9 @@ import pandas as pd
 import pickle
 import ipdb
 
-from common import plot_init, PlotSaver, label_map
+from common import plot_init, PlotSaver, label_map, get_label
 from trace_reader import TraceReader, TraceOps
-from typing import Dict
+from typing import Dict, List
 
 
 def plot_neighbors(df, plot_dir):
@@ -826,7 +826,7 @@ def run_plot_timestep(trace_dir, plot_dir):
         ts_to_plot.append(ts - 1)
         ts_to_plot.append(ts)
         ts_to_plot.append(ts + 1)
-    print(ts_to_plot)
+        print(ts_to_plot)
 
     for ts in ts_to_plot:
         print(ts)
@@ -840,90 +840,44 @@ def run_plot_timestep(trace_dir, plot_dir):
     return
 
 
-""" Input: trace/phases.aggr.csv 
-Output: XX
-"""
-
-
-class AggrReader:
-    def __init__(self, trace_dir: str):
-        self._trace_dir = trace_dir
-        self._aggr_df_path = "{}/trace/phases.aggr.csv".format(trace_dir)
-        self._aggr_df = pd.read_csv(self._aggr_df_path)
-
-        pass
-
-    def get_data(self, key) -> np.array:
-        row = self._aggr_df[self._aggr_df["evtname"] == key]["evtval"].iloc[0]
-        row = np.array([int(i) for i in row.split(",")], dtype=np.int64)
-
-        return row
-        pass
-
-    def get_phase_props(self) -> Dict[str, Dict]:
-        phases = ["AR1", "AR2", "SR", "AR3", "AR3_UMBT"]
-        phase_labels = [label_map[f"tau:{p}"] for p in phases]
-        phase_order = [0, 2, 1, 3, 4]
-        color_order = [ f"C{n}" for n in phase_order ]
-
-        phase_props = {}
-
-        for idx in range(len(phases)):
-            phase_name = phases[idx]
-            props = {
-                'label': phase_labels[idx],
-                'order': phase_order[idx],
-                'color': color_order[idx],
-            }
-
-            phase_props[phase_name] = props
-
-        return phase_props
-
-    def get_phase_times_rankwise(self) -> Dict[str, np.array]:
-        phases = ["AR1", "AR2", "SR", "AR3", "AR3_UMBT"]
-        rankwise_times = [self.get_data(p) for p in phases]
-
-        return dict(zip(phases, rankwise_times))
-
-    def get_phase_times_total(self) -> Dict[str, int]:
-        all_rankwise_times = self.get_phase_times_rankwise()
-        all_total_times = {}
-        for phase, phase_times in all_rankwise_times.items():
-            # rank-microseconds
-            phase_total_rus = sum(phase_times)
-            # rank-hours
-            phase_total_rh = phase_total_rus / (1e6 * 3600)
-            all_total_times[phase] = int(phase_total_rh)
-
-        return all_total_times
-
-
 """ Input: trace/phases.aggr.csv for two traces
 Output: phase_rh_profile10_profile14.png (example)
 """
 
+def get_rankhours(trace_dir: str, phases: List[str]) -> Dict[str, int]:
+    tr = TraceOps(trace_dir)
+    query_strs = list(map(lambda x: "aggr:rw:" + x, phases))
+    rh = {}
+    for phase, query_str in zip(phases, query_strs):
+        phase_data = tr.multimat(query_str)
+        phase_total_rh = int(sum(phase_data) / (1e6 * 3600))
+        rh[phase] = phase_total_rh
+
+    return rh
+
 
 def plot_rankhour_comparison(trace_a: str, trace_b: str):
-    reader_a = AggrReader(trace_a)
-    times_a = reader_a.get_phase_times_total()
+    phases = [ "AR1", "SR", "AR2", "AR3_UMBT", "AR3-AR3_UMBT" ]
+    phase_query_strs = list(map(lambda x: "aggr:rw:" + x, phases))
+
+    times_a = get_rankhours(trace_a, phases)
     label_a = trace_a.split("/")[-1]
 
-    reader_b = AggrReader(trace_b)
-    times_b = reader_b.get_phase_times_total()
+    times_b = get_rankhours(trace_b, phases)
     label_b = trace_b.split("/")[-1]
 
     fig, ax = plt.subplots(1, 1)
+
+    data_x = np.arange(len(phases))
+    labels_x = [ get_label(p) for p in phases ]
 
     data_x1 = times_a.keys()
     data_x2 = times_b.keys()
     for x1, x2 in zip(data_x1, data_x2):
         assert x1 == x2
 
-    data_x = np.arange(len(data_x1))
-
-    data_y1 = times_a.values()
-    data_y2 = times_b.values()
+    data_y1 = [ times_a[p] for p in phases ]
+    data_y2 = [ times_b[p] for p in phases ]
 
     width = 0.35
     ax.bar(data_x - width / 2, data_y1, width, label=label_a, zorder=2)
@@ -933,10 +887,7 @@ def plot_rankhour_comparison(trace_a: str, trace_b: str):
     ax.set_ylabel("Rank-Hours (512 ranks * hrs/rank)")
     ax.set_title(f"Phase-wise Time Comparison: {label_a} vs {label_b}")
 
-    #  tick_labels_x = [label_map[f"tau:{k}"] for k in data_x1]
-    props_x = reader_a.get_phase_props()
-    ticklabels_x = [ props_x[p]["label"] for p in data_x1 ]
-    ax.set_xticks(data_x, ticklabels_x)
+    ax.set_xticks(data_x, labels_x)
 
     ax.yaxis.set_minor_locator(MultipleLocator(100))
     ax.yaxis.grid(which="major", visible=True, color="#bbb", zorder=0)
@@ -964,25 +915,18 @@ def run_plot_aggr(trace_dir: str, plot_dir):
         data_x = list(range(nranks))
         fig, ax = plt.subplots(1, 1)
 
-        #  ipdb.set_trace()
-        data_rankwise = aggr_reader.get_phase_times_rankwise()
-        phase_props = aggr_reader.get_phase_props()
-
-        phase_names = list(data_rankwise.keys())
-        phase_order = [ phase_props[p]['order'] for p in phase_names ]
-
-        for phase_idx in phase_order:
-            phase = phase_names[phase_idx]
-            phase_data = data_rankwise[phase]
-            props = phase_props[phase]
-            ax.plot(data_x, phase_data, label=props["label"], color=props["color"])
+        phases = [ "AR1", "SR", "AR2", "AR3_UMBT", "AR3-AR3_UMBT" ]
+        for phase in phases:
+            phase_query = f"aggr:rw:{phase}"
+            phase_data = tr.multimat(phase_query)
+            ax.plot(data_x, phase_data, label=get_label(phase))
 
         ax.set_xlabel("Rank ID")
         ax.set_ylabel("Total Time (s)")
         ax.set_title("Total Time For Each Phase/Rank")
 
         ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f}s".format(x / 1e6))
-        ax.legend(bbox_to_anchor=(-0.23, 1.08), loc="lower left", ncol=5)
+        ax.legend(bbox_to_anchor=(-0.18, 1.08), loc="lower left", ncol=5)
         fig.tight_layout()
 
         plot_fname = "phases.aggr"

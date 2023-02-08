@@ -2,9 +2,11 @@ import collections
 import numpy as np
 import pandas as pd
 import re
+import unittest
 
 from operator import itemgetter
 from plot_msgs import to_dense_2d
+from typing import List
 
 """
 Interesting files:
@@ -13,8 +15,11 @@ ts,evtname,evtval
 - (renamed) /trace/phases.aggr.by_ts.csv
 - /aggr/msg_concat.csv
 timestep,phase,send_or_recv,rank,msg_sz_count
-- /run/logstats.csv
-cycle,time,dt,zc_per_step,wtime_total,wtime_step_other,zc_wamr,wtime_step_amr
+- /run/logstats.csv - from analyze_taskflow.py
+cycle,time,dt,zone-cycles/wsec_step,wsec_total,wsec_step,zone-cycles/wsec,wsec_AMR
+- /run/log.txt.csv - from scripts/phoebus-runs.sh
+cycle,time,dt,zc_per_step,wtime_total,wtime_step_other,zc_wamr,wtime_step_amr 
+
 
 Other files:
 
@@ -28,6 +33,8 @@ Other files:
 
 class TraceReader:
     def __init__(self, dir_path):
+        print(f"[TraceReader::Init] {dir_path}")
+
         self._dir_path = dir_path
         self._df_cache = {}
 
@@ -44,9 +51,31 @@ class TraceReader:
 
         return df
 
-    def read_aggregate(self):
+    def read_aggr_rw(self):
+        aggr_path = "trace/phases.aggr.csv"
+        return self._read_file(aggr_path)
+
+    def get_aggr_rw_key(self, key: str):
+        aggr_df = self.read_aggr_rw()
+        row = aggr_df[aggr_df["evtname"] == key]["evtval"].iloc[0]
+        row = np.array([int(i) for i in row.split(",")], dtype=np.int64)
+
+        print(f"Reading {key}: {len(row)} items retrieved")
+
+        return row
+
+    def read_aggr_tsw(self):
         aggr_path = "trace/phases.aggr.by_ts.csv"
         return self._read_file(aggr_path)
+
+    def get_aggr_tsw_key(self, key: str):
+        aggr_df = self.read_aggr_tsw()
+        row = aggr_df[aggr_df["evtname"] == key]["evtval"].iloc[0]
+        row = np.array([int(i) for i in row.split(",")], dtype=np.int64)
+
+        print(f"Reading {key}: {len(row)} items retrieved")
+
+        return row
 
     def read_msg_concat(self):
         msg_concat_path = "aggr/msg_concat.csv"
@@ -60,6 +89,9 @@ class TraceReader:
                 "msg_sz_count": str,
             }
         )
+
+        print(f"Reading msg_concat: {len(row)} items retrieved")
+
         return df_msg
 
     def read_rank_trace(self, rank: int) -> pd.DataFrame:
@@ -82,6 +114,9 @@ class TraceReader:
         df = self.read_aggregate()
         df_rel = df[df["evtname"] == event]
         evt_vals = TraceReader._parse_arrays(df_rel["evtval"])
+
+        print(f"Reading {event}: {len(evt_vals)} items retrieved")
+
         return evt_vals
 
     def get_tau_state_(self, state: str) -> pd.DataFrame:
@@ -93,6 +128,9 @@ class TraceReader:
             return list(map(int, ls_str))
 
         df_key["val"] = df_key["val"].apply(strtolsi)
+
+        print(f"Reading {state}: {len(df_key)} items retrieved")
+
         return df_key
 
     def get_rank_alloc(self) -> None:
@@ -238,19 +276,25 @@ class TraceOps:
         return [pos, neg]
 
     @classmethod
+    def _parse_query(cls, query_str) -> List:
+        match = re.fullmatch(r"(^.*?):(.*$)", query_str)
+        pref, rest = match.group(1), match.group(2)
+        if ":" in rest:
+            return [pref] + cls._parse_query(rest)
+        else:
+            return [pref, cls.split_eqn(rest)]
+
+    @classmethod
     def cropsum_2d(cls, mats):
         len_min = min([m.shape[0] for m in mats])
         mats = [m[:len_min] for m in mats]
-        print([m.shape for m in mats])
+        #  print([m.shape for m in mats])
         mat_agg = np.sum(mats, axis=0)
-        print(mat_agg.shape)
+        #  print(mat_agg.shape)
         return mat_agg
 
     @classmethod
     def multimat_labels(cls, labels, f):
-        print(labels)
-        labels = cls.split_eqn(labels)
-        print(labels)
         labels_pos = labels[0]
         labels_neg = labels[1]
 
@@ -265,33 +309,33 @@ class TraceOps:
 
         return mat_pos_agg
 
-    def multimat_tau(self, labels):
-        labels = labels.split("+")
-        mats = [self.trace.get_tau_event(l) for l in labels]
-        mat_agg = self.cropsum_2d(mats)
-        return mat_agg
-
-    def multimat_msg(self, labels):
-        labels = labels.split("+")
-        mats = [self.trace.get_msg_count(l) for l in labels]
-        mat_agg = self.cropsum_2d(mats)
-        return mat_agg
-
     # XXX: some memory usage issues possible?
-    def multimat(self, label_str):
-        ltype, labels = label_str.split(":")
-        if ltype == "tau":
-            return self.multimat_labels(labels, self.trace.get_tau_event)
-        elif ltype == "msgcnt":
-            return self.multimat_labels(labels, self.trace.get_msg_count)
-        elif ltype == "msgsz":
-            return self.multimat_labels(labels, self.trace.get_msg_sz)
-        elif ltype == "npeer":
-            return self.multimat_labels(labels, self.trace.get_msg_npeers)
-        elif ltype == "rcnt":
+    def multimat(self, query_str):
+        parsed_query = self._parse_query(query_str)
+        qtype = parsed_query[:-1]
+        qlabels = parsed_query[-1]
+
+        if qtype[0] == "rcnt":
             return np.array(self.trace.get_rank_alloc())
+
+        f = None
+
+        if qtype[0] == "tau":
+            f = self.trace.get_tau_event
+        elif qtype[0] == "msgcnt":
+            f = self.trace.get_msg_count
+        elif qtype[0] == "msgsz":
+            f = self.trace.get_msg_sz
+        elif qtype[0] == "npeer":
+            f = self.trace.get_msg_npeers
+        elif qtype[0] == "aggr" and qtype[1] == "rw":
+            f = self.trace.get_aggr_rw_key
+        elif qtype[0] == "aggr" and qtype[1] == "tsw":
+            f = self.trace.get_aggr_tsw_key
         else:
             assert False
+
+        return self.multimat_labels(qlabels, f)
 
 
 def TraceReaderTest():
@@ -302,5 +346,28 @@ def TraceReaderTest():
     tr.get_tau_state("RL")
 
 
+class TestTraceReader(unittest.TestCase):
+    def test_parse_query(self):
+        query_str = "tau:AR3"
+        parsed_query = TraceOps._parse_query(query_str)
+        self.assertEqual(len(parsed_query), 2)
+        self.assertEqual(parsed_query[0], "tau")
+        self.assertEqual(parsed_query[1][0][0], "AR3")
+
+        query_str = "aggr:rw:AR3-AR3U"
+        parsed_query = TraceOps._parse_query(query_str)
+        self.assertEqual(len(parsed_query), 3)
+        self.assertEqual(parsed_query[0], "aggr")
+        self.assertEqual(parsed_query[1], "rw")
+        self.assertEqual(parsed_query[2][0][0], "AR3")
+        self.assertEqual(parsed_query[2][1][0], "AR3U")
+
+    def test_read_aggr(self):
+        trace_path = "/mnt/ltio/parthenon-topo/profile14"
+        tr = TraceOps(trace_path)
+        data = tr.multimat("aggr:rw:AR3-AR3_UMBT")
+        assert len(data) == 512
+
+
 if __name__ == "__main__":
-    TraceReaderTest()
+    unittest.main()
