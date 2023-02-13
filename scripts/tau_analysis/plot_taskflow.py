@@ -951,8 +951,8 @@ def run_plot_aggr(trace_dir: str):
 
         data_x = range(len(phases_med[0]))
 
-        counter = 0
-        for phase, phase_med, phase_max in zip(phases, phases_med, phases_max):
+        for counter, zipobj in enumerate(zip(phases, phases_med, phases_max)):
+            phase, phase_med, phase_max = zipobj
             ax.plot(data_x, phase_med, label=get_label(phase), color=f"C{counter}")
             ax.plot(data_x, phase_max, linestyle="--", color=f"C{counter}", alpha=0.5)
 
