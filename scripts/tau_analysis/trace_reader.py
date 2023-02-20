@@ -68,15 +68,6 @@ class TraceReader:
         aggr_path = "trace/phases.aggr.by_ts.csv"
         return self._read_file(aggr_path)
 
-    def get_aggr_tsw_key(self, key: str):
-        aggr_df = self.read_aggr_tsw()
-        row = aggr_df[aggr_df["evtname"] == key]["evtval"].iloc[0]
-        row = np.array([int(i) for i in row.split(",")], dtype=np.int64)
-
-        print(f"Reading {key}: {len(row)} items retrieved")
-
-        return row
-
     def read_msg_concat(self):
         msg_concat_path = "aggr/msg_concat.csv"
         df_msg = self._read_file(msg_concat_path)
@@ -110,8 +101,8 @@ class TraceReader:
         logstats_path = "run/log.txt.csv"
         return self._read_file(logstats_path)
 
-    def get_tau_event(self, event: str) -> None:
-        df = self.read_aggregate()
+    def get_aggr_tsw(self, event: str) -> None:
+        df = self.read_aggr_tsw()
         df_rel = df[df["evtname"] == event]
         evt_vals = TraceReader._parse_arrays(df_rel["evtval"])
 
@@ -258,7 +249,8 @@ class TraceReader:
 
 class TraceOps:
     def __init__(self, dir_path):
-        self.trace = TraceReader(dir_path)
+        self._cache = {}
+        self._trace = TraceReader(dir_path)
 
     @classmethod
     def split_eqn(cls, eqn):
@@ -310,7 +302,7 @@ class TraceOps:
         return mat_pos_agg
 
     # XXX: some memory usage issues possible?
-    def multimat(self, query_str):
+    def _multimat_uncached(self, query_str):
         parsed_query = self._parse_query(query_str)
         qtype = parsed_query[:-1]
         qlabels = parsed_query[-1]
@@ -321,21 +313,58 @@ class TraceOps:
         f = None
 
         if qtype[0] == "tau":
-            f = self.trace.get_tau_event
+            # TODO: deprecate this in favor of aggr_tsw
+            f = self._trace.get_aggr_tsw
         elif qtype[0] == "msgcnt":
-            f = self.trace.get_msg_count
+            f = self._trace.get_msg_count
         elif qtype[0] == "msgsz":
-            f = self.trace.get_msg_sz
+            f = self._trace.get_msg_sz
         elif qtype[0] == "npeer":
-            f = self.trace.get_msg_npeers
+            f = self._trace.get_msg_npeers
         elif qtype[0] == "aggr" and qtype[1] == "rw":
-            f = self.trace.get_aggr_rw_key
+            f = self._trace.get_aggr_rw_key
         elif qtype[0] == "aggr" and qtype[1] == "tsw":
-            f = self.trace.get_aggr_tsw_key
+            f = self._trace.get_aggr_tsw
         else:
             assert False
 
         return self.multimat_labels(qlabels, f)
+
+    def multimat(self, query_str, nocache=False):
+        if query_str in self._cache and not nocache:
+            return self._cache[query_str]
+
+        response = self._multimat_uncached(query_str)
+        self._cache[query_str] = response
+        return response
+
+    @classmethod
+    def trim_to_min_1d(cls, all_data: List) -> List:
+        min_len = min(map(len, all_data))
+        print(f"[Trim_1D]: Trimming all to {min_len}")
+        return [ data[:min_len] for data in all_data ]
+
+    @classmethod
+    def trim_to_min(cls, all_data: List) -> List:
+        shapes = list(map(lambda x: x.shape, all_data))
+        min_shape = list(map(lambda x: min(x), zip(*shapes)))
+
+        ret = []
+        for d in all_data:
+            if len(min_shape) == 1:
+                dt = d[:min_shape[0]]
+            elif len(min_shape) == 2:
+                dt = d[:min_shape[0], :min_shape[1]]
+            else:
+                assert("not supported")
+
+            ret.append(dt)
+        return ret
+
+    @classmethod
+    def smoothen_1d(cls, data: List, window=100) -> List:
+        series = pd.Series(data).rolling(window=window).mean().tolist()
+        return series
 
 
 def TraceReaderTest():
@@ -367,6 +396,16 @@ class TestTraceReader(unittest.TestCase):
         tr = TraceOps(trace_path)
         data = tr.multimat("aggr:rw:AR3-AR3_UMBT")
         assert len(data) == 512
+
+    def test_trim(self):
+        x = np.zeros([5, 3])
+        y = np.zeros([4, 4])
+        z = np.zeros([6, 5])
+
+        out = TraceOps.trim_to_min([x, y, z])
+
+        for mat in out:
+            assert(mat.shape == (4, 3))
 
 
 if __name__ == "__main__":
