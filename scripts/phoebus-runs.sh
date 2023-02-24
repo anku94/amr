@@ -1,166 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash -eu
 
 . common.sh
-
-trap_handler() {
-  echo "Trapping SIGINT and propagating..."
-  pkill -INT mpirun
-  sleep 60
-}
-
-openmpi_run_fullmpi() {
-  . ~/spack/share/spack/setup-env.sh
-  spack env deactivate
-  spack load mpi
-  JOBDIR=/mnt/lustre/parthenon-phoebus/run-micro
-  MPIEXEC=mpirun
-  PROG=/users/ankushj/repos/phoebus/build-omp/src/phoebus
-  DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_2d_parthreads.pin
-  DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d.pin
-  DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_2d_parthreads_micro.pin
-  export PATH=$PATH:/users/ankushj/repos/tau/tau-ompi-ubuntu2004/tau-2.31/x86_64/bin
-
-  TAU=$(echo /users/ankushj/repos/tau/tau-ompi-ubuntu2004/tau-2.31/x86_64/bin/tau_exec -T ompt,mpi,openmp -ompt -ebs)
-
-  cmd=$(echo $MPIEXEC $(binding_flags) --host $(hoststr 8) $(mca_flags) $PROG -i $DECK)
-  cmd=$(echo $MPIEXEC $(binding_flags) --host $(hoststr 8) $(mca_flags) $TAU $PROG -i $DECK)
-  cmd=$(echo $MPIEXEC $(binding_flags) $(tau_flags) --host $(hoststr 8) $(mca_flags) $TAU $PROG -i $DECK)
-  cmd=$(echo $MPIEXEC $(tau_flags) --host $(hoststr 8) $(mca_flags) $TAU $PROG -i $DECK)
-  # cmd=$(echo $MPIEXEC --host $(hoststr 8) $(mca_flags) $PROG -i $DECK)
-  echo $cmd
-
-  cd $JOBDIR
-  $cmd 2>&1 | tee log.txt
-}
-
-openmpi_run() {
-  JOBDIR=/mnt/lustre/parthenon-phoebus/run-3d-128-1t1288p-reflvl2
-  mkdir -p $JOBDIR
-  rm -rf $JOBDIR/*
-
-  MPIEXEC=mpirun
-  PROG=/users/ankushj/repos/phoebus/build-mpionly/src/phoebus
-  PROG=/users/ankushj/repos/phoebus/build-mpionly-2/src/phoebus
-  # PROG=/users/ankushj/repos/phoebus/build-omp-4t/src/phoebus
-  # PROG=/users/ankushj/repos/phoebus/build-omp-8t/src/phoebus
-  # PROG=/users/ankushj/repos/phoebus/build-omp-16t/src/phoebus
-  # PROG=/users/ankushj/repos/phoebus/build-omp/parthenon/example/calculate_pi/pi-example
-  DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_2d_parthreads.pin
-  DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d.pin
-  DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_64.pin
-  # DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_2d_parthreads_micro.pin
-  # DECK=/users/ankushj/repos/parthenon/example/calculate_pi/parthinput.example.big
-  export PATH=$PATH:/users/ankushj/repos/amr-workspace/tau/tau-2.31/x86_64/bin
-
-  TAU=$(echo /users/ankushj/repos/amr-workspace/tau/tau-2.31/x86_64/bin/tau_exec -T ompt,mpi,openmp -ompt -ebs)
-
-  cmd=$(echo $MPIEXEC $(binding_flags) --host $(hoststr 8) $(mca_flags) $PROG -i $DECK)
-  cmd=$(echo $MPIEXEC $(binding_flags) --host $(hoststr 8) $(mca_flags) $TAU $PROG -i $DECK)
-  cmd=$(echo $MPIEXEC $(binding_flags) $(tau_flags) --host $(hoststr 8 1) -np 8 $(mca_flags) $TAU $PROG -i $DECK)
-  # cmd=$(echo $MPIEXEC $(tau_flags) --host $(hoststr 8) -np 128 --map-by ppr:1:core $(mca_flags) $TAU $PROG -i $DECK)
-  cmd=$(echo $MPIEXEC $(tau_flags) --host $(hoststr 8 16) -np 128 --map-by ppr:1:core $(mca_flags) $TAU $PROG -i $DECK)
-
-  echo $cmd
-
-  cd $JOBDIR
-  $cmd 2>&1 | tee log.txt
-}
-
-tau_plugin_run() {
-  AMR_BIN=/users/ankushj/repos/phoebus/build-mpich-1t/src/phoebus
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_micro.pin
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_64.pin
-  RUN_ROOT=/mnt/lustre/parthenon-phoebus/tauplugtest-psm
-  mkdir -p $RUN_ROOT
-  cp hosts.txt $RUN_ROOT
-  cd $RUN_ROOT
-
-  TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-mpich-2004
-  TAU_REL=tau-2.31/x86_64/bin/tau_exec
-  TAU_BIN=$TAU_ROOT/$TAU_REL
-  TAU_PLUGINS_PATH=/users/ankushj/repos/amr-workspace/tau-mpich-2004/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp
-  TAU_PLUGINS=libTAU-amr.so
-  echo $TAU_BIN
-
-  TAU=$(echo $TAU_BIN -T ompt,mpi,openmp -ompt -ebs)
-  TAU_FLAGS=$(tau_flags_mpich)
-  TAU_FLAGS=$(echo $TAU_FLAGS -env TAU_PLUGINS_PATH $TAU_PLUGINS_PATH -env TAU_PLUGINS $TAU_PLUGINS)
-  # TAU_FLAGS=
-
-  mpirun -f hosts.txt -np 512 -map-by ppr:16:node $TAU_FLAGS $TAU $AMR_BIN -i $AMR_DECK
-}
-
-reg_mpich_run() {
-  AMR_BIN=/users/ankushj/repos/phoebus/build-mpich-1t/src/phoebus
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_micro.pin
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_64.pin
-
-  RUN_ROOT=/mnt/lustre/parthenon-phoebus/notautest
-  mkdir -p $RUN_ROOT
-  cp hosts.txt $RUN_ROOT
-  cd $RUN_ROOT
-
-  mpirun -f hosts.txt -np 512 -map-by ppr:16:node $TAU_FLAGS $TAU $AMR_BIN -i $AMR_DECK
-}
-
-reg_mvapich_run() {
-  AMR_BIN=/users/ankushj/repos/phoebus/build-psm/src/phoebus
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_micro.pin
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_64.pin
-
-  MPIRUN=/users/ankushj/amr-workspace/install/bin/mpirun
-
-  RUN_ROOT=/mnt/lustre/parthenon-phoebus/notautest
-  mkdir -p $RUN_ROOT
-  cp hosts.txt $RUN_ROOT
-  cd $RUN_ROOT
-
-  ENV_STR="-env LD_LIBRARY_PATH /lib64"
-
-  cmd=$(echo $MPIRUN -f hosts.txt $ENV_STR -np 128 -map-by ppr:16:node $AMR_BIN -i $AMR_DECK)
-  echo $cmd
-  $cmd
-}
-
-tau_mvapich_run() {
-  AMR_BIN=/users/ankushj/repos/phoebus/build-psm/src/phoebus
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_micro.pin
-  AMR_DECK=/users/ankushj/repos/phoebus/inputs/blast_wave_3d_64.pin
-
-  MPIRUN=/users/ankushj/amr-workspace/install/bin/mpirun
-
-  EXP_ROOT=/mnt/ltio/parthenon-topo/profile6.wtau
-  RUN_ROOT=$EXP_ROOT/run
-  TRACE_ROOT=$EXP_ROOT/trace
-
-  mkdir -p $RUN_ROOT $TRACE_ROOT
-  cp hosts.txt $RUN_ROOT
-  cd $RUN_ROOT
-
-  TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004
-  TAU_REL=tau-2.31/x86_64/bin/tau_exec
-  TAU_BIN=$TAU_ROOT/$TAU_REL
-  TAU_PLUGINS_PATH=$TAU_ROOT/tau-2.31/x86_64/lib/shared-ompt-mpi-pdt-openmp
-  TAU_PLUGINS=libTAU-amr.so
-  echo $TAU_BIN
-
-  TAU=$(echo $TAU_BIN -T ompt,mpi,openmp -ompt -ebs)
-  TAU=$(echo $TAU_BIN -T ompt,mpi,openmp -ompt -ebs)
-  TAU_FLAGS=$(tau_flags_mpich)
-  TAU_FLAGS=$(echo $TAU_FLAGS -env TAU_PLUGINS_PATH $TAU_PLUGINS_PATH -env TAU_PLUGINS $TAU_PLUGINS)
-
-  ENV_STR="-env LD_LIBRARY_PATH /lib64 $TAU_FLAGS"
-  ENV_STR="$ENV_STR"
-
-  # mpirun -f hosts.txt $ENV_STR -np 512 -map-by ppr:16:node $TAU_FLAGS $TAU $AMR_BIN -i $AMR_DECK
-  cmd=$(echo $MPIRUN -f hosts.txt $ENV_STR -np 512 -map-by ppr:16:node $TAU $AMR_BIN -i $AMR_DECK)
-  # cmd=$(echo $MPIRUN $ENV_STR -np 16 $TAU $AMR_BIN -i $AMR_DECK)
-  rm log.txt
-  touch log.txt
-  echo $cmd | tee -a log.txt
-  $cmd 2>&1 | tee -a log.txt
-  process_log log.txt
-}
 
 process_log() {
   LOG_IN=$1
@@ -173,7 +13,7 @@ process_log() {
 
 tau_linked_build() {
   MPI_HOME=/users/ankushj/amr-workspace/install
-  TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004/tau-2.31
+  TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004/tau-2.31-profilephase
   HDF5_DIR=/users/ankushj/repos/hdf5/hdf5-2004-psm/CMake-hdf5-1.10.7/HDF5-1.10.7-Linux/HDF_Group/HDF5/1.10.7/share/cmake/hdf5
   PHOEBUS_BUILD_DIR=/users/ankushj/repos/phoebus/build-psm-wtau
   PHOEBUS_BUILD_DIR=/users/ankushj/repos/phoebus/build-psm-wtau-hacks
@@ -184,74 +24,155 @@ tau_linked_build() {
   MPI_HOME=$MPI_HOME cmake -DTAU_ROOT=$TAU_ROOT -DHDF5_DIR=$HDF5_DIR ..
 }
 
-tau_linked_run() {
+run_setup_mpi() {
   MPITYPE=mvapich
   MPIRUN=/users/ankushj/amr-workspace/install/bin/mpirun
+}
 
-  RUN_SUFFIX=profile16
-
+run_setup_amr() {
   AMR_BUILD_BL=/users/ankushj/repos/amr-workspace/phoebus-baseline/build
   AMR_BUILD_HK=/users/ankushj/repos/phoebus/build-psm-wtau
-  AMR_BUILD_HK=/users/ankushj/repos/phoebus/build-psm-wtau-hacks
+  AMR_BUILD_HK=/users/ankushj/repos/phoebus/build-psm-wtau-hacks-profilephase
 
   AMR_BUILD=$AMR_BUILD_HK
+  # AMR_BUILD=$AMR_BUILD_BL
   AMR_BIN=$AMR_BUILD/src/phoebus
+}
 
-  AMR_DECK=/users/ankushj/repos/amr/decks/$RUN_SUFFIX.pin
-  AMR_DECK=/users/ankushj/repos/amr/decks/profile14.pin
+run_setup_jobdir() {
+  CLEAN_EXPDIR=${CLEAN_EXPDIR:-0}
 
+  if [[ "$CLEAN_EXPDIR" == "1" ]]; then
+    echo "[[ INFO ]] Cleaning exp root: $EXP_ROOT"
 
-  EXP_ROOT=/mnt/ltio/parthenon-topo/$RUN_SUFFIX
+    confirm_assume_yes
+
+    rm -rf $EXP_ROOT
+  fi
+
   RUN_ROOT=$EXP_ROOT/run
   TRACE_ROOT=$EXP_ROOT/trace
   PROF_ROOT=$EXP_ROOT/profile
 
-  REST_FILE=sedov.out2.00053.rhdf
+  mkdir -p $RUN_ROOT $TRACE_ROOT $PROF_ROOT
+
+  LOG_FILE="$RUN_ROOT/log.txt"
+
+  if [[ -f "$LOG_FILE" ]]; then
+    rm $LOG_FILE
+  fi
+
+  RANK_ALLOC_TYPE=${RANK_ALLOC_TYPE:-unknown}
+
+  if [[ "$RANK_ALLOC_TYPE" == "contig" ]]; then
+    _hostfile=hosts.contig.txt
+  elif [[ "$RANK_ALLOC_TYPE" == "rr" ]]; then
+    _hostfile=hosts.rr.txt
+  else
+    echo "[ERROR] Unknown rank_alloc_type" | tee -a $LOG_FILE
+    exit -1
+  fi
+
+  if [[ -f "hosts.txt" ]]; then
+    echo "Local hosts.txt detected. Better to remove it to avoid clash potential."
+    exit -1
+  fi
+
+  echo "[INFO] Using hostfile: $_hostfile"
+  cp $_hostfile $RUN_ROOT/hosts.txt
+}
+
+#
+# run_setup_jobdir_new:
+# uses:
+# sets: logfile, exp_logfile, jobdir
+# creates: RUN_ROOT, TRACE_ROOT, PROF_ROOT dirs
+#
+
+run_setup_jobdir_new() {
+  CLEAN_EXPDIR=${CLEAN_EXPDIR:-0}
+
+  if [[ "$CLEAN_EXPDIR" == "1" ]]; then
+    echo "[[ INFO ]] Cleaning exp root: $EXP_ROOT"
+
+    confirm_assume_yes
+
+    rm -rf $EXP_ROOT
+  fi
+
+  RUN_ROOT=$EXP_ROOT/run
+  TRACE_ROOT=$EXP_ROOT/trace
+  PROF_ROOT=$EXP_ROOT/profile
 
   mkdir -p $RUN_ROOT $TRACE_ROOT $PROF_ROOT
-  cp /mnt/ltio/parthenon-topo/profile15/run/sedov.out2.00053.rhdf $RUN_ROOT
 
-  cp $AMR_DECK $RUN_ROOT
-  cp hosts.txt $RUN_ROOT
-  cd $RUN_ROOT
-  rm log.txt
+  LOG_FILE="$RUN_ROOT/log.txt"
+  LOG_FILE_ALT="$RUN_ROOT/log.alt.txt"
 
-  TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004/tau-2.31/x86_64
+  if [[ -f "$LOG_FILE" ]]; then
+    rm $LOG_FILE
+  fi
+
+  # set common parameters
+  logfile="$LOG_FILE"
+  # don't really need this tbh
+  exp_logfile="$LOG_FILE_ALT"
+  jobdir="$RUN_ROOT"
+}
+
+run_setup_env_tau() {
+  TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004/tau-2.31-profilephase/x86_64
   TAU_BIN=$TAU_ROOT/bin/tau_exec
-  TAU_PLUGINS_PATH=$TAU_ROOT/lib/shared-ompt-mpi-pdt-openmp
-  TAU_PLUGINS=libTAU-amr.so
-  # TAU_PLUGINS=libTAU-load-balance.so
-  # echo $TAU_BIN
 
+  TAU_PLUGINS_PATH=$TAU_ROOT/lib/shared-phase-ompt-mpi-pdt-openmp
+  TAU_PLUGINS=libTAU-amr.so
+
+  # With sampling
   TAU=$(echo $TAU_BIN -T ompt,mpi,openmp -ompt -ebs)
-  # Disable sampling
+  # Without sampling
   # TAU=$(echo $TAU_BIN -T ompt,mpi,openmp)
 
-  # TAU_FLAGS=$(tau_flags_mpich)
-  # TAU_FLAGS=$(echo $TAU_FLAGS -env TAU_PLUGINS_PATH $TAU_PLUGINS_PATH -env TAU_PLUGINS $TAU_PLUGINS -env TAU_AMR_LOGDIR $TRACE_ROOT)
-
-  # ENV_STR="-env LD_LIBRARY_PATH /lib64 -env IPATH_NO_BACKTRACE 1"
-  # ENV_STR="$ENV_STR -env MV2_DEBUG_CORESIZE unlimited"
-  # ENV_STR="$ENV_STR $TAU_FLAGS"
-  # ENV_STR="$ENV_STR -env LD_PRELOAD /usr/lib/x86_64-linux-gnu/libasan.so.5 -env ASAN_OPTIONS log_path=/users/ankushj/repos/amr/scripts/asan/asan.log"
-  # ENV_STR="$ENV_STR -env LD_PRELOAD /usr/lib/x86_64-linux-gnu/libasan.so.5"
-  # ENV_STR="$ENV_STR"
-
-  ## set env_variables
-  ENV_STR=""
-
-  # PSM vars
-  add_env_var LD_LIBRARY_PATH /lib64
-  add_env_var IPATH_NO_BACKTRACE 1
-
   # Tau flags
-  tau_flags_mpich
-
+  add_env_var TAU_COMM_MATRIX 1
+  add_env_var TAU_TRACK_MESSAGE 1
+  add_env_var TAU_PROFILE 1
+  add_env_var PROFILEDIR $PROF_ROOT
+  add_env_var TAU_CALLPATH 1
+  add_env_var TAU_CALLPATH_DEPTH 8
   add_env_var TAU_EBS_UNWIND 1
   add_env_var TAU_EBS_UNWIND_DEPTH 5
   add_env_var TAU_PLUGINS_PATH $TAU_PLUGINS_PATH
   add_env_var TAU_PLUGINS $TAU_PLUGINS
   add_env_var TAU_AMR_LOGDIR $TRACE_ROOT
+
+  CMD_PROFILE="$TAU"
+}
+
+run_setup_env_vtune() {
+  set +eu
+  source /opt/intel/oneapi/vtune/2021.9.0/amplxe-vars.sh
+  set -eu
+
+  PROFILER_KNOBS=""
+  PROFILER_KNOBS="$PROFILER_KNOBS -k enable-stack-collection=true"
+  PROFILER_KNOBS="$PROFILER_KNOBS -k collect-memory-bandwidth=false"
+
+  _CMD="vtune"
+  _CMD="$_CMD -collect hpc-performance"
+  _CMD="$_CMD -r $PROF_ROOT"
+  _CMD="$_CMD -trace-mpi"
+  _CMD="$_CMD $PROFILER_KNOBS"
+  _CMD="$_CMD --"
+
+  CMD_PROFILE="$_CMD"
+}
+
+run_setup_env() {
+  ENV_STR=""
+
+  # PSM vars
+  add_env_var LD_LIBRARY_PATH /lib64
+  add_env_var IPATH_NO_BACKTRACE 1
 
   # Debug flags
   add_env_var MV2_DEBUG_CORESIZE unlimited
@@ -260,38 +181,176 @@ tau_linked_run() {
   # add_env_var LD_PRELOAD /usr/lib/x86_64-linux-gnu/libasan.so.5
   # add_env_var ASAN_OPTIONS "log_path=/users/ankushj/repos/amr/scripts/asan/asan.log"
 
-  PROFILER="$TAU"
-  # PROFILER=""
+  # Alloc type flags
+  RANK_ALLOC_TYPE=${RANK_ALLOC_TYPE:-unknown}
 
-  # head -8 hosts.txt > hosts8.txt
-  # For first run
-  # cmd=$(echo $MPIRUN -f hosts.txt $ENV_STR -np 512 -map-by ppr:16:node $TAU_FLAGS $TAU $AMR_BIN -i $AMR_DECK)
-  # cmd=$(echo $MPIRUN -f hosts.txt $ENV_STR -np 512 -map-by ppr:16:node $PROFILER $AMR_BIN -i $AMR_DECK)
+  # if [[ "$RANK_ALLOC_TYPE" == "rr" ]]; then
+  # For reasons documented in:
+  # "MPI & OpenMP Binding & Placement"
+  # add_env_var MV2_BCAST_HWLOC_TOPOLOGY 0
+  # fi
 
-  # For restart
-  cmd=$(echo $MPIRUN -f hosts.txt $ENV_STR -np 512 -map-by ppr:16:node $PROFILER $AMR_BIN -r $REST_FILE)
-  # cmd=$(echo $MPIRUN -f hosts.txt $ENV_STR -np 512 -map-by ppr:16:node $AMR_BIN -r $REST_FILE)
+  PROFILER_TYPE=${PROFILER_TYPE:-none}
 
-  # Other cmds
-  # cmd=$(echo $MPIRUN -f hosts.txt $ENV_STR -np 512 -map-by ppr:16:node $AMR_BIN -i $AMR_DECK)
-  # cmd=$(echo $MPIRUN $ENV_STR -np 4 -map-by ppr:16:node $TAU_FLAGS $TAU $AMR_BIN -i $AMR_DECK)
-  # cmd=$(echo $MPIRUN $ENV_STR -np 1 -map-by ppr:16:node $TAU_FLAGS gdb $AMR_BIN -i $AMR_DECK)
-  # cmd=$(echo $MPIRUN $ENV_STR -np 1 -map-by ppr:16:node $TAU_FLAGS gdb $AMR_BIN)
-  # cmd=$(echo $MPIRUN $ENV_STR -np 16 -map-by ppr:16:node $AMR_BIN -i $AMR_DECK)
-  # cmd=$(echo $MPIRUN $ENV_STR -np 1 -map-by ppr:16:node gdb $AMR_BIN)
-  # rm log.txt; touch log.txt
-
-  echo -e "\n[CMD]: $cmd\n" | tee -a log.txt
-  $cmd 2>&1 | tee -a log.txt
-  # process_log log.txt
+  if [[ "$PROFILER_TYPE" == "tau" ]]; then
+    run_setup_env_tau
+  elif [[ "$PROFILER_TYPE" == "vtune" ]]; then
+    run_setup_env_vtune
+  else
+    echo "[[ INFO ]] Not using any profiler"
+    CMD_PROFILE=""
+  fi
 }
 
-# tau_plugin_run
-# reg_mpich_run
-# reg_mvapich_run
-# tau_mvapich_run
-# process_log /mnt/ltio/parthenon-topo/profile5/run/log.txt
-# process_profile
-# tau_linked_build
-tau_linked_run
-# process_log /mnt/ltio/parthenon-topo/profile14/run/log.txt
+run_phoebus_cmd() {
+  # CMD_MPI="$MPIRUN $ENV_STR"
+  # CMD_MPI="$CMD_MPI -np 512 -map-by ppr:16:node -f hosts.txt"
+  # CMD_MPI="$CMD_MPI -np 8 -map-by ppr:16:node -f hosts.txt"
+  # CMD_MPI="$CMD_MPI -np 16"
+
+  REST_FPATH=${REST_FPATH:-""}
+
+  if [[ "$REST_FPATH" != "" ]]; then
+    message "-INFO- Restarting from $REST_FPATH"
+
+    cp $REST_FPATH $RUN_ROOT
+    AMR_REST=$(basename $REST_FPATH)
+    CMD_AMR=$(echo $AMR_BIN -r $AMR_REST)
+  else
+    message "-INFO- First Run, Deck: $AMR_DECK"
+
+    CMD_AMR=$(echo $AMR_BIN -i $AMR_DECK)
+  fi
+
+  # CMD="$CMD_MPI $CMD_PROFILE $CMD_AMR"
+
+  # if [[ "${DRYRUN:-1}" == "0" ]]; then
+    # echo "[[ INFO ]] Executing in 3 seconds..."
+    # echo -e "\n[CMD] $CMD\n" | tee -a log.txt
+    # sleep 3
+    # cd $RUN_ROOT
+    # $CMD 2>&1 | tee -a log.txt
+  # else
+    # echo "[[ INFO ]] Dry run. Skipping execution."
+    # echo -e "\n[CMD] $CMD\n"
+  # fi
+
+  # do_mpirun 1 1 "none" $env_vars[@] "" "" ""
+  exe="$CMD_PROFILE $CMD_AMR"
+  extra_opts=""
+  env_vars=( $ENV_STR )
+
+  echo ""
+
+  do_mpirun $procs $ppnode $bind_opt env_vars[@] "$amr_nodes" "$exe" $extra_opts
+}
+
+run_phoebus() {
+  DRYRUN=0
+  CLEAN_EXPDIR=1
+
+  # contig or rr
+  # XXX: rr doesn't really work on mpich/mvapich
+  RANK_ALLOC_TYPE=contig
+
+  # tau,vtune,none
+  PROFILER_TYPE=tau
+  # PROFILER_TYPE=none
+
+  RUN_SUFFIX=profile17
+  EXP_ROOT=/mnt/ltio/parthenon-topo/$RUN_SUFFIX
+  AMR_DECK=/users/ankushj/repos/amr/decks/$RUN_SUFFIX.pin
+  AMR_DECK=/users/ankushj/repos/amr/decks/profile14.hacks.pin
+  # REST_FPATH=/mnt/ltio/parthenon-topo/profile15/run/sedov.out2.00053.rhdf
+
+  run_setup_mpi
+  run_setup_amr
+  run_setup_jobdir
+  run_setup_env
+  run_phoebus_cmd
+}
+
+#
+# setup_hostfile: sets up local hostfile, detects throttlers, filters them out
+# uses: $jobdir, $host_suffix
+# sets: $exp_hosts_blacklist
+# creates: ./hosts.txt, ./hosts.blacklist.expname
+#
+
+setup_hostfile() {
+  _exp_name=$(hostname | cut -d. -f 2)
+  exp_hosts_blacklist="hosts.blacklist.$_exp_name"
+
+  _jobdir_bak="$jobdir"
+  jobdir="."
+
+  gen_hostfile
+
+  message "-INFO- Checking hostfile for throttlers"
+  throttling_nodes=$(log_throttling_nodes)
+
+  if [[ "$throttling_nodes" != "" ]]; then
+    message "-WARN- Throttlers found: $throttling_nodes. Updating blacklist"
+    update_blacklist "$throttling_nodes"
+
+    message "-INFO- Filtering blacklist from hostfile"
+    egrep -v -f $exp_hosts_blacklist $jobdir/hosts.txt > tmp
+    mv tmp $jobdir/hosts.txt
+
+    message "-INFO- num hosts = $(wc -l ./hosts.txt)"
+  else
+    message "-INFO- No new throttlers detected."
+  fi
+
+  jobdir="$_jobdir_bak"
+}
+
+run_phoebus_new() {
+  # -- frequently changed parameters --
+  RUN_SUFFIX=profile18
+  DRYRUN=0
+  CLEAN_EXPDIR=1
+  procs=256
+
+  AMR_DECK=/users/ankushj/repos/amr/decks/$RUN_SUFFIX.pin
+  AMR_DECK=/users/ankushj/repos/amr/decks/profile14.hacks.pin
+
+  # tau,vtune,none
+  PROFILER_TYPE=tau
+
+  # -- relatively static parameters --
+  AMR_ROOT=/mnt/ltio/parthenon-topo
+  host_suffix="dib"
+  ppnode=16
+  nodes=$(( procs / ppnode ))
+  bind_opt=none
+
+  # -- end of configuration --
+
+  EXP_ROOT=$AMR_ROOT/$RUN_SUFFIX
+
+  run_setup_mpi
+  run_setup_amr
+  run_setup_jobdir_new
+  run_setup_env
+
+  # common_init can only happen now because it needs
+  # logfile to be available for logging
+  common_init
+  setup_hostfile
+
+  cp ./hosts.txt $jobdir
+  gen_hosts
+
+  run_phoebus_cmd
+}
+
+run() {
+  # gen_hostfile_rr
+  # tau_linked_build
+  # run_phoebus
+  run_phoebus_new
+  # process_log /mnt/ltio/parthenon-topo/profile15/run/log.txt
+}
+
+run
