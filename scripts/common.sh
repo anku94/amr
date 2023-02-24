@@ -33,14 +33,6 @@ binding_flags() {
   echo $ENV_STR
 }
 
-hoststr() {
-  echo $(seq 0 $(($1 - 1)) | sed 's/^/h/g' | sed "s/$/\:$2/g" | paste -sd, -)
-}
-
-hoststr_dib() {
-  echo $(seq 0 $(($1 - 1)) | sed 's/^/h/g' | sed "s/$/-dib\:$2/g" | paste -sd, -)
-}
-
 mca_flags() {
   echo --mca btl tcp,self,vader --mca btl_tcp_if_include ibs2 --mca pml ob1
 }
@@ -59,6 +51,7 @@ confirm_assume_no() {
   fi
 }
 
+# XXX: unused
 gen_hostfile_rr() {
   nnodes=32
   nrpn=16
@@ -114,17 +107,4 @@ log_throttling_nodes() {
   CHECK=$(do_mpirun $nnodes 1 "none" "" "$all_nodes" $THROTTLE_SCRIPT | tail -n+2 | cut -d, -f1)
 
   echo $CHECK
-}
-
-usage_example() {
-  logfile=log.tmp.txt
-  exp_logfile=log.tmp.txt
-  jobdir="/mnt/ltio/parthenon-topo/profile16/run"
-
-  common_init
-  throttling_nodes=$(log_throttling_nodes)
-  # echo $throttling_nodes
-  # return
-  exp_hosts_blacklist="hosts.bl.txt"
-  update_blacklist "$throttling_nodes"
 }

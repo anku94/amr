@@ -39,57 +39,14 @@ run_setup_amr() {
   AMR_BIN=$AMR_BUILD/src/phoebus
 }
 
-run_setup_jobdir() {
-  CLEAN_EXPDIR=${CLEAN_EXPDIR:-0}
-
-  if [[ "$CLEAN_EXPDIR" == "1" ]]; then
-    echo "[[ INFO ]] Cleaning exp root: $EXP_ROOT"
-
-    confirm_assume_yes
-
-    rm -rf $EXP_ROOT
-  fi
-
-  RUN_ROOT=$EXP_ROOT/run
-  TRACE_ROOT=$EXP_ROOT/trace
-  PROF_ROOT=$EXP_ROOT/profile
-
-  mkdir -p $RUN_ROOT $TRACE_ROOT $PROF_ROOT
-
-  LOG_FILE="$RUN_ROOT/log.txt"
-
-  if [[ -f "$LOG_FILE" ]]; then
-    rm $LOG_FILE
-  fi
-
-  RANK_ALLOC_TYPE=${RANK_ALLOC_TYPE:-unknown}
-
-  if [[ "$RANK_ALLOC_TYPE" == "contig" ]]; then
-    _hostfile=hosts.contig.txt
-  elif [[ "$RANK_ALLOC_TYPE" == "rr" ]]; then
-    _hostfile=hosts.rr.txt
-  else
-    echo "[ERROR] Unknown rank_alloc_type" | tee -a $LOG_FILE
-    exit -1
-  fi
-
-  if [[ -f "hosts.txt" ]]; then
-    echo "Local hosts.txt detected. Better to remove it to avoid clash potential."
-    exit -1
-  fi
-
-  echo "[INFO] Using hostfile: $_hostfile"
-  cp $_hostfile $RUN_ROOT/hosts.txt
-}
-
 #
-# run_setup_jobdir_new:
+# run_setup_jobdir:
 # uses:
 # sets: logfile, exp_logfile, jobdir
 # creates: RUN_ROOT, TRACE_ROOT, PROF_ROOT dirs
 #
 
-run_setup_jobdir_new() {
+run_setup_jobdir() {
   CLEAN_EXPDIR=${CLEAN_EXPDIR:-0}
 
   if [[ "$CLEAN_EXPDIR" == "1" ]]; then
@@ -181,15 +138,6 @@ run_setup_env() {
   # add_env_var LD_PRELOAD /usr/lib/x86_64-linux-gnu/libasan.so.5
   # add_env_var ASAN_OPTIONS "log_path=/users/ankushj/repos/amr/scripts/asan/asan.log"
 
-  # Alloc type flags
-  RANK_ALLOC_TYPE=${RANK_ALLOC_TYPE:-unknown}
-
-  # if [[ "$RANK_ALLOC_TYPE" == "rr" ]]; then
-  # For reasons documented in:
-  # "MPI & OpenMP Binding & Placement"
-  # add_env_var MV2_BCAST_HWLOC_TOPOLOGY 0
-  # fi
-
   PROFILER_TYPE=${PROFILER_TYPE:-none}
 
   if [[ "$PROFILER_TYPE" == "tau" ]]; then
@@ -203,11 +151,6 @@ run_setup_env() {
 }
 
 run_phoebus_cmd() {
-  # CMD_MPI="$MPIRUN $ENV_STR"
-  # CMD_MPI="$CMD_MPI -np 512 -map-by ppr:16:node -f hosts.txt"
-  # CMD_MPI="$CMD_MPI -np 8 -map-by ppr:16:node -f hosts.txt"
-  # CMD_MPI="$CMD_MPI -np 16"
-
   REST_FPATH=${REST_FPATH:-""}
 
   if [[ "$REST_FPATH" != "" ]]; then
@@ -222,20 +165,6 @@ run_phoebus_cmd() {
     CMD_AMR=$(echo $AMR_BIN -i $AMR_DECK)
   fi
 
-  # CMD="$CMD_MPI $CMD_PROFILE $CMD_AMR"
-
-  # if [[ "${DRYRUN:-1}" == "0" ]]; then
-    # echo "[[ INFO ]] Executing in 3 seconds..."
-    # echo -e "\n[CMD] $CMD\n" | tee -a log.txt
-    # sleep 3
-    # cd $RUN_ROOT
-    # $CMD 2>&1 | tee -a log.txt
-  # else
-    # echo "[[ INFO ]] Dry run. Skipping execution."
-    # echo -e "\n[CMD] $CMD\n"
-  # fi
-
-  # do_mpirun 1 1 "none" $env_vars[@] "" "" ""
   exe="$CMD_PROFILE $CMD_AMR"
   extra_opts=""
   env_vars=( $ENV_STR )
@@ -243,31 +172,6 @@ run_phoebus_cmd() {
   echo ""
 
   do_mpirun $procs $ppnode $bind_opt env_vars[@] "$amr_nodes" "$exe" $extra_opts
-}
-
-run_phoebus() {
-  DRYRUN=0
-  CLEAN_EXPDIR=1
-
-  # contig or rr
-  # XXX: rr doesn't really work on mpich/mvapich
-  RANK_ALLOC_TYPE=contig
-
-  # tau,vtune,none
-  PROFILER_TYPE=tau
-  # PROFILER_TYPE=none
-
-  RUN_SUFFIX=profile17
-  EXP_ROOT=/mnt/ltio/parthenon-topo/$RUN_SUFFIX
-  AMR_DECK=/users/ankushj/repos/amr/decks/$RUN_SUFFIX.pin
-  AMR_DECK=/users/ankushj/repos/amr/decks/profile14.hacks.pin
-  # REST_FPATH=/mnt/ltio/parthenon-topo/profile15/run/sedov.out2.00053.rhdf
-
-  run_setup_mpi
-  run_setup_amr
-  run_setup_jobdir
-  run_setup_env
-  run_phoebus_cmd
 }
 
 #
@@ -305,7 +209,7 @@ setup_hostfile() {
   jobdir="$_jobdir_bak"
 }
 
-run_phoebus_new() {
+run_phoebus() {
   # -- frequently changed parameters --
   RUN_SUFFIX=profile18
   DRYRUN=0
@@ -331,8 +235,11 @@ run_phoebus_new() {
 
   run_setup_mpi
   run_setup_amr
-  run_setup_jobdir_new
+  run_setup_jobdir
   run_setup_env
+
+  # Let directories be visible
+  sleep 3
 
   # common_init can only happen now because it needs
   # logfile to be available for logging
@@ -340,16 +247,15 @@ run_phoebus_new() {
   setup_hostfile
 
   cp ./hosts.txt $jobdir
+  # generate amr.hosts
   gen_hosts
 
   run_phoebus_cmd
 }
 
 run() {
-  # gen_hostfile_rr
   # tau_linked_build
-  # run_phoebus
-  run_phoebus_new
+  run_phoebus
   # process_log /mnt/ltio/parthenon-topo/profile15/run/log.txt
 }
 

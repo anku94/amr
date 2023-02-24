@@ -481,28 +481,6 @@ do_mpirun() {
       tee -a $log2 | tee -a $log1
 
   else
-
     die "could not find a supported do_mpirun command"
-
   fi
 }
-
-example() {
-  # cd to the right directory and everything. This just runs things.
-  logfile=log.tmp.txt
-  exp_logfile=$logfile
-  LD_LIBRARY_PATH=/usr/lib64
-  env_vars_base="LD_LIBRARY_PATH /usr/lib64"
-  # env_vars=($env_vars_base
-    # ANOTHER_VAR useless_value
-  # )
-  env_vars=(
-    "ABC" "def"
-    )
-
-  MPIRUN=/users/ankushj/amr-workspace/install/bin/mpirun
-  common_init
-  do_mpirun 1 1 "none" env_vars[@] "h0-dib" "" "echo 1"
-}
-
-# example
