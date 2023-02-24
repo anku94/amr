@@ -468,12 +468,15 @@ def run_parse_log(dpath: str):
     f = open(log_path).read().split("\n")
     data = [line for line in f if "zone-cycles/wsec" in line]
 
-    keys = [i.split("=")[0] for i in data[0].split(" ")]
+    keys = "cycle,time,dt,zc_per_step,wtime_total,wtime_step_other,zc_wamr,wtime_step_amr".split(
+        ","
+    )
     vals = [
         [float(i.split("=")[1]) for i in data[k].split(" ")] for k in range(len(data))
     ]
 
-    df = pd.DataFrame.from_records(vals, columns=keys)
+
+    df = pd.DataFrame.from_records(vals, columns=keys).astype({"cycle": int})
     df.to_csv(df_path, index=None)
 
 

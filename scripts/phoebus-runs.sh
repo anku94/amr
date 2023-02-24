@@ -2,15 +2,6 @@
 
 . common.sh
 
-process_log() {
-  LOG_IN=$1
-  LOG_OUT=$LOG_IN.csv
-  # LOG_OUT=/dev/stdout
-
-  echo "cycle,time,dt,zc_per_step,wtime_total,wtime_step_other,zc_wamr,wtime_step_amr" > $LOG_OUT
-  cat $LOG_IN | grep wsec_AMR | awk -F "\ |=" '{ print $2","$4","$6","$8","$10","$12","$14","$16 }' >> $LOG_OUT
-}
-
 tau_linked_build() {
   MPI_HOME=/users/ankushj/amr-workspace/install
   TAU_ROOT=/users/ankushj/repos/amr-workspace/tau-psm-2004/tau-2.31-profilephase
@@ -256,7 +247,6 @@ run_phoebus() {
 run() {
   # tau_linked_build
   run_phoebus
-  # process_log /mnt/ltio/parthenon-topo/profile15/run/log.txt
 }
 
 run

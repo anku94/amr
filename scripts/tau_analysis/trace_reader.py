@@ -15,9 +15,7 @@ ts,evtname,evtval
 - (renamed) /trace/phases.aggr.by_ts.csv
 - /aggr/msg_concat.csv
 timestep,phase,send_or_recv,rank,msg_sz_count
-- /run/logstats.csv - from analyze_taskflow.py
-cycle,time,dt,zone-cycles/wsec_step,wsec_total,wsec_step,zone-cycles/wsec,wsec_AMR
-- /run/log.txt.csv - from scripts/phoebus-runs.sh
+- /trace/logstats.csv - from analyze_taskflow.py
 cycle,time,dt,zc_per_step,wtime_total,wtime_step_other,zc_wamr,wtime_step_amr 
 
 
@@ -98,7 +96,7 @@ class TraceReader:
         return self._read_file(state_path, sep="|")
 
     def read_logstats(self):
-        logstats_path = "run/log.txt.csv"
+        logstats_path = "trace/logstats.csv"
         return self._read_file(logstats_path)
 
     def get_aggr_tsw(self, event: str) -> None:
