@@ -41,6 +41,7 @@ class AMRTracer {
       : rank_(-1),
         size_(0),
         timestep_(0),
+        ts_sim_(0),
         num_redistrib_(0),
         phase_(AMRPhase::LoadBalancing),
         redistribute_ongoing_(false) {
@@ -52,6 +53,7 @@ class AMRTracer {
     msglog_ = std::make_unique<MsgLog>(dir, rank_);
     funclog_ = std::make_unique<FuncLog>(dir, rank_);
     statelog_ = std::make_unique<StateLog>(dir, rank_);
+    proflog_ = std::make_unique<ProfLog>(dir, rank_);
   }
 
   int MyRank() const { return rank_; }
@@ -220,16 +222,20 @@ class AMRTracer {
 
   void ProcessTriggerMsgTargetCost(void *data);
 
+  void ProcessTriggerMsgEventTime(void *data);
+
   int rank_;
   int size_;
 
   int timestep_;
+  int ts_sim_;
   int num_redistrib_;
   AMRPhase phase_;
 
   std::unique_ptr<MsgLog> msglog_;
   std::unique_ptr<FuncLog> funclog_;
   std::unique_ptr<StateLog> statelog_;
+  std::unique_ptr<ProfLog> proflog_;
 
   bool redistribute_ongoing_;
 

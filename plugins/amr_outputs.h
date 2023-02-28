@@ -10,18 +10,7 @@ namespace tau {
 class MsgLog {
  public:
   MsgLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
-    const char* logdir_name = "msgs";
-    char logdir_path[4096];
-    snprintf(logdir_path, 4096, "%s/%s", dir, logdir_name);
-    EnsureDirOrDie(logdir_path, rank);
-
-    const char* fname = "msgs";
-    char fpath[4096];
-    snprintf(fpath, 4096, "%s/%s.%d.csv", logdir_path, fname, rank);
-    file_ = fopen(fpath, "w+");
-    if (file_ == nullptr) {
-      ABORT("Failed to open CSV");
-    }
+    EnsureFileOrDie(&file_, dir, "msgs", "csv", rank_);
     WriteHeader();
   }
 
@@ -68,18 +57,7 @@ class MsgLog {
 class FuncLog {
  public:
   FuncLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
-    const char* logdir_name = "funcs";
-    char logdir_path[4096];
-    snprintf(logdir_path, 4096, "%s/%s", dir, logdir_name);
-    EnsureDirOrDie(logdir_path, rank);
-
-    const char* fname = "funcs";
-    char fpath[4096];
-    snprintf(fpath, 4096, "%s/%s.%d.csv", logdir_path, fname, rank);
-    file_ = fopen(fpath, "w+");
-    if (file_ == nullptr) {
-      ABORT("Failed to open CSV");
-    }
+    EnsureFileOrDie(&file_, dir, "funcs", "csv", rank);
     WriteHeader();
   }
 
@@ -113,18 +91,7 @@ class FuncLog {
 class StateLog {
  public:
   StateLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
-    const char* logdir_name = "state";
-    char logdir_path[4096];
-    snprintf(logdir_path, 4096, "%s/%s", dir, logdir_name);
-    EnsureDirOrDie(logdir_path, rank);
-
-    const char* fname = "state";
-    char fpath[4096];
-    snprintf(fpath, 4096, "%s/%s.%d.csv", logdir_path, fname, rank);
-    file_ = fopen(fpath, "w+");
-    if (file_ == nullptr) {
-      ABORT("Failed to open CSV");
-    }
+    EnsureFileOrDie(&file_, dir, "state", "csv", rank);
     WriteHeader();
   }
 
@@ -146,4 +113,25 @@ class StateLog {
   static const bool paranoid_ = true;
 };
 
+class ProfLog {
+  public:
+    ProfLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
+      EnsureFileOrDie(&file_, dir, "prof", "bin", rank);
+    }
+
+    void LogEvent(int ts, int block_id, int event_opcode, int event_us) {
+      fwrite(&ts, sizeof(int), 1, file_);
+      fwrite(&block_id, sizeof(int), 1, file_);
+      fwrite(&event_opcode, sizeof(int), 1, file_);
+      fwrite(&event_us, sizeof(int), 1, file_);
+    }
+
+    ~ProfLog() {
+      fclose(file_);
+    }
+
+  private:
+    int rank_;
+    FILE* file_;
+};
 }  // namespace tau

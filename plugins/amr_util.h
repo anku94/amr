@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdio.h>
+
 namespace tau {
 
 enum class AmrFunc {
@@ -15,5 +17,8 @@ enum class AmrFunc {
 AmrFunc ParseBlock(const char* block_name);
 
 void EnsureDirOrDie(const char* dir_path, int rank);
+
+void EnsureFileOrDie(FILE** file, const char* dir_path, const char* fprefix,
+                     const char* fmt, int rank);
 
 };  // namespace tau

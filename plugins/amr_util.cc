@@ -1,4 +1,5 @@
 #include "amr_util.h"
+
 #include "../tools/common.h"
 
 #include <errno.h>
@@ -31,8 +32,6 @@ AmrFunc ParseBlock(const char* block_name) {
 
 void EnsureDirOrDie(const char* dir_path, int rank) {
   if (rank != 0) {
-    // poor man's barrier
-    sleep(3);
     return;
   }
 
@@ -41,6 +40,29 @@ void EnsureDirOrDie(const char* dir_path, int rank) {
       logf(LOG_ERRO, "Unable to create directory: %s", dir_path);
       ABORT("Unable to create directory");
     }
+  }
+}
+
+void EnsureFileOrDie(FILE** file, const char* dir_path, const char* fprefix,
+                     const char* fmt, int rank) {
+  char subdir_path[4096];
+  snprintf(subdir_path, 4096, "%s/%s", dir_path, fprefix);
+  EnsureDirOrDie(subdir_path, rank);
+
+  char fpath[4096];
+  snprintf(fpath, 4096, "%s/%s/%s.%d.%s", dir_path, fprefix, fprefix, rank, fmt);
+
+  int attempts_rem = 3;
+  int sleep_timer = 1;
+
+  while((attempts_rem--) && (*file == nullptr)) {
+    sleep(sleep_timer);
+    sleep_timer *= 2;
+    *file = fopen(fpath, "w+");
+  }
+
+  if (*file == nullptr) {
+    ABORT("Failed to open CSV");
   }
 }
 
