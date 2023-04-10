@@ -28,3 +28,4 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 endif ()
 
 add_subdirectory(topobench)
+add_subdirectory(loadbalancing)
