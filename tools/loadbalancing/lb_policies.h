@@ -14,12 +14,38 @@
 
 namespace amr {
 enum class Policy;
-class Policies {
+class LoadBalancePolicies {
  public:
   static void AssignBlocks(Policy policy, std::vector<double> const& costlist,
-                           std::vector<int>& ranklist, int nranks);
+                           std::vector<int>& ranklist, int nranks) {
+    // Two reasons to have a static object:
+    // - once per lifetime policy selection
+    // - once-per-lifetime logging of policy selection
+
+    static LoadBalancePolicies lb_instance(policy);
+    if (lb_instance.policy_ != policy) {
+      ABORT("Only one policy supported during program lifetime!");
+    }
+
+    AssignBlocksInternal(lb_instance.policy_, costlist, ranklist, nranks);
+  }
+
+  LoadBalancePolicies(LoadBalancePolicies const&) = delete;
+  void operator=(LoadBalancePolicies const&)      = delete;
 
  private:
+  LoadBalancePolicies(Policy policy) : policy_(policy) {
+    std::string policy_str = PolicyToString(policy);
+    logf(LOG_INFO, "[LoadBalancePolicies] Selected Policy: %s",
+         policy_str.c_str());
+  }
+
+  static std::string PolicyToString(Policy policy);
+
+  static void AssignBlocksInternal(Policy                     policy,
+                                   std::vector<double> const& costlist,
+                                   std::vector<int>& ranklist, int nranks);
+
   static void AssignBlocksRoundRobin(std::vector<double> const& costlist,
                                      std::vector<int>& ranklist, int nranks);
 
@@ -28,5 +54,7 @@ class Policies {
 
   static void AssignBlocksContiguous(std::vector<double> const& costlist,
                                      std::vector<int>& ranklist, int nranks);
+
+  const Policy policy_;
 };
 }  // namespace amr

@@ -48,7 +48,7 @@ void PolicySim::CheckAssignment(std::vector<int>& times) {
   std::vector<double> costlist(nblocks, 1.0f);
   std::vector<int> ranklist(nblocks, -1);
 
-  Policies::AssignBlocks(options_.policy, costlist, ranklist, nranks);
+  LoadBalancePolicies::AssignBlocks(options_.policy, costlist, ranklist, nranks);
 
   for (int bid = 0; bid < nblocks; bid++) {
     int block_rank = ranklist[bid];
@@ -65,5 +65,35 @@ void PolicySim::CheckAssignment(std::vector<int>& times) {
   excess_cost_ += (rtmax - rtavg);
   total_cost_avg_ += rtavg;
   total_cost_max_ += rtmax;
+}
+
+std::vector<std::string> PolicySim::LocateRelevantFiles(
+    const std::string& root_dir) {
+  std::vector<std::string> files;
+  env_->GetChildren(root_dir.c_str(), &files);
+
+  logf(LOG_DBG2, "Enumerating directory: %s", root_dir.c_str());
+  for (auto& f : files) {
+    logf(LOG_DBG2, "- File: %s", f.c_str());
+  }
+
+  std::vector<std::string> regex_patterns = {
+      R"(prof\.merged\.evt\d+\.csv)",
+      R"(prof\.merged\.evt\d+\.mini\.csv)",
+      R"(prof\.aggr\.evt\d+\.csv)",
+  };
+
+  for (auto& pattern : regex_patterns) {
+    logf(LOG_DBG2, "Searching by pattern: %s", pattern.c_str());
+    std::vector<std::string> relevant_files = FilterByRegex(files, pattern);
+
+    for (auto& f : relevant_files) {
+      logf(LOG_DBG2, "- Match: %s", f.c_str());
+    }
+
+    if (!relevant_files.empty()) return relevant_files;
+  }
+
+  return {};
 }
 }  // namespace amr
