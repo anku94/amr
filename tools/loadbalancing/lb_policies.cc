@@ -13,6 +13,10 @@ std::string LoadBalancePolicies::PolicyToString(Policy policy) {
       return "Skewed";
     case Policy::kPolicyRoundRobin:
       return "RoundRobin";
+    case Policy::kPolicySPT:
+      return "SPT";
+    case Policy::kPolicyLPT:
+      return "LPT";
   }
 
   logf(LOG_ERRO, "Policy not implemented!");
@@ -38,6 +42,12 @@ void LoadBalancePolicies::AssignBlocksInternal(
       break;
     case Policy::kPolicyRoundRobin:
       AssignBlocksRoundRobin(costlist, ranklist, nranks);
+      break;
+    case Policy::kPolicySPT:
+      AssignBlocksSPT(costlist, ranklist, nranks);
+      break;
+    case Policy::kPolicyLPT:
+      AssignBlocksLPT(costlist, ranklist, nranks);
       break;
     default:
       ABORT("Policy not implemented!!");

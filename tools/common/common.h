@@ -5,6 +5,7 @@
 #pragma once
 
 #include <random>
+#include <sstream>
 #include <stdio.h>
 #include <string.h>
 
@@ -106,3 +107,14 @@ class NormalGenerator {
   std::mt19937 gen_;
   std::normal_distribution<> d_;
 };
+
+template <typename T>
+std::string SerializeVector(std::vector<T>& v) {
+  std::stringstream ss;
+  ss << "(" << v.size() << " items): ";
+  for (auto n : v) {
+    ss << n << " ";
+  }
+
+  return ss.str();
+}

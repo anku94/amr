@@ -31,7 +31,7 @@ class LoadBalancePolicies {
   }
 
   LoadBalancePolicies(LoadBalancePolicies const&) = delete;
-  void operator=(LoadBalancePolicies const&)      = delete;
+  void operator=(LoadBalancePolicies const&) = delete;
 
  private:
   LoadBalancePolicies(Policy policy) : policy_(policy) {
@@ -42,7 +42,7 @@ class LoadBalancePolicies {
 
   static std::string PolicyToString(Policy policy);
 
-  static void AssignBlocksInternal(Policy                     policy,
+  static void AssignBlocksInternal(Policy policy,
                                    std::vector<double> const& costlist,
                                    std::vector<int>& ranklist, int nranks);
 
@@ -55,6 +55,14 @@ class LoadBalancePolicies {
   static void AssignBlocksContiguous(std::vector<double> const& costlist,
                                      std::vector<int>& ranklist, int nranks);
 
+  static void AssignBlocksSPT(std::vector<double> const& costlist,
+                              std::vector<int>& ranklist, int nranks);
+
+  static void AssignBlocksLPT(std::vector<double> const& costlist,
+                              std::vector<int>& ranklist, int nranks);
+
   const Policy policy_;
+
+  friend class LoadBalancingPoliciesTest;
 };
 }  // namespace amr

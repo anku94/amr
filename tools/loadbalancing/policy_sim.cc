@@ -6,6 +6,8 @@
 
 namespace amr {
 void PolicySim::SimulateTrace() {
+  logf(LOG_INFO, "[SimulateTrace] Looking for trace files in: \n\t%s", options_.prof_dir);
+
   std::vector<std::string> files = LocateRelevantFiles(options_.prof_dir);
 
   if (files.empty()) {
@@ -15,7 +17,7 @@ void PolicySim::SimulateTrace() {
   ProfSetReader psr;
   for (auto& f: files) {
     std::string full_path = std::string(options_.prof_dir) + "/" + f;
-    logf(LOG_DBUG, "+ Adding file: %s", full_path.c_str());
+    logf(LOG_INFO, "[ProfSetReader] Adding trace file: %s", full_path.c_str());
     psr.AddProfile(full_path);
   }
 

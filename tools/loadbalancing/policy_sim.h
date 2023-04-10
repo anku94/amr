@@ -11,7 +11,7 @@
 #define PROF_DIR "/mnt/ltio/parthenon-topo/profile20/"
 
 namespace amr {
-enum class Policy { kPolicyContiguous, kPolicyRoundRobin, kPolicySkewed };
+enum class Policy { kPolicyContiguous, kPolicyRoundRobin, kPolicySkewed, kPolicySPT, kPolicyLPT };
 
 struct PolicySimOptions {
   pdlfs::Env* env;
