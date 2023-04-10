@@ -1,6 +1,5 @@
-set(lb-srcs
-  main.cc
-../common/common.cc)
+set(lb_srcs
+  main.cc)
 
-add_executable(lb-sim ${lb-srcs})
-target_include_directories(lb-sim PRIVATE ../common)
+add_executable(lb-sim ${lb_srcs} ${common_srcs})
+target_include_directories(lb-sim PRIVATE ${common_include})

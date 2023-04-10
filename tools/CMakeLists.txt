@@ -27,5 +27,8 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     endif ()
 endif ()
 
+set (common_include "${CMAKE_SOURCE_DIR}/common/")
+set (common_srcs "${CMAKE_SOURCE_DIR}/common/common.cc")
+
 add_subdirectory(topobench)
 add_subdirectory(loadbalancing)
