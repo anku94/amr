@@ -4,9 +4,23 @@
 
 #include "policy_sim.h"
 
+#include "policy_exec_ctx.h"
+
 namespace amr {
+void PolicySim::InitializePolicies() {
+  policies_.emplace_back("Contiguous/Unit-Cost", Policy::kPolicyContiguous,
+                         env_);
+  policies_.emplace_back("Contiguous/Actual-Cost", Policy::kPolicyContiguous,
+                         env_);
+  policies_.emplace_back("RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
+                         env_);
+  policies_.emplace_back("SPT/Actual-Cost", Policy::kPolicySPT, env_);
+  policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, env_);
+}
+
 void PolicySim::SimulateTrace() {
-  logf(LOG_INFO, "[SimulateTrace] Looking for trace files in: \n\t%s", options_.prof_dir);
+  logf(LOG_INFO, "[SimulateTrace] Looking for trace files in: \n\t%s",
+       options_.prof_dir);
 
   std::vector<std::string> files = LocateRelevantFiles(options_.prof_dir);
 
@@ -15,58 +29,35 @@ void PolicySim::SimulateTrace() {
   }
 
   ProfSetReader psr;
-  for (auto& f: files) {
+  for (auto& f : files) {
     std::string full_path = std::string(options_.prof_dir) + "/" + f;
     logf(LOG_INFO, "[ProfSetReader] Adding trace file: %s", full_path.c_str());
     psr.AddProfile(full_path);
   }
 
-  int nread;
   int nts = 0;
-
-  std::vector<int> times;
-
-  while ((nread = psr.ReadTimestep(times)) > 0) {
-    CheckAssignment(times);
-
+  std::vector<int> block_times;
+  while (psr.ReadTimestep(block_times) > 0) {
+    InvokePolicies(block_times);
     nts++;
     if (nts % 100 == 0) {
       printf("\rTS Read: %d", nts);
       // break;
     }
   }
-
-  printf("\n");
-  logf(LOG_INFO, "Excess Cost: \t%.2f s", excess_cost_ / 1e6);
-  logf(LOG_INFO, "Avg Cost: \t%.2f s", total_cost_avg_ / 1e6);
-  logf(LOG_INFO, "Max Cost: \t%.2f s", total_cost_max_ / 1e6);
 }
 
-void PolicySim::CheckAssignment(std::vector<int>& times) {
+void PolicySim::InvokePolicies(std::vector<int>& cost_actual) {
   int nranks = 512;
-  int nblocks = times.size();
-  std::vector<int> rank_times(nranks, 0);
 
-  std::vector<double> costlist(nblocks, 1.0f);
-  std::vector<int> ranklist(nblocks, -1);
+  std::vector<double> cost_naive(cost_actual.size(), 1.0f);
+  std::vector<double> cost_actual_lf(cost_actual.begin(), cost_actual.end());
 
-  LoadBalancePolicies::AssignBlocks(options_.policy, costlist, ranklist, nranks);
-
-  for (int bid = 0; bid < nblocks; bid++) {
-    int block_rank = ranklist[bid];
-    int block_cost = times[bid];
-    rank_times[block_rank] += block_cost;
-  }
-
-  int const& (*max_func)(int const&, int const&) = std::max<int>;
-  int rtmax = std::accumulate(rank_times.begin(), rank_times.end(),
-                              rank_times.front(), max_func);
-  uint64_t rtsum = std::accumulate(rank_times.begin(), rank_times.end(), 0ull);
-  double rtavg = rtsum * 1.0 / nranks;
-
-  excess_cost_ += (rtmax - rtavg);
-  total_cost_avg_ += rtavg;
-  total_cost_max_ += rtmax;
+  policies_[0].ExecuteTimestep(nranks, cost_naive, cost_actual_lf);
+  policies_[1].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  policies_[2].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  policies_[3].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  policies_[4].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
 }
 
 std::vector<std::string> PolicySim::LocateRelevantFiles(

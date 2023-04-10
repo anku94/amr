@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lb_policies.h"
+#include "policy_exec_ctx.h"
 #include "prof_set_reader.h"
 
 #include "pdlfs-common/env.h"
@@ -8,10 +9,14 @@
 #include <regex>
 #include <vector>
 
-#define PROF_DIR "/mnt/ltio/parthenon-topo/profile20/"
-
 namespace amr {
-enum class Policy { kPolicyContiguous, kPolicyRoundRobin, kPolicySkewed, kPolicySPT, kPolicyLPT };
+enum class Policy {
+  kPolicyContiguous,
+  kPolicyRoundRobin,
+  kPolicySkewed,
+  kPolicySPT,
+  kPolicyLPT
+};
 
 struct PolicySimOptions {
   pdlfs::Env* env;
@@ -21,18 +26,24 @@ struct PolicySimOptions {
 
 class PolicySim {
  public:
-  PolicySim(const PolicySimOptions& options)
-      : options_(options),
-        env_(options.env),
-        excess_cost_(0),
-        total_cost_avg_(0),
-        total_cost_max_(0) {}
+  explicit PolicySim(const PolicySimOptions& options)
+      : options_(options), env_(options.env) {}
 
-  void Run() { SimulateTrace(); }
+  void Run() {
+    InitializePolicies();
+    SimulateTrace();
+    LogSummary();
+  }
+
+  void InitializePolicies();
 
   void SimulateTrace();
 
-  void CheckAssignment(std::vector<int>& times);
+  void LogSummary() {
+    for (auto& ctx : policies_) ctx.LogSummary();
+  }
+
+  void InvokePolicies(std::vector<int>& cost_actual);
 
  private:
   std::vector<std::string> LocateRelevantFiles(const std::string& root_dir);
@@ -53,9 +64,6 @@ class PolicySim {
 
   const PolicySimOptions options_;
   pdlfs::Env* const env_;
-
-  double excess_cost_;
-  double total_cost_avg_;
-  double total_cost_max_;
+  std::vector<PolicyExecutionContext> policies_;
 };
 }  // namespace amr

@@ -5,7 +5,8 @@ include(GoogleTest)
 set(lb_srcs
         lb_lspt.cc
         policy_sim.cc
-        lb_policies.cc)
+        lb_policies.cc
+        policy_exec_ctx.cc)
 
 add_library(lb ${lb_srcs} ${common_srcs})
 target_include_directories(lb PUBLIC ${common_include})

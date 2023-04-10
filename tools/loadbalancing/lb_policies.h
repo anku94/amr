@@ -64,5 +64,6 @@ class LoadBalancePolicies {
   const Policy policy_;
 
   friend class LoadBalancingPoliciesTest;
+  friend class PolicyExecutionContext;
 };
 }  // namespace amr
