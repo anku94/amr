@@ -78,6 +78,7 @@ class ProfileReader {
     csv_fd_ = fopen(csv_path_, "r");
 
     if (csv_fd_ == nullptr) {
+      logf(LOG_ERRO, "[ProfReader] Unable to open: %s", csv_path_);
       ABORT("Unable to open specified CSV");
     }
 
@@ -168,7 +169,7 @@ class ProfileReader {
       ss << n << " ";
     }
 
-    logf(LOG_DBUG, "%s", ss.str().c_str());
+    logf(LOG_DBG2, "%s", ss.str().c_str());
   }
 
   void SafeCloseFile() {

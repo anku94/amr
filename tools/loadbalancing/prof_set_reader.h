@@ -7,8 +7,8 @@ class ProfSetReader {
  public:
   ProfSetReader() : nblocks_prev_(0) {}
 
-  void AddProfile(const char* fpath) {
-    all_readers_.emplace_back(fpath);
+  void AddProfile(std::string& fpath) {
+    all_readers_.emplace_back(fpath.c_str());
 
     for (auto& reader : all_readers_) {
       reader.Reset();

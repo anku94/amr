@@ -3,71 +3,84 @@
 #include "lb_policies.h"
 #include "prof_set_reader.h"
 
+#include "pdlfs-common/env.h"
+
+#include <regex>
 #include <vector>
 
 #define PROF_DIR "/mnt/ltio/parthenon-topo/profile20/"
 
 namespace amr {
+enum class Policy { kPolicyContiguous, kPolicyRoundRobin, kPolicySkewed };
+
+struct PolicySimOptions {
+  pdlfs::Env* env;
+  const char* prof_dir;
+  Policy policy;
+};
+
 class PolicySim {
  public:
-  PolicySim() : excess_cost_(0), total_cost_avg_(0), total_cost_max_(0) {}
+  PolicySim(const PolicySimOptions& options)
+      : options_(options),
+        env_(options.env),
+        excess_cost_(0),
+        total_cost_avg_(0),
+        total_cost_max_(0) {}
 
-  void Run() {
-    ProfSetReader psr;
-    psr.AddProfile(PROF_DIR "prof.merged.evt0.csv");
-    psr.AddProfile(PROF_DIR "prof.merged.evt1.csv");
+  void Run() { SimulateTrace(); }
 
-    int nread;
-    int nts = 0;
+  void SimulateTrace();
 
-    std::vector<int> times;
-
-    while ((nread = psr.ReadTimestep(times)) > 0) {
-      CheckAssignment(times);
-
-      nts++;
-      if (nts % 100 == 0) {
-        printf("\rTS Read: %d", nts);
-        // break;
-      }
-    }
-
-    printf("\n");
-    logf(LOG_INFO, "Excess Cost: \t%.7f s", excess_cost_ / 1e6);
-    logf(LOG_INFO, "Avg Cost: \t%.7f s", total_cost_avg_ / 1e6);
-    logf(LOG_INFO, "Max Cost: \t%.7f s", total_cost_max_ / 1e6);
-  }
-
-  void CheckAssignment(std::vector<int>& times) {
-    int nranks = 512;
-    int nblocks = times.size();
-    std::vector<int> rank_times(nranks, 0);
-
-    std::vector<double> costlist(nblocks, 1.0f);
-    std::vector<int> ranklist(nblocks, -1);
-
-    // Policies::AssignBlocksRoundRobin(costlist, ranklist, nranks);
-    Policies::AssignBlocksContiguous(costlist, ranklist, nranks);
-
-    for (int bid = 0; bid < nblocks; bid++) {
-      int block_rank = ranklist[bid];
-      int block_cost = times[bid];
-      rank_times[block_rank] += block_cost;
-    }
-
-    int const& (*max_func)(int const&, int const&) = std::max<int>;
-    int rtmax = std::accumulate(rank_times.begin(), rank_times.end(),
-                                rank_times.front(), max_func);
-    uint64_t rtsum =
-        std::accumulate(rank_times.begin(), rank_times.end(), 0ull);
-    double rtavg = rtsum * 1.0 / nranks;
-
-    excess_cost_ += (rtmax - rtavg);
-    total_cost_avg_ += rtavg;
-    total_cost_max_ += rtmax;
-  }
+  void CheckAssignment(std::vector<int>& times);
 
  private:
+  std::vector<std::string> LocateRelevantFiles(const std::string& root_dir) {
+    std::vector<std::string> files;
+    env_->GetChildren(root_dir.c_str(), &files);
+
+    logf(LOG_DBG2, "Enumerating directory: %s", root_dir.c_str());
+    for (auto& f : files) {
+      logf(LOG_DBG2, "- File: %s", f.c_str());
+    }
+
+    std::vector<std::string> regex_patterns = {
+        R"(prof\.merged\.evt\d+\.csv)",
+        R"(prof\.merged\.evt\d+\.mini\.csv)",
+        R"(prof\.aggr\.evt\d+\.csv)",
+    };
+
+    for (auto& pattern : regex_patterns) {
+      logf(LOG_DBG2, "Searching by pattern: %s", pattern.c_str());
+      std::vector<std::string> relevant_files = FilterByRegex(files, pattern);
+
+      for (auto& f : relevant_files) {
+        logf(LOG_DBG2, "- Match: %s", f.c_str());
+      }
+
+      if (!relevant_files.empty()) return relevant_files;
+    }
+
+    return {};
+  }
+
+  static std::vector<std::string> FilterByRegex(
+      std::vector<std::string>& strings, std::string regex_pattern) {
+    std::vector<std::string> matches;
+    const std::regex regex_obj(regex_pattern);
+
+    for (auto& s : strings) {
+      std::smatch match_obj;
+      if (std::regex_match(s, match_obj, regex_obj)) {
+        matches.push_back(s);
+      }
+    }
+    return matches;
+  }
+
+  const PolicySimOptions options_;
+  pdlfs::Env* const env_;
+
   double excess_cost_;
   double total_cost_avg_;
   double total_cost_max_;
