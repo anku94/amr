@@ -21,7 +21,6 @@ enum class Policy {
 struct PolicySimOptions {
   pdlfs::Env* env;
   const char* prof_dir;
-  Policy policy;
 };
 
 class PolicySim {
@@ -40,6 +39,7 @@ class PolicySim {
   void SimulateTrace();
 
   void LogSummary() {
+    logf(LOG_INFO, "\n\nFinished trace replay. Summary:\n");
     for (auto& ctx : policies_) ctx.LogSummary();
   }
 
