@@ -21,6 +21,7 @@ class PolicyExecutionContext {
         excess_cost_(0),
         total_cost_avg_(0),
         total_cost_max_(0),
+        locality_score_sum_(0),
         exec_time_us_(0) {}
 
   /*
@@ -28,7 +29,7 @@ class PolicyExecutionContext {
    * @param cost_actual Cost-vector for load balance estimation
    */
   int ExecuteTimestep(int nranks, std::vector<double> const& cost_alloc,
-                       std::vector<double> const& cost_actual);
+                      std::vector<double> const& cost_actual);
 
   /* cost is assumed to be us */
   void LogSummary() {
@@ -37,11 +38,46 @@ class PolicyExecutionContext {
     logf(LOG_INFO, "\tExcess Cost: \t%.2f s", excess_cost_ / 1e6);
     logf(LOG_INFO, "\tAvg Cost: \t%.2f s", total_cost_avg_ / 1e6);
     logf(LOG_INFO, "\tMax Cost: \t%.2f s", total_cost_max_ / 1e6);
+    logf(LOG_INFO, "\tLoc Score: \t%.2f%%", locality_score_sum_ * 100 / ts_);
 
     logf(LOG_INFO, "\n\tExec Time: \t%.2f s\n", exec_time_us_ / 1e6);
   }
 
  private:
+  //
+  // Use an arbitary model to compute
+  // Intuition: amount of linear locality captured (lower is better)
+  // cost of 1 for neighboring ranks
+  // cost of 2 for same node (hardcoded rn)
+  // cost of 3 for arbitrary communication
+  //
+  static double ComputeLocScore(std::vector<int>& rank_list) {
+    int nb = rank_list.size();
+    int local_score = 0;
+
+    for (int bidx = 0; bidx < nb - 1; bidx++) {
+      int p = rank_list[bidx];
+      int q = rank_list[bidx + 1];
+
+      // Nodes for p and q, computed using assumptions
+      int pn = p / 16;
+      int qn = q / 16;
+
+      if (p == q) {
+        // nothing
+      } else if (abs(q - p) == 1) {
+        local_score += 1;
+      } else if (qn == pn) {
+        local_score += 2;
+      } else {
+        local_score += 3;
+      }
+    }
+
+    double norm_score = local_score * 1.0 / nb;
+    return norm_score;
+  }
+
   const char* const policy_name_;
   const Policy policy_;
   pdlfs::Env* const env_;
@@ -52,6 +88,8 @@ class PolicyExecutionContext {
   double excess_cost_;
   double total_cost_avg_;
   double total_cost_max_;
+
+  double locality_score_sum_;
 
   double exec_time_us_;
 };

@@ -41,9 +41,9 @@ int amr::PolicyExecutionContext::ExecuteTimestep(
   excess_cost_ += (rtmax - rtavg);
   total_cost_avg_ += rtavg;
   total_cost_max_ += rtmax;
+  locality_score_sum_ += ComputeLocScore(rank_list);
 
   ts_++;
-
   return rv;
 }
 }  // namespace amr
