@@ -27,7 +27,7 @@ class PolicyExecutionContext {
    * @param cost_alloc Cost-vector for assignment by policy
    * @param cost_actual Cost-vector for load balance estimation
    */
-  void ExecuteTimestep(int nranks, std::vector<double> const& cost_alloc,
+  int ExecuteTimestep(int nranks, std::vector<double> const& cost_alloc,
                        std::vector<double> const& cost_actual);
 
   /* cost is assumed to be us */

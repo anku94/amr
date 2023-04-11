@@ -58,17 +58,19 @@ void AssignBlocks(std::vector<double> const& costlist,
 }  // namespace
 
 namespace amr {
-void LoadBalancePolicies::AssignBlocksSPT(std::vector<double> const& costlist,
-                                          std::vector<int>& ranklist,
-                                          int nranks) {
+int LoadBalancePolicies::AssignBlocksSPT(std::vector<double> const& costlist,
+                                         std::vector<int>& ranklist,
+                                         int nranks) {
   ::AssignBlocks(costlist, ranklist, nranks,
                  [&](int a, int b) { return costlist[a] < costlist[b]; });
+  return 0;
 }
 
-void LoadBalancePolicies::AssignBlocksLPT(std::vector<double> const& costlist,
-                                          std::vector<int>& ranklist,
-                                          int nranks) {
+int LoadBalancePolicies::AssignBlocksLPT(std::vector<double> const& costlist,
+                                         std::vector<int>& ranklist,
+                                         int nranks) {
   ::AssignBlocks(costlist, ranklist, nranks,
                  [&](int a, int b) { return costlist[a] > costlist[b]; });
+  return 0;
 }
 }  // namespace amr

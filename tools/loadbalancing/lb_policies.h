@@ -16,7 +16,7 @@ namespace amr {
 enum class Policy;
 class LoadBalancePolicies {
  public:
-  static void AssignBlocks(Policy policy, std::vector<double> const& costlist,
+  static int AssignBlocks(Policy policy, std::vector<double> const& costlist,
                            std::vector<int>& ranklist, int nranks) {
     // Two reasons to have a static object:
     // - once per lifetime policy selection
@@ -27,7 +27,7 @@ class LoadBalancePolicies {
       ABORT("Only one policy supported during program lifetime!");
     }
 
-    AssignBlocksInternal(lb_instance.policy_, costlist, ranklist, nranks);
+    return AssignBlocksInternal(lb_instance.policy_, costlist, ranklist, nranks);
   }
 
   LoadBalancePolicies(LoadBalancePolicies const&) = delete;
@@ -42,23 +42,23 @@ class LoadBalancePolicies {
 
   static std::string PolicyToString(Policy policy);
 
-  static void AssignBlocksInternal(Policy policy,
+  static int AssignBlocksInternal(Policy policy,
                                    std::vector<double> const& costlist,
                                    std::vector<int>& ranklist, int nranks);
 
-  static void AssignBlocksRoundRobin(std::vector<double> const& costlist,
+  static int AssignBlocksRoundRobin(std::vector<double> const& costlist,
                                      std::vector<int>& ranklist, int nranks);
 
-  static void AssignBlocksSkewed(std::vector<double> const& costlist,
+  static int AssignBlocksSkewed(std::vector<double> const& costlist,
                                  std::vector<int>& ranklist, int nranks);
 
-  static void AssignBlocksContiguous(std::vector<double> const& costlist,
+  static int AssignBlocksContiguous(std::vector<double> const& costlist,
                                      std::vector<int>& ranklist, int nranks);
 
-  static void AssignBlocksSPT(std::vector<double> const& costlist,
+  static int AssignBlocksSPT(std::vector<double> const& costlist,
                               std::vector<int>& ranklist, int nranks);
 
-  static void AssignBlocksLPT(std::vector<double> const& costlist,
+  static int AssignBlocksLPT(std::vector<double> const& costlist,
                               std::vector<int>& ranklist, int nranks);
 
   const Policy policy_;

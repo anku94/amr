@@ -24,7 +24,7 @@ std::string LoadBalancePolicies::PolicyToString(Policy policy) {
   return "Unknown Policy";
 }
 
-void LoadBalancePolicies::AssignBlocksInternal(
+int LoadBalancePolicies::AssignBlocksInternal(
     Policy policy, std::vector<double> const& costlist,
     std::vector<int>& ranklist, int nranks) {
   std::string policy_str = PolicyToString(policy);
@@ -35,27 +35,23 @@ void LoadBalancePolicies::AssignBlocksInternal(
 
   switch (policy) {
     case Policy::kPolicyContiguous:
-      AssignBlocksContiguous(costlist, ranklist, nranks);
-      break;
+      return AssignBlocksContiguous(costlist, ranklist, nranks);
     case Policy::kPolicySkewed:
-      AssignBlocksSkewed(costlist, ranklist, nranks);
-      break;
+      return AssignBlocksSkewed(costlist, ranklist, nranks);
     case Policy::kPolicyRoundRobin:
-      AssignBlocksRoundRobin(costlist, ranklist, nranks);
-      break;
+      return AssignBlocksRoundRobin(costlist, ranklist, nranks);
     case Policy::kPolicySPT:
-      AssignBlocksSPT(costlist, ranklist, nranks);
-      break;
+      return AssignBlocksSPT(costlist, ranklist, nranks);
     case Policy::kPolicyLPT:
-      AssignBlocksLPT(costlist, ranklist, nranks);
-      break;
+      return AssignBlocksLPT(costlist, ranklist, nranks);
     default:
       ABORT("Policy not implemented!!");
-      break;
   }
+
+  return -1;
 }
 
-void LoadBalancePolicies::AssignBlocksRoundRobin(
+int LoadBalancePolicies::AssignBlocksRoundRobin(
     const std::vector<double>& costlist, std::vector<int>& ranklist,
     int nranks) {
   for (int block_id = 0; block_id < costlist.size(); block_id++) {
@@ -65,10 +61,10 @@ void LoadBalancePolicies::AssignBlocksRoundRobin(
     ranklist[block_id] = block_rank;
   }
 
-  return;
+  return 0;
 }
 
-void LoadBalancePolicies::AssignBlocksSkewed(
+int LoadBalancePolicies::AssignBlocksSkewed(
     const std::vector<double>& costlist, std::vector<int>& ranklist,
     int nranks) {
   int nblocks = costlist.size();
@@ -97,10 +93,10 @@ void LoadBalancePolicies::AssignBlocksSkewed(
     }
   }
 
-  return;
+  return 0;
 }
 
-void LoadBalancePolicies::AssignBlocksContiguous(
+int LoadBalancePolicies::AssignBlocksContiguous(
     const std::vector<double>& costlist, std::vector<int>& ranklist,
     int nranks) {
   double const total_cost =
@@ -118,7 +114,10 @@ void LoadBalancePolicies::AssignBlocksContiguous(
           << "There is at least one process which has no MeshBlock" << std::endl
           << "Decrease the number of processes or use smaller MeshBlocks."
           << std::endl;
-      ABORT(msg.str().c_str());
+      logf(LOG_WARN, "%s", msg.str().c_str());
+//      ABORT(msg.str().c_str());
+      logf(LOG_WARN, "Thugs don't abort on fatal errors.");
+      return -1;
     }
     my_cost += costlist[block_id];
     ranklist[block_id] = rank;
@@ -129,5 +128,7 @@ void LoadBalancePolicies::AssignBlocksContiguous(
       target_cost = remaining_cost / (rank + 1);
     }
   }
+
+  return 0;
 }
 }  // namespace amr

@@ -30,12 +30,15 @@ class ProfSetReader {
       nblocks = std::max(nblocks, rnblocks);
     }
 
+    logf(LOG_DBUG, "Blocks read: %d", nblocks);
+
     if (nblocks > 0) {
       nblocks_prev_ = nblocks;
     }
 
-    // should not be necessary: done in ProfReader::LogTime
-    // times.resize(nblocks);
+    // LogTime upsizes the vector if necessary
+    // This is to downsize the vector if necessary
+    times.resize(nblocks);
 
     return nblocks;
   }

@@ -7,9 +7,11 @@
 #include "lb_policies.h"
 
 namespace amr {
-void amr::PolicyExecutionContext::ExecuteTimestep(
+int amr::PolicyExecutionContext::ExecuteTimestep(
     int nranks, const std::vector<double>& cost_alloc,
     const std::vector<double>& cost_actual) {
+  int rv = 0;
+
   int nblocks = cost_alloc.size();
   assert(nblocks == cost_actual.size());
 
@@ -17,9 +19,12 @@ void amr::PolicyExecutionContext::ExecuteTimestep(
   std::vector<double> rank_times(nranks, 0);
 
   uint64_t ts_assign_beg = env_->NowMicros();
-  LoadBalancePolicies::AssignBlocksInternal(policy_, cost_alloc, rank_list,
-                                            nranks);
+  rv = LoadBalancePolicies::AssignBlocksInternal(policy_, cost_alloc, rank_list,
+                                                 nranks);
   uint64_t ts_assign_end = env_->NowMicros();
+
+  if (rv) return rv;
+
   exec_time_us_ += (ts_assign_end - ts_assign_beg);
 
   for (int bid = 0; bid < nblocks; bid++) {
@@ -38,5 +43,7 @@ void amr::PolicyExecutionContext::ExecuteTimestep(
   total_cost_max_ += rtmax;
 
   ts_++;
+
+  return rv;
 }
 }  // namespace amr

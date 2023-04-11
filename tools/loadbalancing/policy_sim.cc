@@ -35,29 +35,48 @@ void PolicySim::SimulateTrace() {
     psr.AddProfile(full_path);
   }
 
-  int nts = 0;
+  nts_ = 0;
+  bad_ts_ = 0;
+
   std::vector<int> block_times;
   while (psr.ReadTimestep(block_times) > 0) {
-    InvokePolicies(block_times);
-    nts++;
-    if (nts % 100 == 0) {
-      printf("\rTS Read: %d", nts);
+    int rv = InvokePolicies(block_times);
+    if (rv) {
+      logf(LOG_WARN, "\n ====> !!!! TS %d seems bad !!!!", nts_);
+      bad_ts_++;
+    }
+
+    nts_++;
+    if (nts_ % 100 == 0) {
+      printf("\rTS Read: %d", nts_);
       // break;
     }
   }
 }
 
-void PolicySim::InvokePolicies(std::vector<int>& cost_actual) {
+int PolicySim::InvokePolicies(std::vector<int>& cost_actual) {
   int nranks = 512;
 
   std::vector<double> cost_naive(cost_actual.size(), 1.0f);
   std::vector<double> cost_actual_lf(cost_actual.begin(), cost_actual.end());
 
-  policies_[0].ExecuteTimestep(nranks, cost_naive, cost_actual_lf);
-  policies_[1].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
-  policies_[2].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
-  policies_[3].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
-  policies_[4].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  int rv = 0;
+  rv = policies_[0].ExecuteTimestep(nranks, cost_naive, cost_actual_lf);
+  if (rv) return rv;
+
+  rv = policies_[1].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  if (rv) return rv;
+
+  rv = policies_[2].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  if (rv) return rv;
+
+  rv = policies_[3].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  if (rv) return rv;
+
+  rv = policies_[4].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
+  if (rv) return rv;
+
+  return 0;
 }
 
 std::vector<std::string> PolicySim::LocateRelevantFiles(

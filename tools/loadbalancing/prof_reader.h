@@ -59,8 +59,16 @@ class ProfileReader {
 
   int ReadNextTimestep(std::vector<int>& times) {
     if (eof_) return -1;
-    int nblocks = ReadTimestep(ts_ + 1, times);
-    ts_++;
+
+    int nlines_read = 0;
+    int nblocks = 0;
+
+    while (nlines_read == 0) {
+      nblocks = ReadTimestep(ts_ + 1, times, nlines_read);
+      ts_++;
+    }
+
+    logf(LOG_DBUG, "Timestep: %d, lines read: %d", ts_, nlines_read);
 
     return nblocks;
   }
@@ -107,7 +115,7 @@ class ProfileReader {
    * Returns: Number of blocks in current ts
    * (assuming contiguous bid allocation)
    */
-  int ReadTimestep(int ts_to_read, std::vector<int>& times) {
+  int ReadTimestep(int ts_to_read, std::vector<int>& times, int& nlines_read) {
     if (eof_) return -1;
 
     if (ts_to_read == 0) {
@@ -122,12 +130,16 @@ class ProfileReader {
     if (prev_ts_ >= 0) {
       if (prev_ts_ == ts_to_read) {
         LogTime(times, prev_bid_, prev_time_);
+        nlines_read++;
 
         max_bid = std::max(max_bid, prev_bid_);
         prev_ts_ = prev_bid_ = prev_time_ = -1;
       } else if (prev_ts_ < ts_to_read) {
         logf(LOG_WARN, "Somehow skipped ts %d data. Dropping...", prev_ts_);
         prev_ts_ = prev_bid_ = prev_time_ = -1;
+      } else if (prev_ts_ > ts_to_read) {
+        // Wait for ts to catch up
+        return max_bid;
       }
     }
 
@@ -147,6 +159,7 @@ class ProfileReader {
 
       max_bid = std::max(max_bid, bid);
       LogTime(times, bid, time_us);
+      nlines_read++;
     }
 
     LogVector(times);

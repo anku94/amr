@@ -26,12 +26,16 @@ struct PolicySimOptions {
 class PolicySim {
  public:
   explicit PolicySim(const PolicySimOptions& options)
-      : options_(options), env_(options.env) {}
+      : options_(options), env_(options.env), nts_(0), bad_ts_(0) {}
 
   void Run() {
     InitializePolicies();
     SimulateTrace();
     LogSummary();
+
+    logf(LOG_INFO, "-------------------");
+    logf(LOG_INFO, "Bad TS Count: %d/%d", bad_ts_, nts_);
+    logf(LOG_INFO, "Run Finished.");
   }
 
   void InitializePolicies();
@@ -43,7 +47,7 @@ class PolicySim {
     for (auto& ctx : policies_) ctx.LogSummary();
   }
 
-  void InvokePolicies(std::vector<int>& cost_actual);
+  int InvokePolicies(std::vector<int>& cost_actual);
 
  private:
   std::vector<std::string> LocateRelevantFiles(const std::string& root_dir);
@@ -65,5 +69,8 @@ class PolicySim {
   const PolicySimOptions options_;
   pdlfs::Env* const env_;
   std::vector<PolicyExecutionContext> policies_;
+
+  int nts_;
+  int bad_ts_;
 };
 }  // namespace amr
