@@ -1,5 +1,7 @@
 find_package(pdlfs-common CONFIG REQUIRED)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+
 include(GoogleTest)
 
 set(lb_srcs

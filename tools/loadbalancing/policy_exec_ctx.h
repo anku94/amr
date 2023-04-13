@@ -17,10 +17,11 @@ namespace amr {
 class PolicyExecutionContext {
  public:
   PolicyExecutionContext(const char* policy_name, Policy policy,
-                         pdlfs::Env* env)
+                         pdlfs::Env* env, int nranks)
       : policy_name_(policy_name),
         policy_(policy),
         env_(env),
+        nranks_(nranks),
         ts_(0),
         exec_time_us_(0),
         fd_(nullptr) {
@@ -38,7 +39,7 @@ class PolicyExecutionContext {
    * @param cost_alloc Cost-vector for assignment by policy
    * @param cost_actual Cost-vector for load balance estimation
    */
-  int ExecuteTimestep(int nranks, std::vector<double> const& cost_alloc,
+  int ExecuteTimestep(std::vector<double> const& cost_alloc,
                       std::vector<double> const& cost_actual) {
     int rv;
     int nblocks = cost_alloc.size();
@@ -48,11 +49,11 @@ class PolicyExecutionContext {
 
     uint64_t ts_assign_beg = pdlfs::Env::NowMicros();
     rv = LoadBalancePolicies::AssignBlocksInternal(policy_, cost_alloc,
-                                                   rank_list, nranks);
+                                                   rank_list, nranks_);
     uint64_t ts_assign_end = pdlfs::Env::NowMicros();
     if (rv) return rv;
 
-    stats_.LogTimestep(nranks, fd_, cost_actual, rank_list);
+    stats_.LogTimestep(nranks_, fd_, cost_actual, rank_list);
     exec_time_us_ += (ts_assign_end - ts_assign_beg);
     ts_++;
     return rv;
@@ -65,22 +66,13 @@ class PolicyExecutionContext {
     logf(LOG_INFO, "\n\tExec Time: \t%.2f s\n", exec_time_us_ / 1e6);
   }
 
+  std::string Name() const {
+    return policy_name_;
+  }
+
  private:
-  void WriteHeader() {
-    const char* header = "ts,avg_us,max_us\n";
-    pdlfs::Status s;
-    SAFE_IO(fd_->Append(header), "Write failed");
-  }
-
-  void WriteData(int ts, double avg, double max) {
-    char buf[1024];
-    int buf_len = snprintf(buf, 1024, " %d,%.0lf,%.0lf\n", ts, avg, max);
-    pdlfs::Status s;
-    SAFE_IO(fd_->Append(pdlfs::Slice(buf, buf_len)), "Write failed");
-  }
-
   void EnsureOutputFile() {
-    std::string fname = policy_name_;
+    std::string fname = GetLogPath();
     if (env_->FileExists(fname.c_str())) {
       logf(LOG_WARN, "Overwriting file: %s", fname.c_str());
       env_->DeleteFile(fname.c_str());
@@ -93,10 +85,8 @@ class PolicyExecutionContext {
 
     pdlfs::Status s = env_->NewWritableFile(fname.c_str(), &fd_);
     if (!s.ok()) {
-      ABORT("Unable to open SequentialFile!");
+      ABORT("Unable to open WriteableFile!");
     }
-
-    WriteHeader();
   }
 
   std::string GetLogPath() const {
@@ -110,6 +100,7 @@ class PolicyExecutionContext {
   const char* const policy_name_;
   const Policy policy_;
   pdlfs::Env* const env_;
+  const int nranks_;
 
   int ts_;
   double exec_time_us_;

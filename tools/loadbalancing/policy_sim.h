@@ -10,12 +10,27 @@
 #include <vector>
 
 namespace amr {
+class PolicyExecutionContext;
+
 struct PolicySimOptions {
   pdlfs::Env* env;
   const char* prof_dir;
+  int nranks;
 };
 
-class PolicyExecutionContext;
+struct ExecCtxWrapper {
+  const char* const ctx_name;
+  Policy policy;
+  bool unit_cost;  // If true, use unit cost for all blocks
+  PolicyExecutionContext ctx;
+
+  ExecCtxWrapper(const char* ctx_name, Policy policy, bool unit_cost,
+                 const PolicySimOptions& sim_opts)
+      : ctx_name(ctx_name),
+        policy(policy),
+        unit_cost(unit_cost),
+        ctx(ctx_name, policy, sim_opts.env, sim_opts.nranks) {}
+};
 
 class PolicySim {
  public:
@@ -59,7 +74,7 @@ class PolicySim {
 
   const PolicySimOptions options_;
   pdlfs::Env* const env_;
-  std::vector<PolicyExecutionContext> policies_;
+  std::vector<ExecCtxWrapper> policies_;
 
   int nts_;
   int bad_ts_;

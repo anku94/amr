@@ -10,18 +10,20 @@
 namespace amr {
 void PolicySim::LogSummary() {
   logf(LOG_INFO, "\n\nFinished trace replay. Summary:\n");
-  for (auto& ctx : policies_) ctx.LogSummary();
+  for (auto& policy : policies_) policy.ctx.LogSummary();
 }
 
 void PolicySim::InitializePolicies() {
   policies_.emplace_back("Contiguous/Unit-Cost", Policy::kPolicyContiguous,
-                         env_);
+                         true, options_);
   policies_.emplace_back("Contiguous/Actual-Cost", Policy::kPolicyContiguous,
-                         env_);
-  policies_.emplace_back("RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
-                         env_);
-  policies_.emplace_back("SPT/Actual-Cost", Policy::kPolicySPT, env_);
-  policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, env_);
+                         false, options_);
+//  policies_.emplace_back("RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
+//                         false, options_);
+//  policies_.emplace_back("SPT/Actual-Cost", Policy::kPolicySPT, false,
+//                         options_);
+//  policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, false,
+//                         options_);
 }
 
 void PolicySim::SimulateTrace() {
@@ -61,26 +63,21 @@ void PolicySim::SimulateTrace() {
 }
 
 int PolicySim::InvokePolicies(std::vector<int>& cost_actual) {
-  int nranks = 512;
-
   std::vector<double> cost_naive(cost_actual.size(), 1.0f);
   std::vector<double> cost_actual_lf(cost_actual.begin(), cost_actual.end());
 
-  int rv = 0;
-  rv = policies_[0].ExecuteTimestep(nranks, cost_naive, cost_actual_lf);
-  if (rv) return rv;
+  for (int pidx = 0; pidx < policies_.size(); pidx++) {
+    int rv;
+    auto& policy = policies_[pidx];
 
-  rv = policies_[1].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
-  if (rv) return rv;
+    if (policy.unit_cost) {
+      rv = policy.ctx.ExecuteTimestep(cost_naive, cost_actual_lf);
+    } else {
+      rv = policy.ctx.ExecuteTimestep(cost_actual_lf, cost_actual_lf);
+    }
 
-  rv = policies_[2].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
-  if (rv) return rv;
-
-  rv = policies_[3].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
-  if (rv) return rv;
-
-  rv = policies_[4].ExecuteTimestep(nranks, cost_actual_lf, cost_actual_lf);
-  if (rv) return rv;
+    if (rv) return rv;
+  }
 
   return 0;
 }

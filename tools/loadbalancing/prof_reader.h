@@ -7,7 +7,7 @@
 namespace amr {
 class ProfileReader {
  public:
-  ProfileReader(const char* prof_csv_path)
+  explicit ProfileReader(const char* prof_csv_path)
       : csv_path_(prof_csv_path),
         csv_fd_(nullptr),
         ts_(-1),
@@ -25,7 +25,7 @@ class ProfileReader {
    * Another way to do this is to wrap the FILE* in a RAII class
    * or a unique pointer
    */
-  ProfileReader(ProfileReader&& rhs)
+  ProfileReader(ProfileReader&& rhs) noexcept
       : csv_path_(rhs.csv_path_),
         csv_fd_(rhs.csv_fd_),
         ts_(rhs.ts_),
@@ -38,22 +38,23 @@ class ProfileReader {
     }
   }
 
-  ProfileReader& operator=(ProfileReader&& rhs) {
-    if (this != &rhs) {
-      SafeCloseFile();
-      csv_fd_ = rhs.csv_fd_;
-      rhs.csv_fd_ = nullptr;
-    }
-
-    csv_path_ = rhs.csv_path_;
-    ts_ = rhs.ts_;
-    eof_ = rhs.eof_;
-    prev_ts_ = rhs.prev_ts_;
-    prev_bid_ = rhs.prev_bid_;
-    prev_time_ = rhs.prev_time_;
-
-    return *this;
-  }
+//  ProfileReader& operator=(ProfileReader&& rhs) noexcept {
+    ProfileReader& operator=(ProfileReader&& rhs) = delete;
+//    if (this != &rhs) {
+//      SafeCloseFile();
+//      csv_fd_ = rhs.csv_fd_;
+//      rhs.csv_fd_ = nullptr;
+//    }
+//
+//    csv_path_ = rhs.csv_path_;
+//    ts_ = rhs.ts_;
+//    eof_ = rhs.eof_;
+//    prev_ts_ = rhs.prev_ts_;
+//    prev_bid_ = rhs.prev_bid_;
+//    prev_time_ = rhs.prev_time_;
+//
+//    return *this;
+//  }
 
   ~ProfileReader() { SafeCloseFile(); }
 
@@ -74,7 +75,7 @@ class ProfileReader {
   }
 
   void Reset() {
-    logf(LOG_DBG2, "Reset: %s", csv_path_);
+    logf(LOG_DBG2, "Reset: %s", csv_path_.c_str());
     SafeCloseFile();
 
     // if (csv_fd_ != nullptr) {
@@ -83,10 +84,10 @@ class ProfileReader {
     // csv_fd_ = nullptr;
     // }
 
-    csv_fd_ = fopen(csv_path_, "r");
+    csv_fd_ = fopen(csv_path_.c_str(), "r");
 
     if (csv_fd_ == nullptr) {
-      logf(LOG_ERRO, "[ProfReader] Unable to open: %s", csv_path_);
+      logf(LOG_ERRO, "[ProfReader] Unable to open: %s", csv_path_.c_str());
       ABORT("Unable to open specified CSV");
     }
 
@@ -192,7 +193,7 @@ class ProfileReader {
     }
   }
 
-  const char* csv_path_;
+  const std::string csv_path_;
   FILE* csv_fd_;
   int ts_;
   bool eof_;
