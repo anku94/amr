@@ -41,6 +41,9 @@ void ParseOptions(int argc, char* argv[]) {
     PrintHelp(argc, argv);
     exit(-1);
   }
+
+  std::string output_dir = std::string(options.prof_dir) + "/lb_sim";
+  options.output_dir = output_dir.c_str();
 }
 
 void Run() {

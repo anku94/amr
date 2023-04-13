@@ -15,6 +15,7 @@ class PolicyExecutionContext;
 struct PolicySimOptions {
   pdlfs::Env* env;
   const char* prof_dir;
+  const char* output_dir;
   int nranks;
 };
 
@@ -39,6 +40,13 @@ class PolicySim {
       : options_(options), env_(options.env), nts_(0), bad_ts_(0) {}
 
   void Run() {
+    pdlfs::Status s = env_->CreateDir(options_.output_dir);
+    if (!(s.ok() || s.IsAlreadyExists())) {
+      logf(LOG_ERRO, "Failed to create output directory: %s",
+           options_.output_dir);
+      return;
+    }
+
     InitializePolicies();
     SimulateTrace();
     LogSummary();

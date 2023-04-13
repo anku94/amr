@@ -17,6 +17,6 @@ class MiscTest : public ::testing::Test {
 TEST_F(MiscTest, OutputFileTest) {
   std::string policy_name = "RoundRobin_Actual-Cost";
   std::string fname = GetLogPath("/a/b/c", policy_name.c_str());
-  ASSERT_EQ(fname, "/a/b/c/lb_sim_roundrobin_actual_cost.csv");
+  ASSERT_EQ(fname, "/a/b/c/roundrobin_actual_cost.csv");
 }
 }  // namespace amr

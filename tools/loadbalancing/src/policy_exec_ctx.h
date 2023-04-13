@@ -112,7 +112,7 @@ class PolicyExecutionContext {
     std::regex rm_unsafe("[/-]");
     std::string result = std::regex_replace(policy_name, rm_unsafe, "_");
     std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-    result = std::string(output_dir) + "/lb_sim_" + result + ".csv";
+    result = std::string(output_dir) + "/" + result + ".csv";
     logf(LOG_DBUG, "Policy Name: %s, Log Fname: %s", policy_name,
          result.c_str());
     return result;
