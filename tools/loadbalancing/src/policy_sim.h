@@ -29,7 +29,8 @@ struct ExecCtxWrapper {
       : ctx_name(ctx_name),
         policy(policy),
         unit_cost(unit_cost),
-        ctx(ctx_name, policy, sim_opts.env, sim_opts.nranks) {}
+        ctx(sim_opts.prof_dir, ctx_name, policy, sim_opts.env,
+            sim_opts.nranks) {}
 };
 
 class PolicySim {

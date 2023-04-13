@@ -16,9 +16,10 @@ namespace amr {
 
 class PolicyExecutionContext {
  public:
-  PolicyExecutionContext(const char* policy_name, Policy policy,
-                         pdlfs::Env* env, int nranks)
-      : policy_name_(policy_name),
+  PolicyExecutionContext(const char* output_dir, const char* policy_name,
+                         Policy policy, pdlfs::Env* env, int nranks)
+      : output_dir_(output_dir),
+        policy_name_(policy_name),
         policy_(policy),
         env_(env),
         nranks_(nranks),
@@ -30,7 +31,8 @@ class PolicyExecutionContext {
 
   // Safe move constructor for fd_
   PolicyExecutionContext(PolicyExecutionContext&& rhs) noexcept
-      : policy_name_(rhs.policy_name_),
+      : output_dir_(rhs.output_dir_),
+        policy_name_(rhs.policy_name_),
         policy_(rhs.policy_),
         env_(rhs.env_),
         nranks_(rhs.nranks_),
@@ -88,7 +90,7 @@ class PolicyExecutionContext {
 
  private:
   void EnsureOutputFile() {
-    std::string fname = GetLogPath();
+    std::string fname = GetLogPath(output_dir_, policy_name_);
     if (env_->FileExists(fname.c_str())) {
       logf(LOG_WARN, "Overwriting file: %s", fname.c_str());
       env_->DeleteFile(fname.c_str());
@@ -105,14 +107,18 @@ class PolicyExecutionContext {
     }
   }
 
-  std::string GetLogPath() const {
-    std::regex rm_unsafe("/");
-    std::string result = std::regex_replace(policy_name_, rm_unsafe, "_");
-    logf(LOG_DBUG, "Policy Name: %s, Log Fname: %s", policy_name_,
+  static std::string GetLogPath(const char* output_dir,
+                                const char* policy_name) {
+    std::regex rm_unsafe("[/-]");
+    std::string result = std::regex_replace(policy_name, rm_unsafe, "_");
+    std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+    result = std::string(output_dir) + "/lb_sim_" + result + ".csv";
+    logf(LOG_DBUG, "Policy Name: %s, Log Fname: %s", policy_name,
          result.c_str());
     return result;
   }
 
+  const char* const output_dir_;
   const char* const policy_name_;
   const Policy policy_;
   pdlfs::Env* const env_;
