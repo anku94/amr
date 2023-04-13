@@ -14,8 +14,8 @@ class PolicyExecutionContext;
 
 struct PolicySimOptions {
   pdlfs::Env* env;
-  const char* prof_dir;
-  const char* output_dir;
+  std::string prof_dir;
+  std::string output_dir;
   int nranks;
 };
 
@@ -30,7 +30,7 @@ struct ExecCtxWrapper {
       : ctx_name(ctx_name),
         policy(policy),
         unit_cost(unit_cost),
-        ctx(sim_opts.prof_dir, ctx_name, policy, sim_opts.env,
+        ctx(sim_opts.output_dir.c_str(), ctx_name, policy, sim_opts.env,
             sim_opts.nranks) {}
 };
 
@@ -40,13 +40,10 @@ class PolicySim {
       : options_(options), env_(options.env), nts_(0), bad_ts_(0) {}
 
   void Run() {
-    pdlfs::Status s = env_->CreateDir(options_.output_dir);
-    if (!(s.ok() || s.IsAlreadyExists())) {
-      logf(LOG_ERRO, "Failed to create output directory: %s",
-           options_.output_dir);
-      return;
-    }
+    logf(LOG_INFO, "Using prof dir: %s", options_.prof_dir.c_str());
+    logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
 
+    EnsureOutputDir();
     InitializePolicies();
     SimulateTrace();
     LogSummary();
@@ -55,6 +52,8 @@ class PolicySim {
     logf(LOG_INFO, "Bad TS Count: %d/%d", bad_ts_, nts_);
     logf(LOG_INFO, "Run Finished.");
   }
+
+  void EnsureOutputDir();
 
   void InitializePolicies();
 

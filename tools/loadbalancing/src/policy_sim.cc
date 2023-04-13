@@ -13,6 +13,18 @@ void PolicySim::LogSummary() {
   for (auto& policy : policies_) policy.ctx.LogSummary();
 }
 
+void PolicySim::EnsureOutputDir() {
+    pdlfs::Status s = env_->CreateDir(options_.output_dir.c_str());
+    if (s.ok()) {
+      logf(LOG_INFO, "\t- Created successfully.");
+    } else if (s.IsAlreadyExists()) {
+      logf(LOG_INFO, "\t- Already exists.");
+    } else {
+      logf(LOG_ERRO, "Failed to create output directory: %s (Reason: %s)",
+           options_.output_dir, s.ToString().c_str());
+    }
+}
+
 void PolicySim::InitializePolicies() {
   policies_.emplace_back("Contiguous/Unit-Cost", Policy::kPolicyContiguous,
                          true, options_);
@@ -28,7 +40,7 @@ void PolicySim::InitializePolicies() {
 
 void PolicySim::SimulateTrace() {
   logf(LOG_INFO, "[SimulateTrace] Looking for trace files in: \n\t%s",
-       options_.prof_dir);
+       options_.prof_dir.c_str());
 
   std::vector<std::string> files = LocateRelevantFiles(options_.prof_dir);
 

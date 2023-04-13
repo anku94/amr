@@ -13,7 +13,7 @@ void ParseOptions(int argc, char* argv[]) {
   extern int optind;
   int c;
 
-  options.prof_dir = nullptr;
+  options.prof_dir = "";
 
   while ((c = getopt(argc, argv, "i:h")) != -1) {
     switch (c) {
@@ -30,20 +30,19 @@ void ParseOptions(int argc, char* argv[]) {
   options.env = env;
   options.nranks = 512;
 
-  if (!options.prof_dir) {
+  if (options.prof_dir == "") {
     logf(LOG_ERRO, "No profile_dir specified!");
     PrintHelp(argc, argv);
     exit(-1);
   }
 
-  if ((!options.prof_dir) || (!options.env->FileExists(options.prof_dir))) {
+  if (!options.env->FileExists(options.prof_dir.c_str())) {
     logf(LOG_ERRO, "Directory does not exist!!!");
     PrintHelp(argc, argv);
     exit(-1);
   }
 
-  std::string output_dir = std::string(options.prof_dir) + "/lb_sim";
-  options.output_dir = output_dir.c_str();
+  options.output_dir = options.prof_dir + "/lb_sim";
 }
 
 void Run() {
