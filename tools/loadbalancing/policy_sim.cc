@@ -18,12 +18,12 @@ void PolicySim::InitializePolicies() {
                          true, options_);
   policies_.emplace_back("Contiguous/Actual-Cost", Policy::kPolicyContiguous,
                          false, options_);
-//  policies_.emplace_back("RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
-//                         false, options_);
-//  policies_.emplace_back("SPT/Actual-Cost", Policy::kPolicySPT, false,
-//                         options_);
-//  policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, false,
-//                         options_);
+  policies_.emplace_back("RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
+                         false, options_);
+  policies_.emplace_back("SPT/Actual-Cost", Policy::kPolicySPT, false,
+                         options_);
+  policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, false,
+                         options_);
 }
 
 void PolicySim::SimulateTrace() {

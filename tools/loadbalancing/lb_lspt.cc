@@ -4,6 +4,7 @@
 
 #include "lb_policies.h"
 
+#include <algorithm>
 #include <numeric>
 #include <queue>
 #include <vector>
@@ -32,27 +33,25 @@ void AssignBlocks(std::vector<double> const& costlist,
   std::fill(ranklist.begin(), ranklist.end(), -1);
 
   // Create a priority queue of ranks with the load as the priority
-  std::priority_queue<Rank, std::vector<Rank>, RankComparator> rankQueue;
+  std::priority_queue<Rank, std::vector<Rank>, RankComparator> rank_queue;
   for (int i = 0; i < nranks; i++) {
-    rankQueue.push(Rank(i, 0.0));
+    rank_queue.emplace(i, 0.0);
   }
 
   // Sort the indices of the costlist in ascending order of their corresponding
   // costs
   std::vector<int> indices(costlist.size());
   std::iota(indices.begin(), indices.end(), 0);
-  //  std::sort(indices.begin(), indices.end(),
-  //            [&](int a, int b) { return costlist[a] < costlist[b]; });
   std::sort(indices.begin(), indices.end(), comp);
 
   // Assign the blocks to the ranks using SPT algorithm
   for (int idx : indices) {
-    Rank minLoadRank = rankQueue.top();
-    rankQueue.pop();
+    Rank minLoadRank = rank_queue.top();
+    rank_queue.pop();
 
     ranklist[idx] = minLoadRank.id;
     minLoadRank.load += costlist[idx];
-    rankQueue.push(minLoadRank);
+    rank_queue.push(minLoadRank);
   }
 }
 }  // namespace

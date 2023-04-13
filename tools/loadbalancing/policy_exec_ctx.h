@@ -28,6 +28,24 @@ class PolicyExecutionContext {
     EnsureOutputFile();
   }
 
+  // Safe move constructor for fd_
+  PolicyExecutionContext(PolicyExecutionContext&& rhs) noexcept
+      : policy_name_(rhs.policy_name_),
+        policy_(rhs.policy_),
+        env_(rhs.env_),
+        nranks_(rhs.nranks_),
+        ts_(rhs.ts_),
+        exec_time_us_(rhs.exec_time_us_),
+        fd_(rhs.fd_) {
+    if (this != &rhs) {
+      rhs.fd_ = nullptr;
+    }
+  }
+
+  PolicyExecutionContext(const PolicyExecutionContext& rhs) = delete;
+
+  PolicyExecutionContext& operator=(PolicyExecutionContext&& rhs) = delete;
+
   ~PolicyExecutionContext() {
     if (fd_) {
       pdlfs::Status s;
@@ -66,9 +84,7 @@ class PolicyExecutionContext {
     logf(LOG_INFO, "\n\tExec Time: \t%.2f s\n", exec_time_us_ / 1e6);
   }
 
-  std::string Name() const {
-    return policy_name_;
-  }
+  std::string Name() const { return policy_name_; }
 
  private:
   void EnsureOutputFile() {

@@ -17,7 +17,7 @@ class MiscTest : public ::testing::Test {
 TEST_F(MiscTest, OutputFileTest) {
   pdlfs::Env* env = pdlfs::Env::Default();
   std::string policy_name = "abcd/efgh";
-  PolicyExecutionContext ctx(policy_name.c_str(), Policy::kPolicyLPT, env);
+  PolicyExecutionContext ctx(policy_name.c_str(), Policy::kPolicyLPT, env, 1);
   std::string fname = GetLogPath(ctx);
   ASSERT_EQ(fname, "abcd_efgh");
 }

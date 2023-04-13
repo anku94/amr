@@ -38,23 +38,7 @@ class ProfileReader {
     }
   }
 
-//  ProfileReader& operator=(ProfileReader&& rhs) noexcept {
-    ProfileReader& operator=(ProfileReader&& rhs) = delete;
-//    if (this != &rhs) {
-//      SafeCloseFile();
-//      csv_fd_ = rhs.csv_fd_;
-//      rhs.csv_fd_ = nullptr;
-//    }
-//
-//    csv_path_ = rhs.csv_path_;
-//    ts_ = rhs.ts_;
-//    eof_ = rhs.eof_;
-//    prev_ts_ = rhs.prev_ts_;
-//    prev_bid_ = rhs.prev_bid_;
-//    prev_time_ = rhs.prev_time_;
-//
-//    return *this;
-//  }
+  ProfileReader& operator=(ProfileReader&& rhs) = delete;
 
   ~ProfileReader() { SafeCloseFile(); }
 
@@ -78,12 +62,6 @@ class ProfileReader {
     logf(LOG_DBG2, "Reset: %s", csv_path_.c_str());
     SafeCloseFile();
 
-    // if (csv_fd_ != nullptr) {
-    // printf("closing fd 2: %p\n", csv_fd_);
-    // fclose(csv_fd_);
-    // csv_fd_ = nullptr;
-    // }
-
     csv_fd_ = fopen(csv_path_.c_str(), "r");
 
     if (csv_fd_ == nullptr) {
@@ -98,7 +76,7 @@ class ProfileReader {
 
  private:
   void ReadLine(char* buf, int max_sz) {
-    char* ret = fgets(buf, 1024, csv_fd_);
+    char* ret = fgets(buf, max_sz, csv_fd_);
     int nbread = strlen(ret);
     if (ret[nbread - 1] != '\n') {
       ABORT("buffer too small for line");
@@ -168,7 +146,7 @@ class ProfileReader {
     return max_bid + 1;
   }
 
-  void LogTime(std::vector<int>& times, int bid, int time_us) {
+  static void LogTime(std::vector<int>& times, int bid, int time_us) {
     if (times.size() <= bid) {
       times.resize(bid + 1, 0);
     }
@@ -176,7 +154,7 @@ class ProfileReader {
     times[bid] += time_us;
   }
 
-  void LogVector(std::vector<int>& v) {
+  static void LogVector(std::vector<int>& v) {
     std::stringstream ss;
     ss << "(" << v.size() << " items): ";
     for (auto n : v) {
