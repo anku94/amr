@@ -10,18 +10,12 @@
 #include <vector>
 
 namespace amr {
-enum class Policy {
-  kPolicyContiguous,
-  kPolicyRoundRobin,
-  kPolicySkewed,
-  kPolicySPT,
-  kPolicyLPT
-};
-
 struct PolicySimOptions {
   pdlfs::Env* env;
   const char* prof_dir;
 };
+
+class PolicyExecutionContext;
 
 class PolicySim {
  public:
@@ -42,10 +36,7 @@ class PolicySim {
 
   void SimulateTrace();
 
-  void LogSummary() {
-    logf(LOG_INFO, "\n\nFinished trace replay. Summary:\n");
-    for (auto& ctx : policies_) ctx.LogSummary();
-  }
+  void LogSummary();
 
   int InvokePolicies(std::vector<int>& cost_actual);
 

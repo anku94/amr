@@ -5,7 +5,6 @@
 #pragma once
 
 #include "common.h"
-#include "policy_sim.h"
 
 #include <iostream>
 #include <math.h>

@@ -4,9 +4,15 @@
 
 #include "policy_sim.h"
 
+#include "policy.h"
 #include "policy_exec_ctx.h"
 
 namespace amr {
+void PolicySim::LogSummary() {
+  logf(LOG_INFO, "\n\nFinished trace replay. Summary:\n");
+  for (auto& ctx : policies_) ctx.LogSummary();
+}
+
 void PolicySim::InitializePolicies() {
   policies_.emplace_back("Contiguous/Unit-Cost", Policy::kPolicyContiguous,
                          env_);

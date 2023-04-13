@@ -4,6 +4,8 @@
 
 #include "lb_policies.h"
 
+#include "policy.h"
+
 namespace amr {
 std::string LoadBalancePolicies::PolicyToString(Policy policy) {
   switch (policy) {

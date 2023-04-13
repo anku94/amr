@@ -5,11 +5,15 @@
 #pragma once
 
 #include "common.h"
+#include "lb_policies.h"
+#include "policy.h"
+#include "policy_stats.h"
 
 #include <pdlfs-common/env.h>
+#include <regex>
 
 namespace amr {
-enum class Policy;
+
 class PolicyExecutionContext {
  public:
   PolicyExecutionContext(const char* policy_name, Policy policy,
@@ -18,64 +22,89 @@ class PolicyExecutionContext {
         policy_(policy),
         env_(env),
         ts_(0),
-        excess_cost_(0),
-        total_cost_avg_(0),
-        total_cost_max_(0),
-        locality_score_sum_(0),
-        exec_time_us_(0) {}
+        exec_time_us_(0),
+        fd_(nullptr) {
+    EnsureOutputFile();
+  }
+
+  ~PolicyExecutionContext() {
+    if (fd_) {
+      pdlfs::Status s;
+      SAFE_IO(fd_->Close(), "Close failed");
+    }
+  }
 
   /*
    * @param cost_alloc Cost-vector for assignment by policy
    * @param cost_actual Cost-vector for load balance estimation
    */
   int ExecuteTimestep(int nranks, std::vector<double> const& cost_alloc,
-                      std::vector<double> const& cost_actual);
+                      std::vector<double> const& cost_actual) {
+    int rv;
+    int nblocks = cost_alloc.size();
+    assert(nblocks == cost_actual.size());
 
-  /* cost is assumed to be us */
+    std::vector<int> rank_list(nblocks, -1);
+
+    uint64_t ts_assign_beg = pdlfs::Env::NowMicros();
+    rv = LoadBalancePolicies::AssignBlocksInternal(policy_, cost_alloc,
+                                                   rank_list, nranks);
+    uint64_t ts_assign_end = pdlfs::Env::NowMicros();
+    if (rv) return rv;
+
+    stats_.LogTimestep(nranks, fd_, cost_actual, rank_list);
+    exec_time_us_ += (ts_assign_end - ts_assign_beg);
+    ts_++;
+    return rv;
+  }
+
   void LogSummary() {
     logf(LOG_INFO, "Policy: %s (%d timesteps simulated)", policy_name_, ts_);
     logf(LOG_INFO, "-----------------------------------");
-    logf(LOG_INFO, "\tExcess Cost: \t%.2f s", excess_cost_ / 1e6);
-    logf(LOG_INFO, "\tAvg Cost: \t%.2f s", total_cost_avg_ / 1e6);
-    logf(LOG_INFO, "\tMax Cost: \t%.2f s", total_cost_max_ / 1e6);
-    logf(LOG_INFO, "\tLoc Score: \t%.2f%%", locality_score_sum_ * 100 / ts_);
-
+    stats_.LogSummary();
     logf(LOG_INFO, "\n\tExec Time: \t%.2f s\n", exec_time_us_ / 1e6);
   }
 
  private:
-  //
-  // Use an arbitary model to compute
-  // Intuition: amount of linear locality captured (lower is better)
-  // cost of 1 for neighboring ranks
-  // cost of 2 for same node (hardcoded rn)
-  // cost of 3 for arbitrary communication
-  //
-  static double ComputeLocScore(std::vector<int>& rank_list) {
-    int nb = rank_list.size();
-    int local_score = 0;
+  void WriteHeader() {
+    const char* header = "ts,avg_us,max_us\n";
+    pdlfs::Status s;
+    SAFE_IO(fd_->Append(header), "Write failed");
+  }
 
-    for (int bidx = 0; bidx < nb - 1; bidx++) {
-      int p = rank_list[bidx];
-      int q = rank_list[bidx + 1];
+  void WriteData(int ts, double avg, double max) {
+    char buf[1024];
+    int buf_len = snprintf(buf, 1024, " %d,%.0lf,%.0lf\n", ts, avg, max);
+    pdlfs::Status s;
+    SAFE_IO(fd_->Append(pdlfs::Slice(buf, buf_len)), "Write failed");
+  }
 
-      // Nodes for p and q, computed using assumptions
-      int pn = p / 16;
-      int qn = q / 16;
-
-      if (p == q) {
-        // nothing
-      } else if (abs(q - p) == 1) {
-        local_score += 1;
-      } else if (qn == pn) {
-        local_score += 2;
-      } else {
-        local_score += 3;
-      }
+  void EnsureOutputFile() {
+    std::string fname = policy_name_;
+    if (env_->FileExists(fname.c_str())) {
+      logf(LOG_WARN, "Overwriting file: %s", fname.c_str());
+      env_->DeleteFile(fname.c_str());
     }
 
-    double norm_score = local_score * 1.0 / nb;
-    return norm_score;
+    if (fd_ != nullptr) {
+      logf(LOG_WARN, "File already exists!");
+      return;
+    }
+
+    pdlfs::Status s = env_->NewWritableFile(fname.c_str(), &fd_);
+    if (!s.ok()) {
+      ABORT("Unable to open SequentialFile!");
+    }
+
+    WriteHeader();
+  }
+
+  std::string GetLogPath() const {
+    std::regex rm_unsafe("/");
+    std::string result = std::regex_replace(policy_name_, rm_unsafe, "_");
+    logf(LOG_DBUG, "Policy Name: %s, Log Fname: %s", policy_name_,
+         result.c_str());
+    return result;
   }
 
   const char* const policy_name_;
@@ -83,14 +112,11 @@ class PolicyExecutionContext {
   pdlfs::Env* const env_;
 
   int ts_;
-
-  /* cost is assumed to be us */
-  double excess_cost_;
-  double total_cost_avg_;
-  double total_cost_max_;
-
-  double locality_score_sum_;
-
   double exec_time_us_;
+  pdlfs::WritableFile* fd_;
+
+  PolicyStats stats_;
+
+  friend class MiscTest;
 };
 }  // namespace amr
