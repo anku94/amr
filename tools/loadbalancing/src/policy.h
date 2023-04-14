@@ -10,6 +10,7 @@ enum class Policy {
   kPolicyRoundRobin,
   kPolicySkewed,
   kPolicySPT,
-  kPolicyLPT
+  kPolicyLPT,
+  kPolicyILP
 };
 }

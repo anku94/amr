@@ -60,6 +60,9 @@ class LoadBalancePolicies {
   static int AssignBlocksLPT(std::vector<double> const& costlist,
                               std::vector<int>& ranklist, int nranks);
 
+  static int AssignBlocksILP(std::vector<double> const& costlist,
+                             std::vector<int>& ranklist, int nranks);
+
   const Policy policy_;
 
   friend class LoadBalancingPoliciesTest;

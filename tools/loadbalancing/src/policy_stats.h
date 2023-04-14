@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "fort.hpp"
+
 #include <pdlfs-common/env.h>
 
 #define SAFE_IO(func, msg) \
@@ -58,6 +60,19 @@ class PolicyStats {
     logf(LOG_INFO, "\tAvg Cost: \t%.2f s", total_cost_avg_ / 1e6);
     logf(LOG_INFO, "\tMax Cost: \t%.2f s", total_cost_max_ / 1e6);
     logf(LOG_INFO, "\tLoc Score: \t%.2f%%", locality_score_sum_ * 100 / ts_);
+  }
+
+  void LogSummary(fort::char_table& table) const {
+    table << FormatProp(excess_cost_ / 1e6, "s")
+          << FormatProp(total_cost_avg_ / 1e6, "s")
+          << FormatProp(total_cost_max_ / 1e6, "s")
+          << FormatProp(locality_score_sum_ * 100 / ts_, "%");
+  }
+
+  static std::string FormatProp(double prop, const char* suffix) {
+    char buf[1024];
+    snprintf(buf, 1024, "%.1f %s", prop, suffix);
+    return {buf};
   }
 
  private:

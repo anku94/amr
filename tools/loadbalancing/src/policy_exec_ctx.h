@@ -23,7 +23,8 @@ class PolicyExecutionContext {
         policy_(policy),
         env_(env),
         nranks_(nranks),
-        ts_(0),
+        ts_invoked_(0),
+        ts_succeeded_(0),
         exec_time_us_(0),
         fd_(nullptr) {
     EnsureOutputFile();
@@ -36,7 +37,8 @@ class PolicyExecutionContext {
         policy_(rhs.policy_),
         env_(rhs.env_),
         nranks_(rhs.nranks_),
-        ts_(rhs.ts_),
+        ts_invoked_(rhs.ts_invoked_),
+        ts_succeeded_(rhs.ts_succeeded_),
         exec_time_us_(rhs.exec_time_us_),
         fd_(rhs.fd_) {
     if (this != &rhs) {
@@ -61,6 +63,8 @@ class PolicyExecutionContext {
    */
   int ExecuteTimestep(std::vector<double> const& cost_alloc,
                       std::vector<double> const& cost_actual) {
+    ts_invoked_++;
+
     int rv;
     int nblocks = cost_alloc.size();
     assert(nblocks == cost_actual.size());
@@ -75,15 +79,24 @@ class PolicyExecutionContext {
 
     stats_.LogTimestep(nranks_, fd_, cost_actual, rank_list);
     exec_time_us_ += (ts_assign_end - ts_assign_beg);
-    ts_++;
+
+    ts_succeeded_++;
     return rv;
   }
 
   void LogSummary() {
-    logf(LOG_INFO, "Policy: %s (%d timesteps simulated)", policy_name_, ts_);
+    logf(LOG_INFO, "Policy: %s (%d/%d timesteps simulated)", policy_name_,
+         ts_succeeded_, ts_invoked_);
     logf(LOG_INFO, "-----------------------------------");
     stats_.LogSummary();
     logf(LOG_INFO, "\n\tExec Time: \t%.2f s\n", exec_time_us_ / 1e6);
+  }
+
+  void LogSummary(fort::char_table& table) {
+    table << policy_name_
+          << std::to_string(ts_succeeded_) + "/" + std::to_string(ts_invoked_);
+    stats_.LogSummary(table);
+    table << PolicyStats::FormatProp(exec_time_us_ / 1e6, "s") << fort::endr;
   }
 
   std::string Name() const { return policy_name_; }
@@ -124,7 +137,8 @@ class PolicyExecutionContext {
   pdlfs::Env* const env_;
   const int nranks_;
 
-  int ts_;
+  int ts_invoked_;
+  int ts_succeeded_;
   double exec_time_us_;
   pdlfs::WritableFile* fd_;
 

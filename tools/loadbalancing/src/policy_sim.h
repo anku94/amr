@@ -46,13 +46,12 @@ class PolicySim {
     EnsureOutputDir();
     InitializePolicies();
     SimulateTrace();
-    LogSummary();
 
-    logf(LOG_INFO, "-------------------");
-    logf(LOG_INFO, "Bad TS Count: %d/%d", bad_ts_, nts_);
-    logf(LOG_INFO, "Run Finished.");
+    fort::char_table table;
+    LogSummary(table);
   }
 
+ private:
   void EnsureOutputDir();
 
   void InitializePolicies();
@@ -61,9 +60,10 @@ class PolicySim {
 
   void LogSummary();
 
+  void LogSummary(fort::char_table& table);
+
   int InvokePolicies(std::vector<int>& cost_actual);
 
- private:
   std::vector<std::string> LocateRelevantFiles(const std::string& root_dir);
 
   static std::vector<std::string> FilterByRegex(

@@ -4,6 +4,7 @@
 
 #include "policy_sim.h"
 
+#include "fort.hpp"
 #include "policy.h"
 #include "policy_exec_ctx.h"
 
@@ -11,18 +12,38 @@ namespace amr {
 void PolicySim::LogSummary() {
   logf(LOG_INFO, "\n\nFinished trace replay. Summary:\n");
   for (auto& policy : policies_) policy.ctx.LogSummary();
+
+  logf(LOG_INFO, "-------------------");
+  logf(LOG_INFO, "Bad TS Count: %d/%d", bad_ts_, nts_);
+  logf(LOG_INFO, "Run Finished.");
+}
+
+void PolicySim::LogSummary(fort::char_table& table) {
+  table << fort::header << "Policy"
+        << "Timesteps"
+        << "ExcessCost"
+        << "AvgCost"
+        << "MaxCost"
+        << "LocScore"
+        << "ExecTime" << fort::endr;
+
+  for (auto& policy : policies_) {
+    policy.ctx.LogSummary(table);
+  }
+
+  logf(LOG_INFO, "\n%s", table.to_string().c_str());
 }
 
 void PolicySim::EnsureOutputDir() {
-    pdlfs::Status s = env_->CreateDir(options_.output_dir.c_str());
-    if (s.ok()) {
-      logf(LOG_INFO, "\t- Created successfully.");
-    } else if (s.IsAlreadyExists()) {
-      logf(LOG_INFO, "\t- Already exists.");
-    } else {
-      logf(LOG_ERRO, "Failed to create output directory: %s (Reason: %s)",
-           options_.output_dir, s.ToString().c_str());
-    }
+  pdlfs::Status s = env_->CreateDir(options_.output_dir.c_str());
+  if (s.ok()) {
+    logf(LOG_INFO, "\t- Created successfully.");
+  } else if (s.IsAlreadyExists()) {
+    logf(LOG_INFO, "\t- Already exists.");
+  } else {
+    logf(LOG_ERRO, "Failed to create output directory: %s (Reason: %s)",
+         options_.output_dir.c_str(), s.ToString().c_str());
+  }
 }
 
 void PolicySim::InitializePolicies() {
@@ -35,6 +56,8 @@ void PolicySim::InitializePolicies() {
   policies_.emplace_back("SPT/Actual-Cost", Policy::kPolicySPT, false,
                          options_);
   policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, false,
+                         options_);
+  policies_.emplace_back("ILP/Actual-Cost", Policy::kPolicyILP, false,
                          options_);
 }
 

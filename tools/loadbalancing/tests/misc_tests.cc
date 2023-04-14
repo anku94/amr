@@ -3,6 +3,7 @@
 //
 
 #include "policy_exec_ctx.h"
+#include "approx_pq.h"
 
 #include <gtest/gtest.h>
 

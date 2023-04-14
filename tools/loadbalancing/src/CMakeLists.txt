@@ -1,15 +1,26 @@
 find_package(pdlfs-common CONFIG REQUIRED)
+find_package(GUROBI REQUIRED)
+
+# From Gurobi's example CMakeLists... not sure if thing thing works with 14
+# We're essentially overriding the top-level directive... do something else?
+set(CMAKE_CXX_STANDARD 11)
+
 set(lb_srcs
+        lb_ilp.cc
         lb_lspt.cc
         policy_sim.cc
         lb_policies.cc)
 
 add_library(lb ${lb_srcs} ${common_srcs})
-# target_include_directories(lb PUBLIC ${common_include})
+
 target_include_directories(lb PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<BUILD_INTERFACE:${common_include}>)
-target_link_libraries(lb pdlfs-common)
+#target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
+target_link_libraries(lb PUBLIC pdlfs-common fort)
+
+# FindGUROBI does not unify both these into a single target :(
+target_include_directories(lb PRIVATE ${GUROBI_INCLUDE_DIRS})
 
 add_executable(lb-sim main.cc)
-target_link_libraries(lb-sim lb)
+target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})

@@ -19,6 +19,8 @@ std::string LoadBalancePolicies::PolicyToString(Policy policy) {
       return "SPT";
     case Policy::kPolicyLPT:
       return "LPT";
+    case Policy::kPolicyILP:
+      return "ILP";
   }
 
   logf(LOG_ERRO, "Policy not implemented!");
@@ -46,6 +48,8 @@ int LoadBalancePolicies::AssignBlocksInternal(
       return AssignBlocksSPT(costlist, ranklist, nranks);
     case Policy::kPolicyLPT:
       return AssignBlocksLPT(costlist, ranklist, nranks);
+    case Policy::kPolicyILP:
+      return AssignBlocksILP(costlist, ranklist, nranks);
     default:
       ABORT("Policy not implemented!!");
   }
