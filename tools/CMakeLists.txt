@@ -44,5 +44,6 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 # END GTest
 
+add_subdirectory(external/libfort)
 add_subdirectory(topobench)
 add_subdirectory(loadbalancing)
