@@ -46,7 +46,7 @@ void PolicySim::EnsureOutputDir() {
   }
 }
 
-void PolicySim::InitializePolicies() {
+void PolicySim::SetupAll() {
   policies_.emplace_back("Contiguous/Unit-Cost", Policy::kPolicyContiguous,
                          true, options_);
   policies_.emplace_back("Contiguous/Actual-Cost", Policy::kPolicyContiguous,
@@ -57,32 +57,71 @@ void PolicySim::InitializePolicies() {
                          options_);
   policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, false,
                          options_);
-  policies_.emplace_back("ILP/Actual-Cost", Policy::kPolicyILP, false,
-                         options_);
+  // Too slow to run in the "ALL" mode
+  //  policies_.emplace_back("ILP/Actual-Cost", Policy::kPolicyILP, false,
+  //                         options_);
 }
 
-void PolicySim::SimulateTrace() {
+std::vector<std::string> PolicySim::LocateTraceFiles(
+    const std::string& search_dir) const {
   logf(LOG_INFO, "[SimulateTrace] Looking for trace files in: \n\t%s",
-       options_.prof_dir.c_str());
+       search_dir.c_str());
 
-  std::vector<std::string> files = LocateRelevantFiles(options_.prof_dir);
+  std::vector<std::string> files;
+  env_->GetChildren(search_dir.c_str(), &files);
+
+  logf(LOG_DBG2, "Enumerating directory: %s", search_dir.c_str());
+  for (auto& f : files) {
+    logf(LOG_DBG2, "- File: %s", f.c_str());
+  }
+
+  std::vector<std::string> regex_patterns = {
+      R"(prof\.merged\.evt\d+\.csv)",
+      R"(prof\.merged\.evt\d+\.mini\.csv)",
+      R"(prof\.aggr\.evt\d+\.csv)",
+  };
+
+  for (auto& pattern : regex_patterns) {
+    logf(LOG_DBG2, "Searching by pattern: %s", pattern.c_str());
+    std::vector<std::string> relevant_files = FilterByRegex(files, pattern);
+
+    for (auto& f : relevant_files) {
+      logf(LOG_DBG2, "- Match: %s", f.c_str());
+    }
+
+    if (!relevant_files.empty()) break;
+  }
 
   if (files.empty()) {
     ABORT("no trace files found!");
   }
 
-  ProfSetReader psr;
+  std::vector<std::string> all_fpaths;
+
   for (auto& f : files) {
-    std::string full_path = std::string(options_.prof_dir) + "/" + f;
+    std::string full_path = std::string(search_dir) + "/" + f;
     logf(LOG_INFO, "[ProfSetReader] Adding trace file: %s", full_path.c_str());
-    psr.AddProfile(full_path);
+    all_fpaths.push_back(full_path);
   }
+
+  return all_fpaths;
+}
+
+void PolicySim::SimulateTrace(int ts_beg, int ts_end) {
+  ProfSetReader psr(LocateTraceFiles(options_.prof_dir));
 
   nts_ = 0;
   bad_ts_ = 0;
 
   std::vector<int> block_times;
   while (psr.ReadTimestep(block_times) > 0) {
+    if (nts_ < ts_beg) {
+      nts_++;
+      continue;
+    } else if (nts_ >= ts_end) {
+      break;
+    }
+
     int rv = InvokePolicies(block_times);
     if (rv) {
       logf(LOG_WARN, "\n ====> !!!! TS %d seems bad !!!!", nts_);
@@ -115,35 +154,5 @@ int PolicySim::InvokePolicies(std::vector<int>& cost_actual) {
   }
 
   return 0;
-}
-
-std::vector<std::string> PolicySim::LocateRelevantFiles(
-    const std::string& root_dir) {
-  std::vector<std::string> files;
-  env_->GetChildren(root_dir.c_str(), &files);
-
-  logf(LOG_DBG2, "Enumerating directory: %s", root_dir.c_str());
-  for (auto& f : files) {
-    logf(LOG_DBG2, "- File: %s", f.c_str());
-  }
-
-  std::vector<std::string> regex_patterns = {
-      R"(prof\.merged\.evt\d+\.csv)",
-      R"(prof\.merged\.evt\d+\.mini\.csv)",
-      R"(prof\.aggr\.evt\d+\.csv)",
-  };
-
-  for (auto& pattern : regex_patterns) {
-    logf(LOG_DBG2, "Searching by pattern: %s", pattern.c_str());
-    std::vector<std::string> relevant_files = FilterByRegex(files, pattern);
-
-    for (auto& f : relevant_files) {
-      logf(LOG_DBG2, "- Match: %s", f.c_str());
-    }
-
-    if (!relevant_files.empty()) return relevant_files;
-  }
-
-  return {};
 }
 }  // namespace amr

@@ -5,13 +5,9 @@
 namespace amr {
 class ProfSetReader {
  public:
-  ProfSetReader() : nblocks_prev_(0) {}
-
-  void AddProfile(std::string& fpath) {
-    all_readers_.emplace_back(fpath.c_str());
-
-    for (auto& reader : all_readers_) {
-      reader.Reset();
+  explicit ProfSetReader(const std::vector<std::string>& fpaths) : nblocks_prev_(0) {
+    for (auto& fpath : fpaths) {
+      all_readers_.emplace_back(fpath.c_str());
     }
   }
 

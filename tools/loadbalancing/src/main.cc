@@ -15,10 +15,22 @@ void ParseOptions(int argc, char* argv[]) {
 
   options.prof_dir = "";
 
-  while ((c = getopt(argc, argv, "i:h")) != -1) {
+  while ((c = getopt(argc, argv, "hp:i:n:t:")) != -1) {
     switch (c) {
-      case 'i':
+      case 'p':
         options.prof_dir = optarg;
+        break;
+      case 'i':
+        options.ilp_shard_idx = strtol(optarg, nullptr, 10);
+        options.sim_ilp = true;
+        break;
+      case 'n':
+        options.ilp_num_shards = strtol(optarg, nullptr, 10);
+        options.sim_ilp = true;
+        break;
+      case 't':
+        options.num_ts = strtol(optarg, nullptr, 10);
+        options.sim_ilp = true;
         break;
       case 'h':
         PrintHelp(argc, argv);
@@ -30,7 +42,7 @@ void ParseOptions(int argc, char* argv[]) {
   options.env = env;
   options.nranks = 512;
 
-  if (options.prof_dir == "") {
+  if (options.prof_dir.empty()) {
     logf(LOG_ERRO, "No profile_dir specified!");
     PrintHelp(argc, argv);
     exit(-1);
@@ -40,6 +52,20 @@ void ParseOptions(int argc, char* argv[]) {
     logf(LOG_ERRO, "Directory does not exist!!!");
     PrintHelp(argc, argv);
     exit(-1);
+  }
+
+  if (options.sim_ilp) {
+    if (options.ilp_shard_idx < 0 || options.ilp_num_shards < 0 ||
+        options.num_ts < 0) {
+      logf(LOG_ERRO, "Invalid ILP options!");
+      PrintHelp(argc, argv);
+      exit(-1);
+    } else {
+      logf(LOG_INFO, "[PolicySim] Simulating ILP only: %d/%d",
+           options.ilp_shard_idx, options.ilp_num_shards);
+    }
+  } else {
+    logf(LOG_INFO, "[PolicySim] Simulating all timesteps");
   }
 
   options.output_dir = options.prof_dir + "/lb_sim";
