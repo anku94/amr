@@ -13,6 +13,9 @@ set(lb_srcs
 
 add_library(lb ${lb_srcs} ${common_srcs})
 
+# GUROBI requires C++11; *sigh*
+target_compile_features(lb PRIVATE cxx_std_11)
+
 target_include_directories(lb PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<BUILD_INTERFACE:${common_include}>)
