@@ -41,11 +41,14 @@ run_setup_jobdir() {
   CLEAN_EXPDIR=${CLEAN_EXPDIR:-0}
 
   if [[ "$CLEAN_EXPDIR" == "1" ]]; then
-    echo "[[ INFO ]] Cleaning exp root: $EXP_ROOT"
+    echo "-INFO- Cleaning exp root: $EXP_ROOT"
 
     confirm_assume_yes
 
     rm -rf $EXP_ROOT
+  else
+    echo "-INFO- Assuming fd is installed, clearing hdf files"
+    fd hdf $EXP_ROOT -x rm
   fi
 
   RUN_ROOT=$EXP_ROOT/run
@@ -101,13 +104,21 @@ run_setup_env_vtune() {
   source /opt/intel/oneapi/vtune/2021.9.0/amplxe-vars.sh
   set -eu
 
+  # 1000 seems to be the default, just to be explicit
+  _VTUNE_DATA_LIMIT=1000
+  message "-INFO- Vtune data limit set to $_VTUNE_DATA_LIMIT MB."
+  message "-INFO- Past experience with Phoebus ranks indicates about 10MB/rank/timestep."
+  message "-INFO- Collection with automatically stop after that."
+  message "-INFO- Set limit to 0 for unlimited data collection."
+
   PROFILER_KNOBS=""
   PROFILER_KNOBS="$PROFILER_KNOBS -k enable-stack-collection=true"
   PROFILER_KNOBS="$PROFILER_KNOBS -k collect-memory-bandwidth=false"
+  PROFILER_KNOBS="$PROFILER_KNOBS -data-limit=$_VTUNE_DATA_LIMIT"
 
   _CMD="vtune"
   _CMD="$_CMD -collect hpc-performance"
-  _CMD="$_CMD -r $PROF_ROOT"
+  _CMD="$_CMD -r $PROF_ROOT/$RUN_SUFFIX"
   _CMD="$_CMD -trace-mpi"
   _CMD="$_CMD $PROFILER_KNOBS"
   _CMD="$_CMD --"
@@ -124,6 +135,8 @@ run_setup_env() {
 
   # Debug flags
   add_env_var MV2_DEBUG_CORESIZE unlimited
+  add_env_var MV2_DEBUG_SHOW_BACKTRACE 1
+  add_env_var MV2_DEBUG_SETUP_SIGHANDLER 0
 
   # Asan flags
   # add_env_var LD_PRELOAD /usr/lib/x86_64-linux-gnu/libasan.so.5
@@ -202,13 +215,15 @@ setup_hostfile() {
 
 run_phoebus() {
   # -- frequently changed parameters --
-  RUN_SUFFIX=profile18
+  RUN_SUFFIX=profile20
   DRYRUN=0
   CLEAN_EXPDIR=1
-  procs=256
+  procs=512
 
   AMR_DECK=/users/ankushj/repos/amr/decks/$RUN_SUFFIX.pin
   AMR_DECK=/users/ankushj/repos/amr/decks/profile14.hacks.pin
+
+  REST_FPATH=/mnt/ltio/parthenon-topo/profile19/run/sedov.out2.00027.rhdf
 
   # tau,vtune,none
   PROFILER_TYPE=tau
@@ -241,6 +256,7 @@ run_phoebus() {
   # generate amr.hosts
   gen_hosts
 
+  cd $jobdir
   run_phoebus_cmd
 }
 

@@ -12,7 +12,7 @@ get_files() {
   widx=$2
   wtotal=$3
 
-  ntasks=$(fd -t f $SEARCH_PATTERN $1 | wc -l)
+  ntasks=$(fd -t f $search_dir $1 | wc -l)
   ntasks_pw=$(( ntasks / wtotal ))
   wt_beg=$(( widx * ntasks_pw ))
   wt_end=$(( wt_beg + ntasks_pw ))
@@ -26,17 +26,23 @@ get_hidx() {
   echo $(hostname) | cut -d. -f 1 | sed 's/h//g'
 }
 
+run_for_pattern() {
+  get_files $trace_dir $hidx $nworkers | sed 's/\ /\n/g' | parallel -I% --max-args 1 gzip %
+}
+
 run() {
   trace_dir=$1
   nworkers=$2
 
   hidx=$(get_hidx)
 
-  SEARCH_PATTERN=msgs
-  get_files $trace_dir $hidx $nworkers | sed 's/\ /\n/g' | parallel -I% --max-args 1 gzip %
+  if [[ $hidx -ge $nworkers ]]; then
+    echo "Don't need to do anything"
+    exit 0
+  fi
 
-  SEARCH_PATTERN=funcs
-  # get_files $trace_dir $hidx $nworkers | sed 's/\ /\n/g' | parallel -I% --max-args 1 gzip %
+  # search_dir=msgs
+  run_for_pattern
 }
 
 if [ $# != 2 ]; then
@@ -44,7 +50,9 @@ if [ $# != 2 ]; then
   exit 1
 fi
 
+nworkers=8
+
 trace_dir=$1
 search_dir=$2
-nworkers=8
+
 run $trace_dir $nworkers

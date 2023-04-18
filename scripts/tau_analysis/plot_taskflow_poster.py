@@ -580,6 +580,7 @@ def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, plot_dir, cached=Fal
 
     #  fig, axes = plt.subplots(1, 4, gridspec_kw={"width_ratios": [4, 1, 1, 1]})
     fig, axes = plt.subplots(1, 3, gridspec_kw={"width_ratios": [4, 1, 1]})
+    fig, ax = plt.subplots(1, 1)
 
     ax_im = axes[0]
     im = ax_im.imshow(data_times, aspect="auto", cmap="plasma")
@@ -840,7 +841,7 @@ def run_plot_timestep():
     #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3", plot_dir, cached=cached)
     #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3_UMBT", plot_dir, cached=cached)
     #  plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
-    #  plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
+    plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, "AR2", plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, "AR3", plot_dir, cached=cached)
     #  plot_umbt_rankgrid(df_phases, "AR3_UMBT", plot_dir, cached=cached)

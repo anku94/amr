@@ -2,6 +2,7 @@ import collections
 import numpy as np
 import pandas as pd
 import re
+import struct
 import unittest
 
 from operator import itemgetter
@@ -10,22 +11,29 @@ from typing import List
 
 """
 Interesting files:
-- /aggregate.csv
-ts,evtname,evtval
-- (renamed) /trace/phases.aggr.by_ts.csv
-- /aggr/msg_concat.csv
-timestep,phase,send_or_recv,rank,msg_sz_count
-- /trace/logstats.csv - from analyze_taskflow.py
-cycle,time,dt,zc_per_step,wtime_total,wtime_step_other,zc_wamr,wtime_step_amr 
 
+- /trace/phases.aggr.csv: analyze_taskflow, run_aggregate
+Header: evtname, evtval, rank
+Aggregated by evtname
+
+- /trace/phases.aggr.byts.csv: analyze_taskflow, run_aggregate
+Header: ts,evtname,evtval
+Aggregated by ts
+
+- /trace/logstats.csv: analyze_taskflow, run_parse_log
+Header: cycle,time,dt,zc_per_step,wtime_total,wtime_step_other,zc_wamr,wtime_step_amr 
 
 Other files:
 
 - /aggr/msgs.R.csv - aggregate msg stats per rank+ts+phase
 - /phases/phases.R.csv -  rank,ts,evtname,evtval
-- /traces/funcs.R.csv
-- /traces/msgs.R.csv
-- /traces/state.R.csv
+
+- /trace/funcs/funcs.R.csv
+- /trace/msgs/msgs.R.csv
+- /trace/state/state.R.csv
+- /trace/prof/prof.R.csv
+Format: ts, block_id, event_opcode, event_us
+Binary file, 4 ints per record
 """
 
 
@@ -48,6 +56,13 @@ class TraceReader:
             self._df_cache[full_path] = df
 
         return df
+
+    def _read_bin(self, fpath: str) -> bytes:
+        full_path = "{}/{}".format(self._dir_path, fpath)
+
+        with open(full_path, "rb") as f:
+            data = f.read()
+            return data
 
     def read_aggr_rw(self):
         aggr_path = "trace/phases.aggr.csv"
@@ -86,6 +101,23 @@ class TraceReader:
     def read_rank_trace(self, rank: int) -> pd.DataFrame:
         trace_path = "trace/funcs/funcs.{}.csv".format(rank)
         return self._read_file(trace_path, sep="|")
+
+    def read_rank_prof(self, rank: int) -> pd.DataFrame:
+        prof_path = "trace/prof/prof.{}.bin".format(rank)
+        if prof_path in self._df_cache:
+            return self._df_cache[prof_path]
+
+        prof_bytes = self._read_bin(prof_path)
+        n_ints = int(len(prof_bytes) / 4)
+        struct_fmt = f"{n_ints}i"
+        data_ints = struct.unpack(struct_fmt, prof_bytes)
+        data_np = np.reshape(np.array(data_ints), (-1, 4))
+        data_df = pd.DataFrame(
+            data_np, columns=["ts", "block_id", "event_code", "time_us"]
+        )
+
+        self._df_cache[prof_path] = data_df
+        return data_df
 
     """
     All ranks emit identical state values, so any arbitrary rank can be read
@@ -340,7 +372,7 @@ class TraceOps:
     def trim_to_min_1d(cls, all_data: List) -> List:
         min_len = min(map(len, all_data))
         print(f"[Trim_1D]: Trimming all to {min_len}")
-        return [ data[:min_len] for data in all_data ]
+        return [data[:min_len] for data in all_data]
 
     @classmethod
     def trim_to_min(cls, all_data: List) -> List:
@@ -350,11 +382,11 @@ class TraceOps:
         ret = []
         for d in all_data:
             if len(min_shape) == 1:
-                dt = d[:min_shape[0]]
+                dt = d[: min_shape[0]]
             elif len(min_shape) == 2:
-                dt = d[:min_shape[0], :min_shape[1]]
+                dt = d[: min_shape[0], : min_shape[1]]
             else:
-                assert("not supported")
+                assert "not supported"
 
             ret.append(dt)
         return ret
@@ -363,6 +395,20 @@ class TraceOps:
     def smoothen_1d(cls, data: List, window=100) -> List:
         series = pd.Series(data).rolling(window=window).mean().tolist()
         return series
+
+    """
+    Take a list of irregularly sized lists, convert to a uniform 2D array
+    Pad with zeros to achieve uniform row lengths.
+    """
+    @classmethod
+    def uniform_2d_nparr(cls, data: List) -> np.array:
+        all_lens = [len(row) for row in data]
+        max_len = max(all_lens)
+
+        uarr = np.zeros((len(all_lens), max_len), int)
+        mask = np.arange(max_len) < np.array(all_lens)[:, None]
+        uarr[mask] = np.concatenate(data)
+        return uarr
 
 
 def TraceReaderTest():
@@ -403,7 +449,14 @@ class TestTraceReader(unittest.TestCase):
         out = TraceOps.trim_to_min([x, y, z])
 
         for mat in out:
-            assert(mat.shape == (4, 3))
+            assert mat.shape == (4, 3)
+
+    def test_prof_read(self):
+        trace_path = "/mnt/ltio/parthenon-topo/profile19"
+        tr = TraceReader(trace_path)
+        df = tr.read_rank_prof(1)
+        df_aggr = df.groupby("event_code").agg({"event_code": "count"})
+        print(df_aggr)
 
 
 if __name__ == "__main__":

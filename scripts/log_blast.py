@@ -26,6 +26,7 @@ def log_all_data(filenames: List[str]):
         xc, P, tau, rho, D, v = get_data(i)
         print(f"[{i}] XC: {xc}")
         print(f"[{i}] rho: {rho}")
+        break
 
 
 def run(filenames: List[str]):
