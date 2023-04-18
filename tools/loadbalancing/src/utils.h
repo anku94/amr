@@ -5,6 +5,7 @@
 #pragma once
 
 #include <pdlfs-common/env.h>
+#include <regex>
 #include <string>
 
 namespace amr {
@@ -39,16 +40,16 @@ class Utils {
     return matches;
   }
 
-  static std::vector<std::string> LocateTraceFiles(pdlfs::Env* env,
-                                            const std::string& search_dir) {
+  static std::vector<std::string> LocateTraceFiles(
+      pdlfs::Env* env, const std::string& search_dir) {
     logf(LOG_INFO, "[SimulateTrace] Looking for trace files in: \n\t%s",
          search_dir.c_str());
 
-    std::vector<std::string> files;
-    env->GetChildren(search_dir.c_str(), &files);
+    std::vector<std::string> all_files;
+    env->GetChildren(search_dir.c_str(), &all_files);
 
     logf(LOG_DBG2, "Enumerating directory: %s", search_dir.c_str());
-    for (auto& f : files) {
+    for (auto& f : all_files) {
       logf(LOG_DBG2, "- File: %s", f.c_str());
     }
 
@@ -58,9 +59,10 @@ class Utils {
         R"(prof\.aggr\.evt\d+\.csv)",
     };
 
+    std::vector<std::string> relevant_files;
     for (auto& pattern : regex_patterns) {
       logf(LOG_DBG2, "Searching by pattern: %s", pattern.c_str());
-      std::vector<std::string> relevant_files = FilterByRegex(files, pattern);
+      relevant_files = FilterByRegex(all_files, pattern);
 
       for (auto& f : relevant_files) {
         logf(LOG_DBG2, "- Match: %s", f.c_str());
@@ -69,13 +71,13 @@ class Utils {
       if (!relevant_files.empty()) break;
     }
 
-    if (files.empty()) {
+    if (relevant_files.empty()) {
       ABORT("no trace files found!");
     }
 
     std::vector<std::string> all_fpaths;
 
-    for (auto& f : files) {
+    for (auto& f : relevant_files) {
       std::string full_path = std::string(search_dir) + "/" + f;
       logf(LOG_INFO, "[ProfSetReader] Adding trace file: %s",
            full_path.c_str());
