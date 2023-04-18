@@ -21,7 +21,7 @@ target_include_directories(lb PUBLIC
         $<BUILD_INTERFACE:${common_include}>)
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
 target_link_libraries(lb PUBLIC pdlfs-common fort)
-target_link_libraries(lb PUBLIC ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
+target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
 
 # FindGUROBI does not unify both these into a single target :(
 target_include_directories(lb PRIVATE ${GUROBI_INCLUDE_DIRS})
