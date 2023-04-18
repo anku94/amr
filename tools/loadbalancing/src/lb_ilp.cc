@@ -14,7 +14,13 @@ int AssignBlocks(const std::vector<double>& costlist,
     // Create a Gurobi environment and model
     GRBEnv env = GRBEnv(true);
     env.set("LogFile", "gurobi.log");
+    env.set("TimeLimit", "45.0");
+    // Illustrative parameter configs below:
+    // env.set("Threads", "8");
+    // model.getEnv().set(GRB_IntParam_Threads, 8);
+    // model.getEnv().set(GRB_DoubleParam_TimeLimit, 45.0);
     env.start();
+
     GRBModel model = GRBModel(env);
 
     int nblocks = costlist.size();
@@ -53,7 +59,6 @@ int AssignBlocks(const std::vector<double>& costlist,
                       y);  // Load of each rank is less than or equal to y
     }
 
-    model.getEnv().set(GRB_DoubleParam_TimeLimit, 30.0);
     // Optimize the model
     model.optimize();
 
