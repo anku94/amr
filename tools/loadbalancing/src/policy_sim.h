@@ -3,6 +3,7 @@
 #include "lb_policies.h"
 #include "policy_exec_ctx.h"
 #include "prof_set_reader.h"
+#include "utils.h"
 
 #include "pdlfs-common/env.h"
 
@@ -56,7 +57,7 @@ class PolicySim {
     logf(LOG_INFO, "Using prof dir: %s", options_.prof_dir.c_str());
     logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
 
-    EnsureOutputDir();
+    Utils::EnsureDir(options_.env, options_.output_dir);
 
     int sim_ts_begin = 0;
     int sim_ts_end = INT_MAX;
@@ -98,12 +99,7 @@ class PolicySim {
   }
 
  private:
-  void EnsureOutputDir();
-
   void SetupAll();
-
-  std::vector<std::string> LocateTraceFiles(
-      const std::string& search_dir) const;
 
   void SimulateTrace(int ts_beg_ = 0, int ts_end_ = INT_MAX);
 
@@ -113,19 +109,6 @@ class PolicySim {
 
   int InvokePolicies(std::vector<int>& cost_actual);
 
-  static std::vector<std::string> FilterByRegex(
-      std::vector<std::string>& strings, std::string regex_pattern) {
-    std::vector<std::string> matches;
-    const std::regex regex_obj(regex_pattern);
-
-    for (auto& s : strings) {
-      std::smatch match_obj;
-      if (std::regex_match(s, match_obj, regex_obj)) {
-        matches.push_back(s);
-      }
-    }
-    return matches;
-  }
 
   const PolicySimOptions options_;
   pdlfs::Env* const env_;

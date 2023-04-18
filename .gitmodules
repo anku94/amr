@@ -4,3 +4,4 @@
 [submodule "tools/external/libfort"]
 	path = tools/external/libfort
 	url = https://github.com/seleznevae/libfort
+	branch = master
