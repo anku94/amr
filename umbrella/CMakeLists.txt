@@ -102,9 +102,8 @@ umbrella_opt_default (HDF5_ENABLE_PARALLEL ON)
 # set other configs before we start pulling in the pieces...
 #
 
-set (PDLFS_OPTIONS -DPDLFS_MERCURY_RPC=ON -DPDLFS_SNAPPY=OFF
+set (PDLFS_OPTIONS -DPDLFS_MERCURY_RPC=OFF -DPDLFS_SNAPPY=OFF
                    -DPDLFS_GFLAGS=OFF -DPDLFS_GLOG=OFF
                    -DPDLFS_VERBOSE=${DELTAFS_VERBOSE})
 
-include (umbrella/deltafs-common)
 include (umbrella/hdf5)

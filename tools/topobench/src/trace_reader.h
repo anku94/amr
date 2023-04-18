@@ -23,7 +23,7 @@ class TraceReader {
 
     size_t buf_sz = trace_file_.size() + 64;
     char buf[buf_sz];
-    snprintf(buf, buf_sz, "%s/msgs/msgs.%d.csv", trace_root, rank);
+    snprintf(buf, buf_sz, "%s/msgs.%d.csv", trace_root, rank);
     trace_file_ = buf;
   }
 

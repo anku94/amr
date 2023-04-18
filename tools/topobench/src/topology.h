@@ -11,7 +11,7 @@
 
 class Topology {
  public:
-  Topology(const DriverOpts& opts) : opts_(opts), reader_(opts.trace_root) {}
+  Topology(const DriverOpts& opts) : opts_(opts), reader_(opts.trace_root, Globals::my_rank) {}
 
   Status GenerateMesh(const DriverOpts& opts, Mesh& mesh, int ts);
 

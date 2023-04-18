@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "lb_policies.h"
+#include "lb_trigger.h"
 #include "policy.h"
 #include "policy_stats.h"
 
@@ -24,9 +25,11 @@ class PolicyExecutionContext {
         env_(env),
         nranks_(nranks),
         ts_invoked_(0),
+        ts_triggered_(0),
         ts_succeeded_(0),
         exec_time_us_(0),
-        fd_(nullptr) {
+        fd_(nullptr),
+        trigger_(nranks) {
     EnsureOutputFile();
   }
 
@@ -38,9 +41,11 @@ class PolicyExecutionContext {
         env_(rhs.env_),
         nranks_(rhs.nranks_),
         ts_invoked_(rhs.ts_invoked_),
+        ts_triggered_(rhs.ts_triggered_),
         ts_succeeded_(rhs.ts_succeeded_),
         exec_time_us_(rhs.exec_time_us_),
-        fd_(rhs.fd_) {
+        fd_(rhs.fd_),
+        trigger_(std::move(rhs.trigger_)) {
     if (this != &rhs) {
       rhs.fd_ = nullptr;
     }
@@ -65,20 +70,29 @@ class PolicyExecutionContext {
                       std::vector<double> const& cost_actual) {
     ts_invoked_++;
 
-    int rv;
+    int rv = 0;
     int nblocks = cost_alloc.size();
     assert(nblocks == cost_actual.size());
 
-    std::vector<int> rank_list(nblocks, -1);
+    if (trigger_.Trigger(cost_alloc)) {
+      ts_triggered_++;
 
-    uint64_t ts_assign_beg = pdlfs::Env::NowMicros();
-    rv = LoadBalancePolicies::AssignBlocksInternal(policy_, cost_alloc,
-                                                   rank_list, nranks_);
-    uint64_t ts_assign_end = pdlfs::Env::NowMicros();
-    if (rv) return rv;
+      std::vector<int> rank_list(nblocks, -1);
 
-    stats_.LogTimestep(nranks_, fd_, cost_actual, rank_list);
-    exec_time_us_ += (ts_assign_end - ts_assign_beg);
+      uint64_t ts_assign_beg = pdlfs::Env::NowMicros();
+      rv = LoadBalancePolicies::AssignBlocksInternal(policy_, cost_alloc,
+                                                     rank_list, nranks_);
+      uint64_t ts_assign_end = pdlfs::Env::NowMicros();
+
+      if (rv) return rv;
+      ts_succeeded_++;
+      
+      exec_time_us_ += (ts_assign_end - ts_assign_beg);
+      stats_.LogTimestep(nranks_, fd_, cost_actual, rank_list);
+    } else {
+      std::vector<int> rank_list = trigger_.GetLastAssignment();
+      stats_.LogTimestep(nranks_, fd_, cost_actual, rank_list);
+    }
 
     ts_succeeded_++;
     return rv;
@@ -138,11 +152,14 @@ class PolicyExecutionContext {
   const int nranks_;
 
   int ts_invoked_;
+  int ts_triggered_;
   int ts_succeeded_;
   double exec_time_us_;
   pdlfs::WritableFile* fd_;
 
   PolicyStats stats_;
+
+  LoadBalanceTrigger trigger_;
 
   friend class MiscTest;
 };

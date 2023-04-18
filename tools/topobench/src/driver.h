@@ -37,9 +37,11 @@ class Driver {
 
   void PrintOpts() {
     if (Globals::my_rank == 0) {
-      printf("[Blocks Per Rank] %zu\n", opts_.blocks_per_rank);
+      if (opts_.topology != NeighborTopology::FromTrace) {
+        printf("[Blocks Per Rank] %zu\n", opts_.blocks_per_rank);
+        printf("[Size Per Msg] %zu\n", opts_.size_per_msg);
+      }
       printf("[Comm Rounds] %d\n", opts_.comm_rounds);
-      printf("[Size Per Msg] %zu\n", opts_.size_per_msg);
       printf("[Topology] %s\n", TopologyToStr(opts_.topology).c_str());
     }
   }

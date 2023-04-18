@@ -42,7 +42,7 @@ TEST(Topogen_Test, NormalGenerator) {
 }
 
 TEST(Topogen_Test, TraceReader) {
-  TraceReader tr("/Users/schwifty/Repos/amr/tools/topobench/src/msgs.csv");
+  TraceReader tr("/Users/schwifty/Repos/amr/tools/topobench/tools/msgs/msgs.0.csv");
   tr.Read();
 }
 

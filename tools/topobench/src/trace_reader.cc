@@ -16,6 +16,8 @@ Status TraceReader::Read() {
    */
   file_read_ = true;
 
+  logf(LOG_DBUG, "[TraceReader] Reading %s\n", trace_file_.c_str());
+
   FILE* f = fopen(trace_file_.c_str(), "r");
   if (f == nullptr) {
     logf(LOG_ERRO, "[TraceReader] Read Failed: %s", strerror(errno));
@@ -28,7 +30,6 @@ Status TraceReader::Read() {
 
   /* scan header */
   int ret = fscanf(f, "%4095[^\n]\n", buf);
-
   while (ret != EOF) {
     ret = fscanf(f, "%4095[^\n]\n", buf);
     s = ParseLine(buf, ret);

@@ -9,7 +9,6 @@ find_library(GUROBI_LIBRARY
     PATH_SUFFIXES lib)
 
 if(CMAKE_CXX_COMPILER)
-    message(INFO "IN CXX")
     if(MSVC)
         set(MSVC_YEAR "2017")
         

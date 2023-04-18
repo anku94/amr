@@ -3,7 +3,7 @@ from matplotlib.ticker import MultipleLocator
 import numpy as np
 import pandas as pd
 import pickle
-import ipdb
+# import ipdb
 
 from trace_reader import TraceReader, TraceOps
 
