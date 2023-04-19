@@ -40,7 +40,7 @@ class ClusterSim {
     logf(LOG_DBUG, "Block times: %zu\n", block_times_orig.size());
 
     std::vector<int> block_times_new(block_times_orig.size());
-    double rel_error = 0;
+    double mean_rel_error, max_rel_error;
     int k = block_times_orig.size();
 
     int k_beg = 1;
@@ -48,8 +48,10 @@ class ClusterSim {
     int cur_k = k_beg + (k_end - k_beg) / 2;
 
     while (k_beg < k_end) {
-      Cluster(block_times_orig, block_times_new, cur_k, rel_error);
-      if (rel_error > 0.02) {
+      Cluster(block_times_orig, block_times_new, cur_k, mean_rel_error,
+              max_rel_error);
+      // if (rel_error > 0.02) {
+      if (mean_rel_error > 0.01) {
         k_beg = cur_k + 1;
       } else {
         k_end = cur_k;
@@ -57,8 +59,12 @@ class ClusterSim {
       cur_k = k_beg + (k_end - k_beg) / 2;
     }
 
-    logf(LOG_INFO, "k: %d, rel_error: %f\n", cur_k, rel_error);
-    WriteData(k, cur_k, rel_error);
+    Cluster(block_times_orig, block_times_new, cur_k, mean_rel_error,
+            max_rel_error);
+
+    logf(LOG_INFO, "k: %d, mean_rele: %f, max_rele\n", cur_k, mean_rel_error,
+         max_rel_error);
+    WriteData(k, cur_k, mean_rel_error, max_rel_error);
   }
 
   ~ClusterSim() {
@@ -76,7 +82,7 @@ class ClusterSim {
     Utils::EnsureDir(options_.env, options_.output_dir);
     if (fd_) return;
 
-    std::string fpath = options_.output_dir + "/cluster_sim.csv";
+    std::string fpath = options_.output_dir + "/cluster_sim_mean.csv";
 
     pdlfs::Status s = options_.env->NewWritableFile(fpath.c_str(), &fd_);
     if (!s.ok()) {
@@ -89,7 +95,7 @@ class ClusterSim {
 
   void WriteHeader() {
     EnsureOutputFile();
-    std::string header = "ts,n,k,rel_error\n";
+    std::string header = "ts,n,k,mean_rel_error,max_rel_error\n";
     pdlfs::Status s = fd_->Append(header);
     if (!s.ok()) {
       logf(LOG_ERRO, "Unable to write to file: %s", s.ToString().c_str());
@@ -97,12 +103,18 @@ class ClusterSim {
     }
   }
 
-  void WriteData(int n, int k, double rel_error) {
+  void WriteData(int n, int k, double mean_rel_error, double max_rel_error) {
     EnsureOutputFile();
-    std::string data = std::to_string(nts_) + "," + std::to_string(n) + "," +
-                       std::to_string(k) + "," + std::to_string(rel_error) +
-                       "\n";
-    pdlfs::Status s = fd_->Append(data);
+    // std::string data = std::to_string(nts_) + "," + std::to_string(n) + "," +
+                       // std::to_string(k) + "," + std::to_string(rel_error) +
+                       // "\n";
+    std::string data = std::to_string(nts_);
+    data += "," + std::to_string(n);
+    data += "," + std::to_string(k);
+    data += "," + std::to_string(mean_rel_error);
+    data += "," + std::to_string(max_rel_error);
+
+    pdlfs::Status s = fd_->Append(data + "\n");
     if (!s.ok()) {
       logf(LOG_ERRO, "Unable to write to file: %s", s.ToString().c_str());
       ABORT("Unable to write to file");

@@ -74,7 +74,8 @@ class PolicyExecutionContext {
     int nblocks = cost_alloc.size();
     assert(nblocks == cost_actual.size());
 
-    if (trigger_.Trigger(cost_alloc)) {
+    // if (trigger_.Trigger(cost_alloc)) {
+    if (true) {
       ts_triggered_++;
 
       std::vector<int> rank_list(nblocks, -1);
@@ -83,6 +84,8 @@ class PolicyExecutionContext {
       rv = LoadBalancePolicies::AssignBlocksInternal(policy_, cost_alloc,
                                                      rank_list, nranks_);
       uint64_t ts_assign_end = pdlfs::Env::NowMicros();
+
+      trigger_.Update(rank_list);
 
       if (rv) return rv;
       ts_succeeded_++;
@@ -94,7 +97,6 @@ class PolicyExecutionContext {
       stats_.LogTimestep(nranks_, fd_, cost_actual, rank_list);
     }
 
-    ts_succeeded_++;
     return rv;
   }
 
@@ -108,7 +110,7 @@ class PolicyExecutionContext {
 
   void LogSummary(fort::char_table& table) {
     table << policy_name_
-          << std::to_string(ts_succeeded_) + "/" + std::to_string(ts_invoked_);
+          << std::to_string(ts_succeeded_) + "/" + std::to_string(ts_triggered_) + "/" + std::to_string(ts_invoked_);
     stats_.LogSummary(table);
     table << PolicyStats::FormatProp(exec_time_us_ / 1e6, "s") << fort::endr;
   }

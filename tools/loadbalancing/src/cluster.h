@@ -14,7 +14,7 @@
 
 namespace amr {
 void Cluster(const std::vector<int>& costlist, std::vector<int>& costlist_new,
-             int k, double& error) {
+             int k, double& mean_rel_error, double& max_rel_error) {
   std::vector<int> costlist_orig(costlist);
   costlist_new.resize(costlist_orig.size());
 
@@ -74,7 +74,7 @@ void Cluster(const std::vector<int>& costlist, std::vector<int>& costlist_new,
 
   // Calculate mean-squared error
   double mse = 0.0;
-  double max_rel_error = 0.0;
+  max_rel_error = 0.0;
   for (int i = 0; i < n; ++i) {
     double delta = std::abs(costlist_new[i] - costlist_orig[i]);
     mse += std::pow(delta, 2);
@@ -87,10 +87,8 @@ void Cluster(const std::vector<int>& costlist, std::vector<int>& costlist_new,
   double mse_sqrt = std::pow(mse, 0.5);
   double costlist_avg =
       std::accumulate(costlist.begin(), costlist.end(), 0.0) / costlist.size();
-  double mean_rel_error = mse_sqrt / costlist_avg;
+  mean_rel_error = mse_sqrt / costlist_avg;
   logf(LOG_DBUG, "K: %d, mean_rel_error: %.1f%%, max_rel_error: %.1f%%", k,
        mean_rel_error * 100, max_rel_error * 100);
-
-  error = max_rel_error;
 }
 }  // namespace amr

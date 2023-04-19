@@ -14,8 +14,7 @@ void ParseOptions(int argc, char* argv[]) {
   int c;
 
   options.prof_dir = "";
-
-  while ((c = getopt(argc, argv, "hp:i:n:t:")) != -1) {
+while ((c = getopt(argc, argv, "hp:i:n:t:")) != -1) {
     switch (c) {
       case 'p':
         options.prof_dir = optarg;

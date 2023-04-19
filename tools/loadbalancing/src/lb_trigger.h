@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 namespace amr {
 class LoadBalanceTrigger {
  public:
@@ -39,7 +41,7 @@ class LoadBalanceTrigger {
     return trigger;
   }
 
-  void Update(std::vector<int>& costlist, std::vector<int>& ranklist) {
+  void Update(std::vector<int>& ranklist) {
     ranklist_prev_ = ranklist;
   }
 
