@@ -109,11 +109,18 @@ class NormalGenerator {
 };
 
 template <typename T>
-std::string SerializeVector(std::vector<T>& v) {
+std::string SerializeVector(std::vector<T> const& v, int trunc_count = -1) {
   std::stringstream ss;
   ss << "(" << v.size() << " items): ";
+
+  int idx = 0;
   for (auto n : v) {
     ss << n << " ";
+    idx++;
+    if (trunc_count == idx) {
+      ss << "... <truncated>";
+      break;
+    }
   }
 
   return ss.str();

@@ -12,6 +12,22 @@
 #include <random>
 #include <vector>
 
+namespace {
+std::vector<double> GetCentroids(const std::vector<int>& v, int k) {
+  std::vector<double> centroids(k);
+  std::vector<int> v_tmp(v);
+
+  // Initialize centroids randomly
+  std::shuffle(v_tmp.begin(), v_tmp.end(),
+               std::mt19937(std::random_device()()));
+  for (int i = 0; i < k; ++i) {
+    centroids[i] = v_tmp[i];
+  }
+
+  return centroids;
+}
+}
+
 namespace amr {
 void Cluster(const std::vector<int>& costlist, std::vector<int>& costlist_new,
              int k, double& mean_rel_error, double& max_rel_error) {
@@ -19,15 +35,8 @@ void Cluster(const std::vector<int>& costlist, std::vector<int>& costlist_new,
   costlist_new.resize(costlist_orig.size());
 
   int n = costlist_orig.size();
-  std::vector<double> centroids(k);
+  std::vector<double> centroids = GetCentroids(costlist_orig, k);
   std::vector<int> assignment(n);
-
-  // Initialize centroids randomly
-  std::shuffle(costlist_orig.begin(), costlist_orig.end(),
-               std::mt19937(std::random_device()()));
-  for (int i = 0; i < k; ++i) {
-    centroids[i] = costlist_orig[i];
-  }
 
   // Run k-means algorithm
   bool changed = true;

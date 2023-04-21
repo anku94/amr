@@ -30,6 +30,7 @@ class ClusterSim {
     while (psr.ReadTimestep(block_times) > 0) {
       HandleTimestep(block_times);
       nts_++;
+      break;
     }
 
     nts_ = 0;
@@ -50,20 +51,22 @@ class ClusterSim {
     while (k_beg < k_end) {
       Cluster(block_times_orig, block_times_new, cur_k, mean_rel_error,
               max_rel_error);
-      // if (rel_error > 0.02) {
-      if (mean_rel_error > 0.01) {
-        k_beg = cur_k + 1;
-      } else {
-        k_end = cur_k;
-      }
-      cur_k = k_beg + (k_end - k_beg) / 2;
+//      BinSearchIterateBoundMean(mean_rel_error, max_rel_error, cur_k, k_beg,
+//                                k_end);
+      BinSearchIterateBoundMax(mean_rel_error, max_rel_error, cur_k, k_beg,
+                               k_end);
     }
 
     Cluster(block_times_orig, block_times_new, cur_k, mean_rel_error,
             max_rel_error);
 
-    logf(LOG_INFO, "k: %d, mean_rele: %f, max_rele\n", cur_k, mean_rel_error,
-         max_rel_error);
+    logf(LOG_DBUG, "[ClusterSim] N: %d, K: %d, RelErr Mean: %.1f, Max: %.1f\n",
+         k, cur_k, mean_rel_error, max_rel_error);
+    logf(LOG_DBG2, "[ClusterSim] OrigTS: %s",
+         SerializeVector(block_times_orig, /* trunc_count */ 50).c_str());
+    logf(LOG_DBG2, "[ClusterSim] NewTS: %s",
+         SerializeVector(block_times_new, /* trunc_count */ 50).c_str());
+
     WriteData(k, cur_k, mean_rel_error, max_rel_error);
   }
 
@@ -78,6 +81,28 @@ class ClusterSim {
   }
 
  private:
+  static void BinSearchIterateBoundMax(double mean_rel_err, double max_rel_err,
+                                       int& cur_k, int& k_beg, int& k_end) {
+    if (max_rel_err > 0.02) {
+      k_beg = cur_k + 1;
+    } else {
+      k_end = cur_k;
+    }
+
+    cur_k = k_beg + (k_end - k_beg) / 2;
+  }
+
+  static void BinSearchIterateBoundMean(double mean_rel_err, double max_rel_err,
+                                        int& cur_k, int& k_beg, int& k_end) {
+    if (mean_rel_err > 0.01) {
+      k_beg = cur_k + 1;
+    } else {
+      k_end = cur_k;
+    }
+
+    cur_k = k_beg + (k_end - k_beg) / 2;
+  }
+
   void EnsureOutputFile() {
     Utils::EnsureDir(options_.env, options_.output_dir);
     if (fd_) return;
@@ -106,8 +131,8 @@ class ClusterSim {
   void WriteData(int n, int k, double mean_rel_error, double max_rel_error) {
     EnsureOutputFile();
     // std::string data = std::to_string(nts_) + "," + std::to_string(n) + "," +
-                       // std::to_string(k) + "," + std::to_string(rel_error) +
-                       // "\n";
+    // std::to_string(k) + "," + std::to_string(rel_error) +
+    // "\n";
     std::string data = std::to_string(nts_);
     data += "," + std::to_string(n);
     data += "," + std::to_string(k);
