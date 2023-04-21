@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../tools/common.h"
+#include "../tools/common/common.h"
 #include "amr_outputs.h"
 #include "amr_util.h"
 
@@ -222,7 +222,7 @@ class AMRTracer {
 
   void ProcessTriggerMsgTargetCost(void *data);
 
-  void ProcessTriggerMsgEventTime(void *data);
+  void ProcessTriggerMsgBlockEvent(void *data);
 
   int rank_;
   int size_;

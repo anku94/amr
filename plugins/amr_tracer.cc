@@ -51,8 +51,8 @@ void AMRTracer::ProcessTriggerMsg(void* data) {
     case MsgType::kTsEnd:
       ts_sim_++;
       break;
-    case MsgType::kEventTime:
-      ProcessTriggerMsgEventTime(msg->data);
+    case MsgType::kBlockEvent:
+      ProcessTriggerMsgBlockEvent(msg->data);
       break;
     default:
       logf(LOG_ERRO, "Unknown trigger msg type!");
@@ -81,8 +81,8 @@ void AMRTracer::ProcessTriggerMsgTargetCost(void* data) {
   statelog_->LogKV(timestep_, "TC", cost_str.c_str());
 }
 
-void AMRTracer::ProcessTriggerMsgEventTime(void* data) {
-  MsgEventTime* msg = (MsgEventTime *)data;
-  proflog_->LogEvent(ts_sim_, msg->block_id, msg->event_opcode, msg->time_us);
+void AMRTracer::ProcessTriggerMsgBlockEvent(void* data) {
+  MsgBlockEvent* msg = (MsgBlockEvent *)data;
+  proflog_->LogEvent(ts_sim_, msg->block_id, msg->opcode, msg->data);
 }
 }  // namespace tau

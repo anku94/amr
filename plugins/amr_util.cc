@@ -1,6 +1,6 @@
 #include "amr_util.h"
 
-#include "../tools/common.h"
+#include "../tools/common/common.h"
 
 #include <errno.h>
 #include <string.h>

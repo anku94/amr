@@ -119,11 +119,11 @@ class ProfLog {
       EnsureFileOrDie(&file_, dir, "prof", "bin", rank);
     }
 
-    void LogEvent(int ts, int block_id, int event_opcode, int event_us) {
+    void LogEvent(int ts, int block_id, int opcode, int data) {
       fwrite(&ts, sizeof(int), 1, file_);
       fwrite(&block_id, sizeof(int), 1, file_);
-      fwrite(&event_opcode, sizeof(int), 1, file_);
-      fwrite(&event_us, sizeof(int), 1, file_);
+      fwrite(&opcode, sizeof(int), 1, file_);
+      fwrite(&data, sizeof(int), 1, file_);
     }
 
     ~ProfLog() {
