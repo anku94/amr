@@ -112,6 +112,10 @@ class PolicyExecutionContext {
     int rv = 0;
     int nblocks = cost_oracle.size();
 
+    // A load-balancing based on the oracle cost can only be
+    // triggered when the oracle cost is available.
+    // We save the trigger flag from the prev_ts to trigger it
+    // in the current ts.
     if (trigger_lb_prev_ and use_oracle_cost_) {
       rv = TriggerLoadBalancing(cost_oracle);
       if (rv) return rv;
