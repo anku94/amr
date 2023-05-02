@@ -14,7 +14,9 @@ class ProfileReader {
         eof_(false),
         prev_ts_(-1),
         prev_bid_(-1),
-        prev_time_(-1) {
+        prev_time_(-1),
+        first_read_(true),
+        prev_set_(false) {
     Reset();
   }
 
@@ -31,8 +33,11 @@ class ProfileReader {
         ts_(rhs.ts_),
         eof_(rhs.eof_),
         prev_ts_(rhs.prev_ts_),
+        prev_sub_ts_(rhs.prev_sub_ts_),
         prev_bid_(rhs.prev_bid_),
-        prev_time_(rhs.prev_time_) {
+        prev_time_(rhs.prev_time_),
+        first_read_(rhs.first_read_),
+        prev_set_(rhs.prev_set_) {
     if (this != &rhs) {
       rhs.csv_fd_ = nullptr;
     }
@@ -49,7 +54,7 @@ class ProfileReader {
     int nblocks = 0;
 
     while (nlines_read == 0) {
-      nblocks = ReadTimestep(ts_ + 1, times, nlines_read);
+      nblocks = ReadTimestep(ts_, times, nlines_read);
       ts_++;
     }
 
@@ -90,6 +95,7 @@ class ProfileReader {
     ReadLine(header, 1024);
   }
 
+ public:
   /* Caller must zero the vector if needed!!
    * Returns: Number of blocks in current ts
    * (assuming contiguous bid allocation)
@@ -97,26 +103,26 @@ class ProfileReader {
   int ReadTimestep(int ts_to_read, std::vector<int>& times, int& nlines_read) {
     if (eof_) return -1;
 
-    if (ts_to_read == 0) {
+    if (first_read_) {
       ReadHeader();
+      first_read_ = false;
     }
 
-    int ts, bid, time_us;
-    ts = ts_to_read;
+    int ts, sub_ts, rank, bid, time_us;
+    sub_ts = ts_to_read;
 
     int max_bid = 0;
 
-    if (prev_ts_ >= 0) {
-      if (prev_ts_ == ts_to_read) {
+    if (prev_set_) {
+      prev_set_ = false;
+      if (prev_sub_ts_ == ts_to_read) {
         LogTime(times, prev_bid_, prev_time_);
         nlines_read++;
 
         max_bid = std::max(max_bid, prev_bid_);
-        prev_ts_ = prev_bid_ = prev_time_ = -1;
-      } else if (prev_ts_ < ts_to_read) {
-        logf(LOG_WARN, "Somehow skipped ts %d data. Dropping...", prev_ts_);
-        prev_ts_ = prev_bid_ = prev_time_ = -1;
-      } else if (prev_ts_ > ts_to_read) {
+      } else if (prev_sub_ts_ < ts_to_read) {
+        logf(LOG_WARN, "Somehow skipped ts %d data. Dropping...", prev_sub_ts_);
+      } else if (prev_sub_ts_ > ts_to_read) {
         // Wait for ts to catch up
         return max_bid;
       }
@@ -124,15 +130,18 @@ class ProfileReader {
 
     while (true) {
       int nread;
-      if ((nread = fscanf(csv_fd_, "%d,%d,%d", &ts, &bid, &time_us)) == EOF) {
+      if ((nread = fscanf(csv_fd_, "%d,%d,%d,%d,%d", &ts, &sub_ts, &rank, &bid,
+                          &time_us)) == EOF) {
         eof_ = true;
         break;
       }
 
-      if (ts > ts_to_read) {
+      if (sub_ts > ts_to_read) {
         prev_ts_ = ts;
+        prev_sub_ts_ = sub_ts;
         prev_bid_ = bid;
         prev_time_ = time_us;
+        prev_set_ = true;
         break;
       }
 
@@ -177,7 +186,11 @@ class ProfileReader {
   bool eof_;
 
   int prev_ts_;
+  int prev_sub_ts_;
   int prev_bid_;
   int prev_time_;
+
+  bool first_read_;
+  bool prev_set_;
 };
 }  // namespace amr

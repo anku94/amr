@@ -6,6 +6,10 @@
 
 #include "bin_readers.h"
 #include "common.h"
+#include "policy.h"
+#include "policy_exec_ctx.h"
+#include "prof_set_reader.h"
+#include "utils.h"
 
 #include <vector>
 
@@ -13,7 +17,9 @@ namespace amr {
 struct BlockSimulatorOpts {
   int nblocks;
   int nranks;
-  const char* trace_root;
+  std::string prof_dir;
+  std::string output_dir;
+  pdlfs::Env* env;
 };
 
 #define FAIL_IF(cond, msg) \
@@ -24,104 +30,100 @@ struct BlockSimulatorOpts {
 
 class BlockSimulator {
  public:
-  BlockSimulator(BlockSimulatorOpts const& opts)
-      : opts_(opts),
-        nblocks_next_expected(-1),
-        ref_reader_(opts_.trace_root),
-        assign_reader_(opts_.trace_root),
-        ts_(0),
-        sub_ts_(0) {}
+  explicit BlockSimulator(BlockSimulatorOpts& opts)
+      : options_(opts),
+        ref_reader_(options_.prof_dir),
+        assign_reader_(options_.prof_dir),
+        prof_reader_(Utils::LocateTraceFiles(options_.env, options_.prof_dir)),
+        nblocks_next_expected_(-1),
+        num_lb_(0) {}
 
-  void Run(int nts = INT_MAX) {
-    InitialAlloc();
+  void SetupAllPolicies() {
+    policies_.clear();
+    policies_.emplace_back(options_.output_dir.c_str(), "Contiguous/Unit-Cost",
+                           Policy::kPolicyContiguous, options_.env,
+                           options_.nranks, /* unit_cost */ true,
+                           /* oracle_cost */ false);
+    policies_.emplace_back(options_.output_dir.c_str(),
+                           "Contiguous/Actual-Cost", Policy::kPolicyContiguous,
+                           options_.env, options_.nranks, /* unit_cost */ false,
+                           /* oracle_cost */ false);
+    policies_.emplace_back(options_.output_dir.c_str(),
+                           "RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
+                           options_.env, options_.nranks, /* unit_cost */ false,
+                           /* oracle_cost */ false);
+    policies_.emplace_back(options_.output_dir.c_str(), "LPT/Actual-Cost",
+                           Policy::kPolicyLPT, options_.env,
+                           options_.nranks, /* unit_cost */ false,
+                           /* oracle_cost */ false);
+    policies_.emplace_back(options_.output_dir.c_str(),
+                           "LPT/Actual-Cost-Oracle", Policy::kPolicyLPT,
+                           options_.env, options_.nranks, /* unit_cost */ false,
+                           /* oracle_cost */ true);
+  }
 
-    /* Semantics: every sub_ts exists in the assignment log, but
-     * refinement log is sparse. A sub_ts not present in the assignment log
-     * indicates corruption.
-     * The code below sets the ts for the current sub_ts
-     */
-    for (int sub_ts = 0; sub_ts < nts; sub_ts++) {
-      int ts;
-      int rv = RunTimestep(ts, sub_ts);
-      if (rv == 0) return;
+  int InvokePolicies(std::vector<double> const& cost_oracle,
+                     std::vector<int>& refs, std::vector<int>& derefs) {
+    int rv = 0;
+
+    for (auto& policy : policies_) {
+      rv = policy.ExecuteTimestep(cost_oracle, refs, derefs);
     }
+
+    return rv;
   }
 
-  void InitialAlloc() {
-    assert(opts_.nblocks % opts_.nranks == 0);
-    int nblocks_per_rank = opts_.nblocks / opts_.nranks;
+  void Run(int nts = INT_MAX);
 
-    nblocks_next_expected = opts_.nblocks;
-
-    for (int i = 0; i < opts_.nranks; ++i) {
-      for (int j = 0; j < nblocks_per_rank; ++j) {
-        ranklist_.push_back(i);
-      }
-    }
-  }
-
-  int RunTimestep(int& ts, int sub_ts) {
-    int rv;
-
-    std::vector<int> block_assignments;
-    std::vector<int> refs, derefs;
-
-    logf(LOG_DBG2, "========================================");
-
-    rv = assign_reader_.ReadTimestep(ts, sub_ts, block_assignments);
-    FAIL_IF(rv < 0, "Error in AssRd/ReadTimestep");
-    logf(LOG_DBG2, "[BlockSim] [AssRd] TS:%d_%d, rv: %d\nAssignments: %s", ts,
-         sub_ts, rv, SerializeVector(block_assignments, 10).c_str());
-
-    if (rv == 0) return 0;
-
-    int ts_rr;
-    rv = ref_reader_.ReadTimestep(ts_rr, sub_ts, refs, derefs);
-    FAIL_IF(rv < 0, "Error in RefRd/ReadTimestep");
-    logf(LOG_DBG2,
-         "[BlockSim] [RefRd] TS:%d_%d, rv: %d\n\tRefs: %s\n\tDerefs: %s", ts,
-         sub_ts, rv, SerializeVector(refs, 10).c_str(),
-         SerializeVector(derefs, 10).c_str());
-
-    if (ts_rr != -1) assert(ts_rr == ts);
-
-    ReadTimestepInternal(ts, sub_ts, refs, derefs, block_assignments);
-
-    return 1;
-  }
+  int RunTimestep(int& ts, int sub_ts);
 
  private:
-  int ReadTimestepInternal(int ts, int sub_ts, const std::vector<int>& refs,
+  int ReadTimestepInternal(int ts, int sub_ts, std::vector<int>& refs,
                            std::vector<int>& derefs,
-                           std::vector<int>& assignments) {
-    logf(LOG_DBG2, "----------------------------------------");
+                           std::vector<int>& assignments,
+                           std::vector<int>& times);
 
-    int nblocks_cur = assignments.size();
-
-    if (nblocks_next_expected != -1 && nblocks_next_expected != nblocks_cur) {
-      logf(LOG_ERRO, "nblocks_next_expected != assignments.size()");
-      ABORT("nblocks_next_expected != assignments.size()");
+  void UpdateExpectedBlockCount(int ts, int sub_ts, int nblocks_cur, int ref_count,
+                                int deref_count) {
+    if (nblocks_next_expected_ != -1 && nblocks_next_expected_ != nblocks_cur) {
+      logf(LOG_ERRO, "nblocks_next_expected_ != assignments.size()");
+      ABORT("nblocks_next_expected_ != assignments.size()");
     }
 
-    nblocks_next_expected = nblocks_cur;
-    nblocks_next_expected += refs.size() * 7;
-    nblocks_next_expected -= derefs.size() * 7 / 8;
+    nblocks_next_expected_ = nblocks_cur;
+    nblocks_next_expected_ += ref_count * 7;
+    nblocks_next_expected_ -= deref_count * 7 / 8;
 
     logf(LOG_DBUG, "[BlockSim] TS:%d_%d, nblocks: %d->%d", ts, sub_ts,
-         nblocks_cur, nblocks_next_expected);
-
-    return 0;
+         nblocks_cur, nblocks_next_expected_);
   }
 
-  BlockSimulatorOpts const opts_;
+  void LogSummary(fort::char_table& table) {
+    table << fort::header << "Policy"
+          << "Timesteps"
+          << "ExcessCost"
+          << "AvgCost"
+          << "MaxCost"
+          << "LocScore"
+          << "ExecTime" << fort::endr;
 
-  int nblocks_next_expected;
-  std::vector<int> ranklist_;
+    for (auto& policy : policies_) {
+      policy.LogSummary(table);
+    }
+
+    logf(LOG_INFO, "\n%s", table.to_string().c_str());
+  }
+
+  BlockSimulatorOpts const options_;
 
   RefinementReader ref_reader_;
   AssignmentReader assign_reader_;
+  ProfSetReader prof_reader_;
 
-  int ts_;
-  int sub_ts_;
+  std::vector<int> ranklist_;
+  int nblocks_next_expected_;
+  int num_lb_;
+
+  std::vector<PolicyExecutionContext> policies_;
 };
 }  // namespace amr

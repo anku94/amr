@@ -45,7 +45,7 @@ struct ExecCtxWrapper {
         policy(policy),
         unit_cost(unit_cost),
         ctx(sim_opts.output_dir.c_str(), ctx_name, policy, sim_opts.env,
-            sim_opts.nranks) {}
+            sim_opts.nranks, false, false) {}
 };
 
 class PolicySim {
@@ -108,7 +108,6 @@ class PolicySim {
   void LogSummary(fort::char_table& table);
 
   int InvokePolicies(std::vector<int>& cost_actual);
-
 
   const PolicySimOptions options_;
   pdlfs::Env* const env_;

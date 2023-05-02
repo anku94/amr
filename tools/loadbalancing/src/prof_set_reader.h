@@ -39,6 +39,30 @@ class ProfSetReader {
     return nblocks;
   }
 
+  int ReadTimestep(int timestep, std::vector<int>& times) {
+    std::fill(times.begin(), times.end(), 0);
+
+    int nblocks = 0;
+
+    for (auto& reader : all_readers_) {
+      int nlines_read = 0;
+      int rnblocks = reader.ReadTimestep(timestep, times, nlines_read);
+      nblocks = std::max(nblocks, rnblocks);
+    }
+
+    logf(LOG_DBUG, "Blocks read: %d", nblocks);
+
+    if (nblocks > 0) {
+      nblocks_prev_ = nblocks;
+    }
+
+    // LogTime upsizes the vector if necessary
+    // This is to downsize the vector if necessary
+    times.resize(nblocks);
+
+    return nblocks;
+  }
+
  private:
   std::vector<ProfileReader> all_readers_;
   int nblocks_prev_;
