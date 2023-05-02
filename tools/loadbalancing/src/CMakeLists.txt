@@ -6,6 +6,7 @@ find_package(GUROBI REQUIRED)
 set(CMAKE_CXX_STANDARD 11)
 
 set(lb_srcs
+        block_alloc_sim.cc
         lb_ilp.cc
         lb_lspt.cc
         policy_sim.cc
@@ -29,6 +30,10 @@ target_include_directories(lb PRIVATE ${GUROBI_INCLUDE_DIRS})
 add_executable(lb-sim policy_main.cc)
 #target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
 target_link_libraries(lb-sim lb)
+
+add_executable(block-sim block_sim_main.cc)
+#target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
+target_link_libraries(block-sim lb)
 
 add_executable(cluster-sim cluster_main.cc)
 target_link_libraries(cluster-sim lb)
