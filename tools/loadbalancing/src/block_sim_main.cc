@@ -28,6 +28,7 @@ void ParseOptions(int argc, char* argv[]) {
   pdlfs::Env* env = pdlfs::Env::Default();
   options.env = env;
   options.nranks = 512;
+  options.nblocks = 512;
 
   if (options.prof_dir.empty()) {
     logf(LOG_ERRO, "No profile_dir specified!");

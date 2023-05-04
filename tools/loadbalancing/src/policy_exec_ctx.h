@@ -47,6 +47,7 @@ class PolicyExecutionContext {
         ts_succeeded_(rhs.ts_succeeded_),
         exec_time_us_(rhs.exec_time_us_),
         fd_(rhs.fd_),
+        ranklist_cur_(rhs.ranklist_cur_),
         trigger_lb_prev_(rhs.trigger_lb_prev_),
         use_unit_cost_(rhs.use_unit_cost_),
         use_oracle_cost_(rhs.use_oracle_cost_) {
@@ -105,6 +106,11 @@ class PolicyExecutionContext {
         ranklist_cur_.push_back(i);
       }
     }
+
+    assert(ranklist_cur_.size() == nblocks);
+    logf(LOG_DBG2,
+         "[PolicyExecCtx] Bootstrapping. Num Blocks: %d, Ranklist: %zu",
+         nblocks, ranklist_cur_.size());
   }
 
   int ExecuteTimestep(std::vector<double> const& cost_oracle,
@@ -234,7 +240,6 @@ class PolicyExecutionContext {
 
   PolicyStats stats_;
 
-  //  std::vector<double> cost_estimated_;
   std::vector<int> ranklist_cur_;
   bool trigger_lb_prev_;
 

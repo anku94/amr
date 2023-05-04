@@ -7,7 +7,13 @@
 namespace amr {
 
 void BlockSimulator::Run(int nts) {
+  logf(LOG_INFO, "Using prof dir: %s", options_.prof_dir.c_str());
+  logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
+
+  Utils::EnsureDir(options_.env, options_.output_dir);
+
   SetupAllPolicies();
+
   for (auto& policy: policies_) policy.Bootstrap(options_.nblocks);
 
   /* Semantics: every sub_ts exists in the assignment log, but

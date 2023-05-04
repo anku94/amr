@@ -58,13 +58,13 @@ class ProfileReader {
       ts_++;
     }
 
-    logf(LOG_DBUG, "Timestep: %d, lines read: %d", ts_, nlines_read);
+    logf(LOG_DBUG, "[ProfReader] Timestep: %d, lines read: %d", ts_, nlines_read);
 
     return nblocks;
   }
 
   void Reset() {
-    logf(LOG_DBG2, "Reset: %s", csv_path_.c_str());
+    logf(LOG_DBG2, "[ProfReader] Reset: %s", csv_path_.c_str());
     SafeCloseFile();
 
     csv_fd_ = fopen(csv_path_.c_str(), "r");
@@ -150,7 +150,7 @@ class ProfileReader {
       nlines_read++;
     }
 
-    LogVector(times);
+    logf(LOG_DBG2, "[PolicySim] Times: %s", SerializeVector(times, 10).c_str());
 
     return max_bid + 1;
   }
@@ -161,16 +161,6 @@ class ProfileReader {
     }
 
     times[bid] += time_us;
-  }
-
-  static void LogVector(std::vector<int>& v) {
-    std::stringstream ss;
-    ss << "(" << v.size() << " items): ";
-    for (auto n : v) {
-      ss << n << " ";
-    }
-
-    logf(LOG_DBG2, "%s", ss.str().c_str());
   }
 
   void SafeCloseFile() {

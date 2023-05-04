@@ -7,6 +7,8 @@
 #include "common.h"
 #include "reader_base.h"
 
+#include <cassert>
+#include <climits>
 #include <string>
 
 #define FAILIO_IFLT(x, y)                                       \
@@ -140,7 +142,7 @@ class RefinementReader : public PeekableReader {
 class AssignmentReader : public PeekableReader {
  public:
   explicit AssignmentReader(std::string fpath)
-      : PeekableReader(fpath + "/blocks.bin") {}
+      : PeekableReader(fpath + "/assignments.bin") {}
 
   int ReadTimestep(int& ts, int sub_ts, std::vector<int>& blocks) {
     ts = -1;
