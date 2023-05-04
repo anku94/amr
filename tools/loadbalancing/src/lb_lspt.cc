@@ -38,7 +38,7 @@ void AssignBlocks(std::vector<double> const& costlist,
     rank_queue.emplace(i, 0.0);
   }
 
-  // Sort the indices of the costlist in ascending order of their corresponding
+  // Sort the indices of the costlist_prev in ascending order of their corresponding
   // costs
   std::vector<int> indices(costlist.size());
   std::iota(indices.begin(), indices.end(), 0);

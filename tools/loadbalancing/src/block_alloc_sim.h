@@ -40,26 +40,37 @@ class BlockSimulator {
 
   void SetupAllPolicies() {
     policies_.clear();
-    policies_.emplace_back(options_.output_dir.c_str(), "Contiguous/Unit-Cost",
-                           Policy::kPolicyContiguous, options_.env,
-                           options_.nranks, /* unit_cost */ true,
-                           /* oracle_cost */ false);
-    policies_.emplace_back(options_.output_dir.c_str(),
-                           "Contiguous/Actual-Cost", Policy::kPolicyContiguous,
-                           options_.env, options_.nranks, /* unit_cost */ false,
-                           /* oracle_cost */ false);
-    policies_.emplace_back(options_.output_dir.c_str(),
-                           "RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
-                           options_.env, options_.nranks, /* unit_cost */ false,
-                           /* oracle_cost */ false);
-    policies_.emplace_back(options_.output_dir.c_str(), "LPT/Actual-Cost",
-                           Policy::kPolicyLPT, options_.env,
-                           options_.nranks, /* unit_cost */ false,
-                           /* oracle_cost */ false);
-    policies_.emplace_back(options_.output_dir.c_str(),
-                           "LPT/Actual-Cost-Oracle", Policy::kPolicyLPT,
-                           options_.env, options_.nranks, /* unit_cost */ false,
-                           /* oracle_cost */ true);
+
+    PolicyExecOpts policy_opts;
+    policy_opts.output_dir = options_.output_dir.c_str();
+    policy_opts.env = options_.env;
+    policy_opts.nranks = options_.nranks;
+    policy_opts.nblocks_init = options_.nblocks;
+
+    policy_opts.SetPolicy(
+        "Contiguous/Unit-Cost", LoadBalancingPolicy::kPolicyContiguous,
+        CostEstimationPolicy::kUnitCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
+        "Contiguous/Actual-Cost", LoadBalancingPolicy::kPolicyContiguous,
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
+        "RoundRobin/Actual-Cost", LoadBalancingPolicy::kPolicyRoundRobin,
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancingPolicy::kPolicyLPT,
+                          CostEstimationPolicy::kExtrapolatedCost,
+                          TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
+        "LPT/Actual-Cost-Oracle", LoadBalancingPolicy::kPolicyLPT,
+        CostEstimationPolicy::kOracleCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
   }
 
   int InvokePolicies(std::vector<double> const& cost_oracle,
@@ -83,8 +94,8 @@ class BlockSimulator {
                            std::vector<int>& assignments,
                            std::vector<int>& times);
 
-  void UpdateExpectedBlockCount(int ts, int sub_ts, int nblocks_cur, int ref_count,
-                                int deref_count) {
+  void UpdateExpectedBlockCount(int ts, int sub_ts, int nblocks_cur,
+                                int ref_count, int deref_count) {
     if (nblocks_next_expected_ != -1 && nblocks_next_expected_ != nblocks_cur) {
       logf(LOG_ERRO, "nblocks_next_expected_ != assignments.size()");
       ABORT("nblocks_next_expected_ != assignments.size()");
@@ -99,7 +110,7 @@ class BlockSimulator {
   }
 
   void LogSummary(fort::char_table& table) {
-    table << fort::header << "Policy"
+    table << fort::header << "LoadBalancingPolicy"
           << "Timesteps"
           << "ExcessCost"
           << "AvgCost"
@@ -124,6 +135,6 @@ class BlockSimulator {
   int nblocks_next_expected_;
   int num_lb_;
 
-  std::vector<PolicyExecutionContext> policies_;
+  std::vector<PolicyExecCtx> policies_;
 };
 }  // namespace amr

@@ -14,7 +14,7 @@ namespace amr {
 class MiscTest : public ::testing::Test {
  protected:
   std::string GetLogPath(const char* output_dir, const char* policy_name) {
-    return PolicyExecutionContext::GetLogPath(output_dir, policy_name);
+    return PolicyExecCtx::GetLogPath(output_dir, policy_name);
   }
 
   void AssertApproxEqual(std::vector<double> const& a,

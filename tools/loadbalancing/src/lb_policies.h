@@ -12,18 +12,18 @@
 #include <sstream>
 
 namespace amr {
-enum class Policy;
+enum class LoadBalancingPolicy;
 class LoadBalancePolicies {
  public:
-  static int AssignBlocks(Policy policy, std::vector<double> const& costlist,
+  static int AssignBlocks(LoadBalancingPolicy policy, std::vector<double> const& costlist,
                            std::vector<int>& ranklist, int nranks) {
     // Two reasons to have a static object:
-    // - once per lifetime policy selection
-    // - once-per-lifetime logging of policy selection
+    // - once per lifetime lb_policy selection
+    // - once-per-lifetime logging of lb_policy selection
 
     static LoadBalancePolicies lb_instance(policy);
     if (lb_instance.policy_ != policy) {
-      ABORT("Only one policy supported during program lifetime!");
+      ABORT("Only one lb_policy supported during program lifetime!");
     }
 
     return AssignBlocksInternal(lb_instance.policy_, costlist, ranklist, nranks);
@@ -33,15 +33,15 @@ class LoadBalancePolicies {
   void operator=(LoadBalancePolicies const&) = delete;
 
  private:
-  LoadBalancePolicies(Policy policy) : policy_(policy) {
+  LoadBalancePolicies(LoadBalancingPolicy policy) : policy_(policy) {
     std::string policy_str = PolicyToString(policy);
-    logf(LOG_INFO, "[LoadBalancePolicies] Selected Policy: %s",
+    logf(LOG_INFO, "[LoadBalancePolicies] Selected LoadBalancingPolicy: %s",
          policy_str.c_str());
   }
 
-  static std::string PolicyToString(Policy policy);
+  static std::string PolicyToString(LoadBalancingPolicy policy);
 
-  static int AssignBlocksInternal(Policy policy,
+  static int AssignBlocksInternal(LoadBalancingPolicy policy,
                                    std::vector<double> const& costlist,
                                    std::vector<int>& ranklist, int nranks);
 
@@ -63,9 +63,9 @@ class LoadBalancePolicies {
   static int AssignBlocksILP(std::vector<double> const& costlist,
                              std::vector<int>& ranklist, int nranks);
 
-  const Policy policy_;
+  const LoadBalancingPolicy policy_;
 
   friend class LoadBalancingPoliciesTest;
-  friend class PolicyExecutionContext;
+  friend class PolicyExecCtx;
 };
 }  // namespace amr

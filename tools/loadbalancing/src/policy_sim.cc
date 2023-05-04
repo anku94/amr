@@ -10,45 +10,17 @@
 #include "utils.h"
 
 namespace amr {
-void PolicySim::LogSummary() {
-  logf(LOG_INFO, "\n\nFinished trace replay. Summary:\n");
-  for (auto& policy : policies_) policy.ctx.LogSummary();
-
-  logf(LOG_INFO, "-------------------");
-  logf(LOG_INFO, "Bad TS Count: %d/%d", bad_ts_, nts_);
-  logf(LOG_INFO, "Run Finished.");
-}
-
 void PolicySim::LogSummary(fort::char_table& table) {
-  table << fort::header << "Policy"
-        << "Timesteps"
-        << "ExcessCost"
-        << "AvgCost"
-        << "MaxCost"
-        << "LocScore"
-        << "ExecTime" << fort::endr;
-
+  PolicyExecCtx::LogHeader(table);
   for (auto& policy : policies_) {
-    policy.ctx.LogSummary(table);
+    policy.LogSummary(table);
   }
 
   logf(LOG_INFO, "\n%s", table.to_string().c_str());
 }
 
 void PolicySim::SetupAll() {
-  policies_.emplace_back("Contiguous/Unit-Cost", Policy::kPolicyContiguous,
-                         true, options_);
-  policies_.emplace_back("Contiguous/Actual-Cost", Policy::kPolicyContiguous,
-                         false, options_);
-  policies_.emplace_back("RoundRobin/Actual-Cost", Policy::kPolicyRoundRobin,
-                         false, options_);
-  policies_.emplace_back("SPT/Actual-Cost", Policy::kPolicySPT, false,
-                         options_);
-  policies_.emplace_back("LPT/Actual-Cost", Policy::kPolicyLPT, false,
-                         options_);
-  // Too slow to run in the "ALL" mode
-  //  policies_.emplace_back("ILP/Actual-Cost", Policy::kPolicyILP, false,
-  //                         options_);
+  ABORT("Deprecated. Use BlockSim instead");
 }
 
 void PolicySim::SimulateTrace(int ts_beg, int ts_end) {
@@ -80,20 +52,13 @@ void PolicySim::SimulateTrace(int ts_beg, int ts_end) {
   }
 }
 
-int PolicySim::InvokePolicies(std::vector<int>& cost_actual) {
-  std::vector<double> cost_naive(cost_actual.size(), 1.0f);
-  std::vector<double> cost_actual_lf(cost_actual.begin(), cost_actual.end());
+int PolicySim::InvokePolicies(std::vector<int>& cost_oracle) {
+  int rv;
+  std::vector<double> cost_oracle_lf(cost_oracle.begin(), cost_oracle.end());
+  std::vector<int> refs(0), derefs(0);
 
-  for (int pidx = 0; pidx < policies_.size(); pidx++) {
-    int rv;
-    auto& policy = policies_[pidx];
-
-    if (policy.unit_cost) {
-      rv = policy.ctx.ExecuteTimestep(cost_naive, cost_actual_lf);
-    } else {
-      rv = policy.ctx.ExecuteTimestep(cost_actual_lf, cost_actual_lf);
-    }
-
+  for (auto& policy: policies_) {
+    rv = policy.ExecuteTimestep(cost_oracle_lf, refs, derefs);
     if (rv) return rv;
   }
 

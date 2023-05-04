@@ -14,8 +14,6 @@ void BlockSimulator::Run(int nts) {
 
   SetupAllPolicies();
 
-  for (auto& policy: policies_) policy.Bootstrap(options_.nblocks);
-
   /* Semantics: every sub_ts exists in the assignment log, but
    * refinement log is sparse. A sub_ts not present in the assignment log
    * indicates corruption.

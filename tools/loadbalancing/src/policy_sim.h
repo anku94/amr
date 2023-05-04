@@ -9,10 +9,11 @@
 
 #include <regex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace amr {
-class PolicyExecutionContext;
+class PolicyExecCtx;
 
 struct PolicySimOptions {
   pdlfs::Env* env;
@@ -33,25 +34,10 @@ struct PolicySimOptions {
         ilp_num_shards(-1) {}
 };
 
-struct ExecCtxWrapper {
-  const char* const ctx_name;
-  Policy policy;
-  bool unit_cost;  // If true, use unit cost for all blocks
-  PolicyExecutionContext ctx;
-
-  ExecCtxWrapper(const char* ctx_name, Policy policy, bool unit_cost,
-                 const PolicySimOptions& sim_opts)
-      : ctx_name(ctx_name),
-        policy(policy),
-        unit_cost(unit_cost),
-        ctx(sim_opts.output_dir.c_str(), ctx_name, policy, sim_opts.env,
-            sim_opts.nranks, false, false) {}
-};
-
 class PolicySim {
  public:
-  explicit PolicySim(const PolicySimOptions& options)
-      : options_(options), env_(options.env), nts_(0), bad_ts_(0) {}
+  explicit PolicySim(PolicySimOptions options)
+      : options_(std::move(options)), nts_(0), bad_ts_(0) {}
 
   void Run() {
     logf(LOG_INFO, "Using prof dir: %s", options_.prof_dir.c_str());
@@ -85,13 +71,22 @@ class PolicySim {
                               std::to_string(shard_idx) + "/" +
                               std::to_string(num_shards);
 
-    policies_.emplace_back(policy_name.c_str(), Policy::kPolicyILP, false,
-                           options_);
+    PolicyExecOpts popts;
+    popts.output_dir = options_.output_dir.c_str();
+    popts.env = options_.env;
+    popts.nranks = options_.nranks;
+    popts.nblocks_init = 512;
+
+    popts.SetPolicy(policy_name.c_str(), LoadBalancingPolicy::kPolicyILP,
+                    CostEstimationPolicy::kOracleCost,
+                    TriggerPolicy::kEveryTimestep);
+
+    policies_.emplace_back(popts);
 
     int shard_beg = shard_idx * num_ts / num_shards;
     int shard_end = std::min((shard_idx + 1) * num_ts / num_shards, num_ts);
 
-    logf(LOG_INFO, "[Policy %s] Simulating trace from %d to %d",
+    logf(LOG_INFO, "[LoadBalancingPolicy %s] Simulating trace from %d to %d",
          policy_name.c_str(), shard_beg, shard_end);
 
     ts_beg = shard_beg;
@@ -99,19 +94,16 @@ class PolicySim {
   }
 
  private:
-  void SetupAll();
+  static void SetupAll();
 
   void SimulateTrace(int ts_beg_ = 0, int ts_end_ = INT_MAX);
 
-  void LogSummary();
-
   void LogSummary(fort::char_table& table);
 
-  int InvokePolicies(std::vector<int>& cost_actual);
+  int InvokePolicies(std::vector<int>& cost_oracle);
 
   const PolicySimOptions options_;
-  pdlfs::Env* const env_;
-  std::vector<ExecCtxWrapper> policies_;
+  std::vector<PolicyExecCtx> policies_;
 
   int nts_;
   int bad_ts_;

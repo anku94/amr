@@ -7,51 +7,51 @@
 #include "policy.h"
 
 namespace amr {
-std::string LoadBalancePolicies::PolicyToString(Policy policy) {
+std::string LoadBalancePolicies::PolicyToString(LoadBalancingPolicy policy) {
   switch (policy) {
-    case Policy::kPolicyContiguous:
+    case LoadBalancingPolicy::kPolicyContiguous:
       return "Contiguous";
-    case Policy::kPolicySkewed:
+    case LoadBalancingPolicy::kPolicySkewed:
       return "Skewed";
-    case Policy::kPolicyRoundRobin:
+    case LoadBalancingPolicy::kPolicyRoundRobin:
       return "RoundRobin";
-    case Policy::kPolicySPT:
+    case LoadBalancingPolicy::kPolicySPT:
       return "SPT";
-    case Policy::kPolicyLPT:
+    case LoadBalancingPolicy::kPolicyLPT:
       return "LPT";
-    case Policy::kPolicyILP:
+    case LoadBalancingPolicy::kPolicyILP:
       return "ILP";
   }
 
-  logf(LOG_ERRO, "Policy not implemented!");
-  ABORT("Unknown Policy");
-  return "Unknown Policy";
+  logf(LOG_ERRO, "LoadBalancingPolicy not implemented!");
+  ABORT("Unknown LoadBalancingPolicy");
+  return "Unknown LoadBalancingPolicy";
 }
 
 int LoadBalancePolicies::AssignBlocksInternal(
-    Policy policy, std::vector<double> const& costlist,
+    LoadBalancingPolicy policy, std::vector<double> const& costlist,
     std::vector<int>& ranklist, int nranks) {
   std::string policy_str = PolicyToString(policy);
-  logf(LOG_DBG2, "[LoadBalancePolicies] Assignment Policy: %s",
+  logf(LOG_DBG2, "[LoadBalancePolicies] Assignment LoadBalancingPolicy: %s",
        policy_str.c_str());
 
   ranklist.resize(costlist.size());
 
   switch (policy) {
-    case Policy::kPolicyContiguous:
+    case LoadBalancingPolicy::kPolicyContiguous:
       return AssignBlocksContiguous(costlist, ranklist, nranks);
-    case Policy::kPolicySkewed:
+    case LoadBalancingPolicy::kPolicySkewed:
       return AssignBlocksSkewed(costlist, ranklist, nranks);
-    case Policy::kPolicyRoundRobin:
+    case LoadBalancingPolicy::kPolicyRoundRobin:
       return AssignBlocksRoundRobin(costlist, ranklist, nranks);
-    case Policy::kPolicySPT:
+    case LoadBalancingPolicy::kPolicySPT:
       return AssignBlocksSPT(costlist, ranklist, nranks);
-    case Policy::kPolicyLPT:
+    case LoadBalancingPolicy::kPolicyLPT:
       return AssignBlocksLPT(costlist, ranklist, nranks);
-    case Policy::kPolicyILP:
+    case LoadBalancingPolicy::kPolicyILP:
       return AssignBlocksILP(costlist, ranklist, nranks);
     default:
-      ABORT("Policy not implemented!!");
+      ABORT("LoadBalancingPolicy not implemented!!");
   }
 
   return -1;

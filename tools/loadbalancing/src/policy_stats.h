@@ -55,11 +55,11 @@ class PolicyStats {
     ts_++;
   }
 
-  void LogSummary() const {
-    logf(LOG_INFO, "\tExcess Cost: \t%.2f s", excess_cost_ / 1e6);
-    logf(LOG_INFO, "\tAvg Cost: \t%.2f s", total_cost_avg_ / 1e6);
-    logf(LOG_INFO, "\tMax Cost: \t%.2f s", total_cost_max_ / 1e6);
-    logf(LOG_INFO, "\tLoc Score: \t%.2f%%", locality_score_sum_ * 100 / ts_);
+  static void LogHeader(fort::char_table& table) {
+    table << "ExcessCost"
+          << "AvgCost"
+          << "MaxCost"
+          << "LocScore";
   }
 
   void LogSummary(fort::char_table& table) const {
