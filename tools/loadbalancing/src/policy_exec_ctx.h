@@ -44,17 +44,31 @@ class PolicyExecCtx {
   int ExecuteTimestep(std::vector<double> const& costlist_oracle,
                       std::vector<int>& refs, std::vector<int>& derefs);
 
+  static int GetNumBlocksNext(int nblocks, int nrefs, int nderefs) {
+    int nblocks_next = nblocks + (nrefs * 7) - (nderefs * 7 / 8);
+    return nblocks_next;
+  }
+
   static void LogHeader(fort::char_table& table) {
-    table << fort::header << "LoadBalancingPolicy"
+    table << fort::header << "Name"
+          << "LB Policy"
+          << "Cost Policy"
+          << "Trigger Policy"
           << "Timesteps";
+
     PolicyStats::LogHeader(table);
+
     table << "ExecTime" << fort::endr;
   }
 
   void LogSummary(fort::char_table& table) {
-    table << opts_.policy_name
+    table << opts_.policy_name << PolicyToString(opts_.lb_policy)
+          << PolicyToString(opts_.cost_policy)
+          << PolicyToString(opts_.trigger_policy)
           << std::to_string(ts_succeeded_) + "/" + std::to_string(ts_invoked_);
+
     stats_.LogSummary(table);
+
     table << PolicyStats::FormatProp(exec_time_us_ / 1e6, "s") << fort::endr;
   }
 
@@ -73,7 +87,8 @@ class PolicyExecCtx {
                                 LoadBalanceState& state,
                                 std::vector<double> const& costlist_oracle,
                                 std::vector<double>& costlist_new) {
-    int nblocks_cur = GetNumBlocksNext(state);
+    int nblocks_cur = GetNumBlocksNext(state.costlist_prev.size(),
+                                       state.refs.size(), state.derefs.size());
 
     switch (cep) {
       case CostEstimationPolicy::kOracleCost:
@@ -92,14 +107,6 @@ class PolicyExecCtx {
     }
 
     assert(costlist_new.size() == nblocks_cur);
-  }
-
-  static int GetNumBlocksNext(LoadBalanceState const& state) {
-    int nblocks = state.costlist_prev.size();
-    assert(state.ranklist.size() == nblocks);
-    int nblocks_next =
-        nblocks + (state.refs.size() * 7) - (state.derefs.size() * 7 / 8);
-    return nblocks_next;
   }
 
   int TriggerLB(const std::vector<double>& costlist);

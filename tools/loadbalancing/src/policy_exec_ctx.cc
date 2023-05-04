@@ -40,15 +40,19 @@ void PolicyExecCtx::Bootstrap() {
     }
   }
 
+  lb_state_.costlist_prev = std::vector<double>(opts_.nblocks_init, 1.0);
+
   assert(lb_state_.ranklist.size() == opts_.nblocks_init);
   logf(LOG_DBG2, "[PolicyExecCtx] Bootstrapping. Num Blocks: %d, Ranklist: %zu",
        opts_.nblocks_init, lb_state_.ranklist.size());
 }
 
-int PolicyExecCtx::ExecuteTimestep(
-    const std::vector<double>& costlist_oracle, std::vector<int>& refs,
-    std::vector<int>& derefs) {
+int PolicyExecCtx::ExecuteTimestep(const std::vector<double>& costlist_oracle,
+                                   std::vector<int>& refs,
+                                   std::vector<int>& derefs) {
   int rv = 0;
+
+  assert(lb_state_.costlist_prev.size() == lb_state_.ranklist.size());
 
   bool trigger_lb = ComputeLBTrigger(opts_.trigger_policy, lb_state_);
   if (trigger_lb) {
@@ -116,7 +120,7 @@ void PolicyExecCtx::EnsureOutputFile() {
 }
 
 std::string PolicyExecCtx::GetLogPath(const char* output_dir,
-                                               const char* policy_name) {
+                                      const char* policy_name) {
   std::regex rm_unsafe("[/-]");
   std::string result = std::regex_replace(policy_name, rm_unsafe, "_");
   std::transform(result.begin(), result.end(), result.begin(), ::tolower);

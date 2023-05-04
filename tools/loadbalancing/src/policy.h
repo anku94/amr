@@ -23,6 +23,12 @@ enum class CostEstimationPolicy {
 
 enum class TriggerPolicy { kEveryTimestep, kOnMeshChange };
 
+std::string PolicyToString(LoadBalancingPolicy policy);
+
+std::string PolicyToString(CostEstimationPolicy policy);
+
+std::string PolicyToString(TriggerPolicy policy);
+
 struct PolicyExecOpts {
   const char* policy_name;
 

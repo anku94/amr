@@ -29,8 +29,7 @@ void BlockSimulator::Run(int nts) {
   fort::char_table table;
   LogSummary(table);
 
-  logf(LOG_INFO, "Simulation finished. Num TS: %d", sub_ts);
-  logf(LOG_INFO, "Num LBs: %d", num_lb_);
+  logf(LOG_INFO, "Simulation finished. Sub-timesteps simulated: %d.", sub_ts);
 }
 
 int BlockSimulator::RunTimestep(int& ts, int sub_ts) {
@@ -80,10 +79,17 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
                                          std::vector<int>& times) {
   logf(LOG_DBG2, "----------------------------------------");
 
-  int nblocks_cur = assignments.size();
-  int ref_sz = refs.size(), deref_sz = derefs.size();
+  if (nblocks_next_expected_ != -1 &&
+      nblocks_next_expected_ != assignments.size()) {
+    logf(LOG_ERRO, "nblocks_next_expected_ != assignments.size()");
+    ABORT("nblocks_next_expected_ != assignments.size()");
+  }
 
-  UpdateExpectedBlockCount(ts, sub_ts, nblocks_cur, ref_sz, deref_sz);
+  nblocks_next_expected_ = PolicyExecCtx::GetNumBlocksNext(
+      assignments.size(), refs.size(), derefs.size());
+
+  logf(LOG_DBUG, "[BlockSim] TS:%d_%d, nblocks: %d->%d", ts, sub_ts,
+       (int)assignments.size(), nblocks_next_expected_);
 
   std::vector<double> costs(times.begin(), times.end());
   InvokePolicies(costs, refs, derefs);

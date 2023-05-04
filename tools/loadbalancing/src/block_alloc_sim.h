@@ -71,6 +71,11 @@ class BlockSimulator {
         "LPT/Actual-Cost-Oracle", LoadBalancingPolicy::kPolicyLPT,
         CostEstimationPolicy::kOracleCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
+        "LPT/Actual-Cost-Oracle-EveryTS", LoadBalancingPolicy::kPolicyLPT,
+        CostEstimationPolicy::kOracleCost, TriggerPolicy::kEveryTimestep);
+    policies_.emplace_back(policy_opts);
   }
 
   int InvokePolicies(std::vector<double> const& cost_oracle,
@@ -94,29 +99,8 @@ class BlockSimulator {
                            std::vector<int>& assignments,
                            std::vector<int>& times);
 
-  void UpdateExpectedBlockCount(int ts, int sub_ts, int nblocks_cur,
-                                int ref_count, int deref_count) {
-    if (nblocks_next_expected_ != -1 && nblocks_next_expected_ != nblocks_cur) {
-      logf(LOG_ERRO, "nblocks_next_expected_ != assignments.size()");
-      ABORT("nblocks_next_expected_ != assignments.size()");
-    }
-
-    nblocks_next_expected_ = nblocks_cur;
-    nblocks_next_expected_ += ref_count * 7;
-    nblocks_next_expected_ -= deref_count * 7 / 8;
-
-    logf(LOG_DBUG, "[BlockSim] TS:%d_%d, nblocks: %d->%d", ts, sub_ts,
-         nblocks_cur, nblocks_next_expected_);
-  }
-
   void LogSummary(fort::char_table& table) {
-    table << fort::header << "LoadBalancingPolicy"
-          << "Timesteps"
-          << "ExcessCost"
-          << "AvgCost"
-          << "MaxCost"
-          << "LocScore"
-          << "ExecTime" << fort::endr;
+    PolicyExecCtx::LogHeader(table);
 
     for (auto& policy : policies_) {
       policy.LogSummary(table);
