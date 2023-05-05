@@ -79,9 +79,9 @@ run_setup_env_tau() {
   TAU_PLUGINS=libTAU-amr.so
 
   # With sampling
-  TAU=$(echo $TAU_BIN -T ompt,mpi,openmp -ompt -ebs)
+  # TAU=$(echo $TAU_BIN -T ompt,mpi,openmp -ompt -ebs)
   # Without sampling
-  # TAU=$(echo $TAU_BIN -T ompt,mpi,openmp)
+  TAU=$(echo $TAU_BIN -T ompt,mpi,openmp)
 
   # Tau flags
   add_env_var TAU_COMM_MATRIX 1
@@ -164,6 +164,9 @@ run_phoebus_cmd() {
     AMR_REST=$(basename $REST_FPATH)
     CMD_AMR=$(echo $AMR_BIN -r $AMR_REST)
   else
+    cp $AMR_DECK $RUN_ROOT
+    AMR_DECK=$RUN_ROOT/$(basename $AMR_DECK)
+
     message "-INFO- First Run, Deck: $AMR_DECK"
 
     CMD_AMR=$(echo $AMR_BIN -i $AMR_DECK)
@@ -215,7 +218,7 @@ setup_hostfile() {
 
 run_phoebus() {
   # -- frequently changed parameters --
-  RUN_SUFFIX=profile20
+  RUN_SUFFIX=profile22
   DRYRUN=0
   CLEAN_EXPDIR=1
   procs=512
@@ -223,7 +226,8 @@ run_phoebus() {
   AMR_DECK=/users/ankushj/repos/amr/decks/$RUN_SUFFIX.pin
   AMR_DECK=/users/ankushj/repos/amr/decks/profile14.hacks.pin
 
-  REST_FPATH=/mnt/ltio/parthenon-topo/profile19/run/sedov.out2.00027.rhdf
+  # REST_FPATH=/mnt/ltio/parthenon-topo/profile19/run/sedov.out2.00027.rhdf
+  # REST_FPATH=/mnt/ltio/parthenon-topo/profile21/run/sedov.out2.00044.rhdf
 
   # tau,vtune,none
   PROFILER_TYPE=tau

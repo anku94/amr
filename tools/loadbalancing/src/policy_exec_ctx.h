@@ -49,29 +49,9 @@ class PolicyExecCtx {
     return nblocks_next;
   }
 
-  static void LogHeader(fort::char_table& table) {
-    table << fort::header << "Name"
-          << "LB Policy"
-          << "Cost Policy"
-          << "Trigger Policy"
-          << "Timesteps";
+  static void LogHeader(fort::char_table& table);
 
-    PolicyStats::LogHeader(table);
-
-    table << "ExecTime" << fort::endr;
-  }
-
-  void LogSummary(fort::char_table& table) {
-    table << opts_.policy_name << PolicyUtils::PolicyToString(opts_.lb_policy)
-          << PolicyUtils::PolicyToString(opts_.cost_policy)
-          << PolicyUtils::PolicyToString(opts_.trigger_policy)
-          << std::to_string(ts_lb_succeeded_) + "/" +
-                 std::to_string(ts_lb_invoked_);
-
-    stats_.LogSummary(table);
-
-    table << PolicyStats::FormatProp(exec_time_us_ / 1e6, "s") << fort::endr;
-  }
+  void LogSummary(fort::char_table& table);
 
   std::string Name() const { return opts_.policy_name; }
 

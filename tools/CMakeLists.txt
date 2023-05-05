@@ -46,7 +46,10 @@ enable_testing()
 
 option(FORT_ENABLE_TESTING OFF)
 option(FORT_TEST_BUILD OFF)
+option(INSTALL_GTEST OFF)
 
 add_subdirectory(external/libfort)
+set_target_properties(fort PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
 add_subdirectory(topobench)
 add_subdirectory(loadbalancing)

@@ -102,7 +102,7 @@ class TraceReader:
         trace_path = "trace/funcs/funcs.{}.csv".format(rank)
         return self._read_file(trace_path, sep="|")
 
-    def read_rank_prof(self, rank: int) -> pd.DataFrame:
+    def read_rank_prof(self, rank: int, evt: int) -> pd.DataFrame:
         prof_path = "trace/prof/prof.{}.bin".format(rank)
         if prof_path in self._df_cache:
             return self._df_cache[prof_path]
@@ -113,10 +113,23 @@ class TraceReader:
         data_ints = struct.unpack(struct_fmt, prof_bytes)
         data_np = np.reshape(np.array(data_ints), (-1, 4))
         data_df = pd.DataFrame(
-            data_np, columns=["ts", "block_id", "event_code", "time_us"]
+            data_np, columns=["ts", "block_id", "event_code", "data"]
         )
 
-        self._df_cache[prof_path] = data_df
+        data_df.insert(loc=1, column='rank', value=[ rank ] * len(data_df))
+
+        subts_boundary = (
+            (data_df["event_code"] == 3) &
+            (data_df["data"] == 0)
+        )
+
+        data_subts = subts_boundary.cumsum() - 1
+        data_df.insert(loc=1, column='sub_ts', value=data_subts)
+        data_df = data_df[ data_df["event_code"] == evt ]
+        data_df = data_df.drop(columns=["event_code"])
+
+        # Disabled because of memory usage concerns
+        #  self._df_cache[prof_path] = data_df
         return data_df
 
     """

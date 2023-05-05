@@ -4,6 +4,8 @@
 
 #include "policy.h"
 
+#include <algorithm>
+#include <cassert>
 #include <string>
 
 namespace amr {
@@ -53,11 +55,11 @@ std::string PolicyUtils::PolicyToString(TriggerPolicy policy) {
 }
 
 void PolicyUtils::ExtrapolateCosts(std::vector<double> const& costs_prev,
-                             std::vector<int>& refs, std::vector<int>& derefs,
-                             std::vector<double>& costs_cur) {
+                                   std::vector<int>& refs,
+                                   std::vector<int>& derefs,
+                                   std::vector<double>& costs_cur) {
   int nblocks_prev = costs_prev.size();
-  int nblocks_cur =
-      nblocks_prev + (refs.size() * 7) - (derefs.size() * 7 / 8);
+  int nblocks_cur = nblocks_prev + (refs.size() * 7) - (derefs.size() * 7 / 8);
 
   costs_cur.resize(0);
   std::sort(refs.begin(), refs.end());

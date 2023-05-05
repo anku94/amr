@@ -4,6 +4,8 @@
 
 #include "block_alloc_sim.h"
 
+#include "fort.hpp"
+
 namespace amr {
 
 void BlockSimulator::Run(int nts) {
@@ -95,5 +97,15 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
   InvokePolicies(costs, refs, derefs);
 
   return 0;
+}
+
+void BlockSimulator::LogSummary(fort::char_table& table) {
+  PolicyExecCtx::LogHeader(table);
+
+  for (auto& policy : policies_) {
+    policy.LogSummary(table);
+  }
+
+  logf(LOG_INFO, "\n%s", table.to_string().c_str());
 }
 }  // namespace amr

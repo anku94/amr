@@ -26,7 +26,7 @@ target_include_directories(lb PUBLIC
         $<INSTALL_INTERFACE:include/lb>
         )
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
-target_link_libraries(lb PUBLIC pdlfs-common fort)
+target_link_libraries(lb PRIVATE pdlfs-common fort)
 target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
 
 # FindGUROBI does not unify both these into a single target :(
@@ -34,14 +34,14 @@ target_include_directories(lb PRIVATE ${GUROBI_INCLUDE_DIRS})
 
 add_executable(lb-sim policy_main.cc)
 #target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
-target_link_libraries(lb-sim lb)
+target_link_libraries(lb-sim PRIVATE lb pdlfs-common fort)
 
 add_executable(block-sim block_sim_main.cc)
 #target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
-target_link_libraries(block-sim lb)
+target_link_libraries(block-sim PRIVATE lb pdlfs-common fort)
 
 add_executable(cluster-sim cluster_main.cc)
-target_link_libraries(cluster-sim lb)
+target_link_libraries(cluster-sim PRIVATE lb pdlfs-common fort)
 
 #
 # "make install" rules

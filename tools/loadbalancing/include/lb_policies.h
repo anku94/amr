@@ -8,6 +8,7 @@
 #include <iostream>
 #include <numeric>
 #include <sstream>
+#include <vector>
 
 namespace amr {
 enum class LoadBalancePolicy;

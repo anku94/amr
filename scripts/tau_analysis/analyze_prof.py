@@ -8,6 +8,7 @@ import matplotlib.colors as colors
 import pickle
 import re
 import subprocess
+import struct
 import sys
 import time
 
@@ -23,16 +24,30 @@ from trace_reader import TraceReader, TraceOps
 
 
 class ProfOutputReader(Task):
-    def __init__(self, trace_dir: str):
+    def __init__(self, trace_dir: str, evt: int):
         super().__init__(trace_dir)
+        self.evt = evt
 
     @staticmethod
     def worker(args):
         trace_dir = args["trace_dir"]
         r = args["rank"]
-        print(f"Running ProfReader for Rank: {r}")
+        evt = args["evt"]
+
+        print(f"Running ProfReader for Rank: {r}, Evt: {evt}")
         trace_reader = TraceReader(trace_dir)
-        return trace_reader.read_rank_prof(r)
+        return trace_reader.read_rank_prof(r, evt)
+        pass
+
+    def gen_worker_fn_args(self):
+        args = super().gen_worker_fn_args()
+        args["evt"] = self.evt
+        return args
+
+    #  def gen_worker_fn_args_rank(self, rank):
+    #  args = self.gen_worker_fn_args()
+    #  args["rank"] = rank
+    #  return args
 
 
 def get_prof_path(evt: int) -> str:
@@ -42,24 +57,263 @@ def get_prof_path(evt: int) -> str:
     return ppath
 
 
-def run_merge_by_event():
+def run_sep_by_evt_util(evt):
     global trace_dir
     tr = TraceReader(trace_dir)
-
-    reader = ProfOutputReader(trace_dir)
+    reader = ProfOutputReader(trace_dir, evt)
     all_dfs = reader.run_rankwise(0, 512)
     aggr_df = pd.concat(all_dfs)
 
-    aggr_df.sort_values(["event_code", "ts", "block_id"], inplace=True)
-    nevents = 2
+    aggr_df.sort_values(["ts", "sub_ts", "rank", "block_id"], inplace=True)
 
-    for evt in range(0, nevents):
-        df = aggr_df[aggr_df["event_code"] == evt]
-        df = df.drop(columns=["event_code"])
-        evt_df_path = f"{trace_dir}/prof.aggr.evt{evt}.csv"
-        print(f"Writing evt {evt} to {evt_df_path}...")
-        df.to_csv(evt_df_path, index=None)
-    pass
+    col_names = ["time_us", "time_us", "refine_flag", "block_idx"]
+    cols_new = list(aggr_df.columns)[:-1]
+    cols_new.append(col_names[evt])
+    aggr_df.columns = cols_new
+
+    evt_df_path = get_prof_path(evt)
+    print(f"Writing evt {evt} to {evt_df_path}...")
+    print(aggr_df)
+    aggr_df.to_csv(evt_df_path, index=None)
+
+
+def run_sep_by_evt():
+    evts = [0, 1]
+    for evt in evts:
+        run_sep_by_evt_util(evt)
+
+
+def group_by_ts(ref_df):
+    boundaries = ref_df["block_id"] == -1
+
+    all_refs = []
+
+    prev_bidx = -1
+    for bidx in ref_df[boundaries].index:
+        df_cur = ref_df.loc[prev_bidx + 1 : bidx - 1]
+        uniq_ts = df_cur["ts"].unique()
+        assert len(uniq_ts) <= 1
+        if len(uniq_ts) == 0:
+            prev_bidx = bidx
+            continue
+
+        cur_ref_tuple = (
+            uniq_ts[0],
+            list(df_cur["block_id"]),
+            list(df_cur["refine_flag"]),
+        )
+
+        all_refs.append(cur_ref_tuple)
+
+        prev_bidx = bidx
+
+    return all_refs
+
+
+def run_aggr_evt3():
+    evt_code = 3
+    global trace_dir
+    df_path = f"{trace_dir}/prof.aggr.evt{evt_code}.csv"
+    df_out_path = f"{trace_dir}/prof.aggrmore.evt{evt_code}.csv"
+
+    df = pd.read_csv(df_path)
+
+    nranks = df["rank"].max() + 1
+
+    all_dfs = []
+
+    for rank in range(nranks):
+        ref_df = df[df["rank"] == rank].copy()
+        ref_df["sub_ts"] = ref_df["block_idx"].eq(0).cumsum() - 1
+        all_dfs.append(ref_df)
+
+    concat_df = pd.concat(all_dfs)
+
+    aggr_df = concat_df.groupby("sub_ts", as_index=False).agg(
+        {"ts": "min", "rank": list, "block_id": list}
+    )
+
+    aggr_df.to_csv(df_out_path, index=None)
+
+    return aggr_df
+
+
+def run_aggr_evt4():
+    evt_code = 2
+    global trace_dir
+    df_out_path = f"{trace_dir}/prof.aggrmore.evt{evt_code}.csv"
+    reader = ProfOutputReader(trace_dir, evt_code)
+    df0 = reader.run_rank(0)
+    print(df0)
+
+    cols = list(df0.columns)
+    cols[-1] = "refine_flag"
+    df0.columns = cols
+
+    ref_df = df0.copy()
+    ref_df["sub_ts"] = ref_df["block_id"].eq(-1).cumsum()
+    ref_df = ref_df[ref_df["block_id"] != -1]
+
+    aggr_df = ref_df.groupby("sub_ts", as_index=False).agg(
+        {"ts": "min", "block_id": list, "refine_flag": list}
+    )
+
+    #  aggr_df["nblocks"] = aggr_df["refine_flag"].apply(lambda x: len(x))
+    aggr_df["nref"] = aggr_df["refine_flag"].apply(lambda x: x.count(1))
+    aggr_df["nderef"] = aggr_df["refine_flag"].apply(lambda x: x.count(-1))
+
+    #  aggr_df["sub_ts"] += 1
+
+    aggr_df.to_csv(df_out_path, index=None)
+    # TODO: write function to persist aggr_df, here and the other one
+    # in cpp-readable format
+    return aggr_df
+
+    #  merged_df = blk_df.merge(aggr_df, how="left", on="sub_ts").fillna(
+    #  0, downcast="infer"
+    #  )
+
+    #  tmp_df = merged_df[["nblocks_before", "nref", "nderef", "nblocks_after"]].copy()
+    #  tmp_df["nblocks_after_computed"] = (
+    #  tmp_df["nblocks_before"] + 7 * tmp_df["nref"] - 7 * tmp_df["nderef"] / 8
+    #  )
+
+    #  try:
+    #  assert (tmp_df["nblocks_after_computed"] == tmp_df["nblocks_after"]).all()
+    #  print("Refinements validated. All block counts as expected!!")
+    #  except AssertionError as e:
+    #  mismatch_df = tmp_df[
+    #  tmp_df["nblocks_after_computed"] != tmp_df["nblocks_after"]
+    #  ]
+    #  print(mismatch_df)
+
+    #  print(deref_df[["ts", "nblocks", "nref", "nderef"]])
+
+    #  for index, data in aggr_df.iterrows():
+    #  print(index)
+    #  print(data)
+    #  break
+
+    #  print(df)
+    #  print(aggr_df)
+    #  print(aggr_df[ "ts", "block_id", "refine_flag" ])
+
+
+def validate_refinements(blk_df: pd.DataFrame, ref_df: pd.DataFrame) -> None:
+    blk_df["nblocks"] = blk_df["block_id"].apply(lambda x: len(x))
+
+    blk_df["nblocks_cur_ts"] = blk_df["nblocks"]
+    blk_df["nblocks_next_ts"] = blk_df["nblocks"].shift(-1, fill_value=-1)
+    # no next_ts for last row
+    blk_df = blk_df.iloc[:-1, :]
+
+    merged_df = blk_df.merge(ref_df, how="left", on="sub_ts").fillna(
+        0, downcast="infer"
+    )
+
+    tmp_df = merged_df[["nblocks_cur_ts", "nref", "nderef", "nblocks_next_ts"]].copy()
+    tmp_df["nblocks_next_ts_computed"] = (
+        tmp_df["nblocks_cur_ts"] + 7 * tmp_df["nref"] - 7 * tmp_df["nderef"] / 8
+    )
+
+    try:
+        assert (tmp_df["nblocks_next_ts_computed"] == tmp_df["nblocks_next_ts"]).all()
+        print("Refinements validated. All block counts as expected!!")
+    except AssertionError as e:
+        mismatch_df = tmp_df[
+            tmp_df["nblocks_after_computed"] != tmp_df["nblocks_after"]
+        ]
+        print(mismatch_df)
+        return
+
+
+def safe_ls(ls):
+    if type(ls) == str:
+        ls = ls.strip("[]")
+        ls = ls.split(",")
+        ls = [int(i) for i in ls]
+        return ls
+
+    return ls
+
+
+def divide_ref(block_ids, ref_flags):
+    block_ids = safe_ls(block_ids)
+    ref_flags = safe_ls(ref_flags)
+
+    try:
+        assert len(block_ids) == len(ref_flags)
+    except AssertionError as e:
+        print(block_ids, ref_flags)
+        print(len(block_ids), len(ref_flags))
+        raise AssertionError("idk")
+
+    blocks_ref = []
+    blocks_deref = []
+
+    for idx, bid in enumerate(block_ids):
+        if ref_flags[idx] == 1:
+            blocks_ref.append(bid)
+        elif ref_flags[idx] == -1:
+            blocks_deref.append(bid)
+
+    return blocks_ref, blocks_deref
+
+
+def write_refinements():
+    global trace_dir
+    df_path = f"{trace_dir}/prof.aggrmore.evt2.csv"
+    df_out = f"{trace_dir}/refinements.bin"
+
+    df = pd.read_csv(df_path)
+
+    write_int = lambda f, i: f.write(struct.pack("i", i))
+
+    with open(df_out, "wb") as f:
+        print(f"Writing to {df_out}")
+        for ridx, row in df.iterrows():
+            write_int(f, row["ts"])
+            write_int(f, row["sub_ts"])
+
+            bids = row["block_id"]
+            refs = row["refine_flag"]
+            bl_ref, bl_deref = divide_ref(bids, refs)
+
+            write_int(f, len(bl_ref))
+            for bid in bl_ref:
+                write_int(f, bid)
+
+            write_int(f, len(bl_deref))
+            for bid in bl_deref:
+                write_int(f, bid)
+
+    return
+
+
+def write_assignments():
+    df_path = f"{trace_dir}/prof.aggrmore.evt3.csv"
+    df_out = f"{trace_dir}/assignments.bin"
+
+    df = pd.read_csv(df_path)
+
+    write_int = lambda f, i: f.write(struct.pack("i", i))
+
+    with open(df_out, "wb") as f:
+        print(f"Writing to {df_out}")
+        for ridx, row in df.iterrows():
+            write_int(f, row["ts"])
+            write_int(f, row["sub_ts"])
+
+            ranks = safe_ls(row["rank"])
+            bids = safe_ls(row["block_id"])
+
+            assert len(ranks) == len(bids)
+            write_int(f, len(ranks))
+
+            for i in ranks:
+                write_int(f, i)
+
+    return
 
 
 def join_two_traces(trace_a, trace_b, evt_code):
@@ -431,7 +685,13 @@ def plot_timegrid_all():
 
 def analyze():
     #  Create tracedir/prof.aggr.evtN.csv
-    run_merge_by_event()
+    run_sep_by_evt()
+    #  run_group_by_ts()
+    #  blk_df = run_aggr_evt3()
+    #  ref_df = run_aggr_evt4()
+    #  validate_refinements(blk_df, ref_df)
+    #  write_refinements()
+    #  write_assignments()
     #  Only when a run had to be restarted
     #  run_join_two_traces()
 
@@ -450,11 +710,11 @@ def plot():
 
 
 def run():
-    #  analyze()
-    plot()
+    analyze()
+    #  plot()
 
 
 if __name__ == "__main__":
     global trace_dir
-    trace_dir = "/mnt/ltio/parthenon-topo/profile20"
+    trace_dir = "/mnt/ltio/parthenon-topo/profile22"
     run()

@@ -110,15 +110,7 @@ class BlockSimulator {
                            std::vector<int>& assignments,
                            std::vector<int>& times);
 
-  void LogSummary(fort::char_table& table) {
-    PolicyExecCtx::LogHeader(table);
-
-    for (auto& policy : policies_) {
-      policy.LogSummary(table);
-    }
-
-    logf(LOG_INFO, "\n%s", table.to_string().c_str());
-  }
+  void LogSummary(fort::char_table& table);
 
   BlockSimulatorOpts const options_;
 

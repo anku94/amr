@@ -4,9 +4,24 @@
 
 #include "policy_exec_ctx.h"
 
+#include "fort.hpp"
 #include "policy.h"
 
 namespace amr {
+void PolicyStats::LogHeader(fort::char_table& table) {
+  table << "ExcessCost"
+        << "AvgCost"
+        << "MaxCost"
+        << "LocScore";
+}
+
+void PolicyStats::LogSummary(fort::char_table& table) const {
+  table << FormatProp(excess_cost_ / 1e6, "s")
+        << FormatProp(total_cost_avg_ / 1e6, "s")
+        << FormatProp(total_cost_max_ / 1e6, "s")
+        << FormatProp(locality_score_sum_ * 100 / ts_, "%");
+}
+
 PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
     : opts_(opts),
       use_cost_cache_(opts_.cost_policy ==
@@ -34,6 +49,30 @@ PolicyExecCtx::PolicyExecCtx(PolicyExecCtx&& rhs) noexcept
   if (this != &rhs) {
     rhs.fd_ = nullptr;
   }
+}
+
+void PolicyExecCtx::LogHeader(fort::char_table& table) {
+  table << fort::header << "Name"
+        << "LB Policy"
+        << "Cost Policy"
+        << "Trigger Policy"
+        << "Timesteps";
+
+  PolicyStats::LogHeader(table);
+
+  table << "ExecTime" << fort::endr;
+}
+
+void PolicyExecCtx::LogSummary(fort::char_table& table) {
+  table << opts_.policy_name << PolicyUtils::PolicyToString(opts_.lb_policy)
+        << PolicyUtils::PolicyToString(opts_.cost_policy)
+        << PolicyUtils::PolicyToString(opts_.trigger_policy)
+        << std::to_string(ts_lb_succeeded_) + "/" +
+               std::to_string(ts_lb_invoked_);
+
+  stats_.LogSummary(table);
+
+  table << PolicyStats::FormatProp(exec_time_us_ / 1e6, "s") << fort::endr;
 }
 
 void PolicyExecCtx::Bootstrap() {
