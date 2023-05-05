@@ -30,6 +30,8 @@ std::string PolicyToString(CostEstimationPolicy policy) {
       return "UnitCost";
     case CostEstimationPolicy::kExtrapolatedCost:
       return "ExtrapolatedCost";
+    case CostEstimationPolicy::kCachedExtrapolatedCost:
+      return "CachedExtrapolatedCost";
     case CostEstimationPolicy::kOracleCost:
       return "OracleCost";
     default:

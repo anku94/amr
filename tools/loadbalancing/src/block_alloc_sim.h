@@ -68,8 +68,18 @@ class BlockSimulator {
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
+        "LPT/Actual-Cost-Cached", LoadBalancingPolicy::kPolicyLPT,
+        CostEstimationPolicy::kCachedExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
         "LPT/Actual-Cost-Oracle", LoadBalancingPolicy::kPolicyLPT,
         CostEstimationPolicy::kOracleCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
+        "LPT/Actual-Cost-EveryTS", LoadBalancingPolicy::kPolicyLPT,
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kEveryTimestep);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(

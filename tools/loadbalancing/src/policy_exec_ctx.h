@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common.h"
+#include "cost_cache.h"
 #include "lb_policies.h"
 #include "lb_trigger.h"
 #include "policy.h"
@@ -65,7 +66,7 @@ class PolicyExecCtx {
     table << opts_.policy_name << PolicyToString(opts_.lb_policy)
           << PolicyToString(opts_.cost_policy)
           << PolicyToString(opts_.trigger_policy)
-          << std::to_string(ts_succeeded_) + "/" + std::to_string(ts_invoked_);
+          << std::to_string(ts_lb_succeeded_) + "/" + std::to_string(ts_lb_invoked_);
 
     stats_.LogSummary(table);
 
@@ -83,7 +84,27 @@ class PolicyExecCtx {
     return (!state.refs.empty() || !state.derefs.empty());
   }
 
-  static void ComputeCostsForLB(CostEstimationPolicy cep,
+  void ComputeCosts(int ts, std::vector<double> const& costlist_oracle,
+                    std::vector<double>& costlist_new) {
+    int nblocks_cur =
+        GetNumBlocksNext(lb_state_.costlist_prev.size(), lb_state_.refs.size(),
+                         lb_state_.derefs.size());
+
+    if (use_cost_cache_ and cost_cache_.Get(ts, nblocks_cur, costlist_new)) {
+      return;
+    }
+
+    ComputeCostsInternal(opts_.cost_policy, lb_state_, costlist_oracle,
+                         costlist_new);
+
+    if (use_cost_cache_) {
+      cost_cache_.Put(ts, costlist_oracle);
+    }
+
+    assert(costlist_new.size() == nblocks_cur);
+  }
+
+  static void ComputeCostsInternal(CostEstimationPolicy cep,
                                 LoadBalanceState& state,
                                 std::vector<double> const& costlist_oracle,
                                 std::vector<double>& costlist_new) {
@@ -98,6 +119,7 @@ class PolicyExecCtx {
         costlist_new = std::vector<double>(nblocks_cur, 1.0);
         break;
       case CostEstimationPolicy::kExtrapolatedCost:
+      case CostEstimationPolicy::kCachedExtrapolatedCost:
         // If both refs and derefs are empty, these should be the same
         Utils::ExtrapolateCosts(state.costlist_prev, state.refs, state.derefs,
                                 costlist_new);
@@ -105,8 +127,6 @@ class PolicyExecCtx {
       default:
         ABORT("Not implemented!");
     }
-
-    assert(costlist_new.size() == nblocks_cur);
   }
 
   int TriggerLB(const std::vector<double>& costlist);
@@ -117,12 +137,17 @@ class PolicyExecCtx {
                                 const char* policy_name);
 
   const PolicyExecOpts opts_;
+  bool use_cost_cache_;
+
   LoadBalanceState lb_state_;
   PolicyStats stats_;
+  CostCache cost_cache_;
 
   pdlfs::WritableFile* fd_;
-  int ts_invoked_;
-  int ts_succeeded_;
+
+  int ts_;
+  int ts_lb_invoked_;
+  int ts_lb_succeeded_;
   double exec_time_us_;
 
   friend class MiscTest;

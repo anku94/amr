@@ -4,12 +4,17 @@
 
 #include "policy_exec_ctx.h"
 
+#include "policy.h"
+
 namespace amr {
 PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
     : opts_(opts),
+      use_cost_cache_(opts_.cost_policy ==
+                      CostEstimationPolicy::kCachedExtrapolatedCost),
       fd_(nullptr),
-      ts_invoked_(0),
-      ts_succeeded_(0),
+      ts_(0),
+      ts_lb_invoked_(0),
+      ts_lb_succeeded_(0),
       exec_time_us_(0) {
   EnsureOutputFile();
   Bootstrap();
@@ -17,11 +22,14 @@ PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
 
 PolicyExecCtx::PolicyExecCtx(PolicyExecCtx&& rhs) noexcept
     : opts_(rhs.opts_),
+      cost_cache_(rhs.cost_cache_),
+      use_cost_cache_(rhs.use_cost_cache_),
       lb_state_(rhs.lb_state_),
       stats_(rhs.stats_),
       fd_(rhs.fd_),
-      ts_invoked_(rhs.ts_invoked_),
-      ts_succeeded_(rhs.ts_succeeded_),
+      ts_(rhs.ts_),
+      ts_lb_invoked_(rhs.ts_lb_invoked_),
+      ts_lb_succeeded_(rhs.ts_lb_succeeded_),
       exec_time_us_(rhs.exec_time_us_) {
   if (this != &rhs) {
     rhs.fd_ = nullptr;
@@ -57,11 +65,11 @@ int PolicyExecCtx::ExecuteTimestep(const std::vector<double>& costlist_oracle,
   bool trigger_lb = ComputeLBTrigger(opts_.trigger_policy, lb_state_);
   if (trigger_lb) {
     std::vector<double> costlist_lb;
-    ComputeCostsForLB(opts_.cost_policy, lb_state_, costlist_oracle,
-                      costlist_lb);
+    ComputeCosts(ts_, costlist_oracle, costlist_lb);
     rv = TriggerLB(costlist_lb);
     if (rv) {
       logf(LOG_WARN, "[PolicyExecCtx] TriggerLB failed!");
+      ts_++;
       return rv;
     }
   }
@@ -75,6 +83,7 @@ int PolicyExecCtx::ExecuteTimestep(const std::vector<double>& costlist_oracle,
   lb_state_.refs = refs;
   lb_state_.derefs = derefs;
 
+  ts_++;
   return rv;
 }
 
@@ -82,7 +91,7 @@ int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist) {
   int rv;
   std::vector<int> ranklist_lb;
 
-  ts_invoked_++;
+  ts_lb_invoked_++;
 
   uint64_t lb_beg = pdlfs::Env::NowMicros();
   rv = LoadBalancePolicies::AssignBlocksInternal(opts_.lb_policy, costlist,
@@ -91,7 +100,7 @@ int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist) {
 
   if (rv) return rv;
 
-  ts_succeeded_++;
+  ts_lb_succeeded_++;
   exec_time_us_ += (lb_end - lb_beg);
 
   lb_state_.ranklist = ranklist_lb;

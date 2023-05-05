@@ -19,6 +19,7 @@ enum class CostEstimationPolicy {
   kUnitCost,
   kExtrapolatedCost,
   kOracleCost,
+  kCachedExtrapolatedCost
 };
 
 enum class TriggerPolicy { kEveryTimestep, kOnMeshChange };
