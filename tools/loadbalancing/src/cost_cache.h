@@ -9,7 +9,7 @@
 namespace amr {
 class CostCache {
  public:
-  explicit CostCache(int ttl = 5)
+  explicit CostCache(int ttl = 15)
       : ttl_(ttl), req_cnt_(0), req_miss_(0), req_exp_(0) {}
 
   ~CostCache() { LogStats(); }
@@ -23,11 +23,14 @@ class CostCache {
       return false;
     }
 
+
     if (ts - it->second.first > ttl_) {
+      logf(LOG_DBUG, "[CostCache] Cache Miss, Expired: TS_req: %d, TS_cache: %d", ts, it->second.first);
       req_exp_++;
       return false;
     }
 
+    logf(LOG_DBUG, "[CostCache] Cache Hit: TS_req: %d, TS_cache: %d", ts, it->second.first);
     cost = it->second.second;
     return true;
   }
