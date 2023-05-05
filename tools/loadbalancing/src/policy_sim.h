@@ -3,7 +3,7 @@
 #include "lb_policies.h"
 #include "policy_exec_ctx.h"
 #include "prof_set_reader.h"
-#include "utils.h"
+#include "trace_utils.h"
 
 #include "pdlfs-common/env.h"
 
@@ -77,7 +77,7 @@ class PolicySim {
     popts.nranks = options_.nranks;
     popts.nblocks_init = 512;
 
-    popts.SetPolicy(policy_name.c_str(), LoadBalancingPolicy::kPolicyILP,
+    popts.SetPolicy(policy_name.c_str(), LoadBalancePolicy::kPolicyILP,
                     CostEstimationPolicy::kOracleCost,
                     TriggerPolicy::kEveryTimestep);
 
@@ -86,7 +86,7 @@ class PolicySim {
     int shard_beg = shard_idx * num_ts / num_shards;
     int shard_end = std::min((shard_idx + 1) * num_ts / num_shards, num_ts);
 
-    logf(LOG_INFO, "[LoadBalancingPolicy %s] Simulating trace from %d to %d",
+    logf(LOG_INFO, "[LoadBalancePolicy %s] Simulating trace from %d to %d",
          policy_name.c_str(), shard_beg, shard_end);
 
     ts_beg = shard_beg;

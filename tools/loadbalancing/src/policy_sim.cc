@@ -7,7 +7,7 @@
 #include "fort.hpp"
 #include "policy.h"
 #include "policy_exec_ctx.h"
-#include "utils.h"
+#include "trace_utils.h"
 
 namespace amr {
 void PolicySim::LogSummary(fort::char_table& table) {

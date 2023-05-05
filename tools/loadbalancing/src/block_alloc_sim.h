@@ -9,7 +9,7 @@
 #include "policy.h"
 #include "policy_exec_ctx.h"
 #include "prof_set_reader.h"
-#include "utils.h"
+#include "trace_utils.h"
 
 #include <vector>
 
@@ -48,42 +48,43 @@ class BlockSimulator {
     policy_opts.nblocks_init = options_.nblocks;
 
     policy_opts.SetPolicy(
-        "Contiguous/Unit-Cost", LoadBalancingPolicy::kPolicyContiguous,
+        "Contiguous/Unit-Cost", LoadBalancePolicy::kPolicyContiguous,
         CostEstimationPolicy::kUnitCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "Contiguous/Actual-Cost", LoadBalancingPolicy::kPolicyContiguous,
+        "Contiguous/Actual-Cost", LoadBalancePolicy::kPolicyContiguous,
         CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "RoundRobin/Actual-Cost", LoadBalancingPolicy::kPolicyRoundRobin,
+        "RoundRobin/Actual-Cost", LoadBalancePolicy::kPolicyRoundRobin,
         CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancingPolicy::kPolicyLPT,
+    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancePolicy::kPolicyLPT,
                           CostEstimationPolicy::kExtrapolatedCost,
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "LPT/Actual-Cost-Cached", LoadBalancingPolicy::kPolicyLPT,
+        "LPT/Actual-Cost-Cached",
+                          LoadBalancePolicy::kPolicyLPT,
         CostEstimationPolicy::kCachedExtrapolatedCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "LPT/Actual-Cost-Oracle", LoadBalancingPolicy::kPolicyLPT,
+        "LPT/Actual-Cost-Oracle", LoadBalancePolicy::kPolicyLPT,
         CostEstimationPolicy::kOracleCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "LPT/Actual-Cost-EveryTS", LoadBalancingPolicy::kPolicyLPT,
+        "LPT/Actual-Cost-EveryTS", LoadBalancePolicy::kPolicyLPT,
         CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kEveryTimestep);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "LPT/Actual-Cost-Oracle-EveryTS", LoadBalancingPolicy::kPolicyLPT,
+        "LPT/Actual-Cost-Oracle-EveryTS", LoadBalancePolicy::kPolicyLPT,
         CostEstimationPolicy::kOracleCost, TriggerPolicy::kEveryTimestep);
     policies_.emplace_back(policy_opts);
   }

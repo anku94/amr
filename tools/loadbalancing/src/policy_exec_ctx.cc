@@ -134,7 +134,7 @@ std::string PolicyExecCtx::GetLogPath(const char* output_dir,
   std::string result = std::regex_replace(policy_name, rm_unsafe, "_");
   std::transform(result.begin(), result.end(), result.begin(), ::tolower);
   result = std::string(output_dir) + "/" + result + ".csv";
-  logf(LOG_DBUG, "LoadBalancingPolicy Name: %s, Log Fname: %s", policy_name,
+  logf(LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s", policy_name,
        result.c_str());
   return result;
 }

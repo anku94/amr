@@ -7,10 +7,9 @@
 #include "common.h"
 #include "cost_cache.h"
 #include "lb_policies.h"
-#include "lb_trigger.h"
 #include "policy.h"
 #include "policy_stats.h"
-#include "utils.h"
+#include "trace_utils.h"
 
 #include <pdlfs-common/env.h>
 #include <regex>
@@ -63,10 +62,11 @@ class PolicyExecCtx {
   }
 
   void LogSummary(fort::char_table& table) {
-    table << opts_.policy_name << PolicyToString(opts_.lb_policy)
-          << PolicyToString(opts_.cost_policy)
-          << PolicyToString(opts_.trigger_policy)
-          << std::to_string(ts_lb_succeeded_) + "/" + std::to_string(ts_lb_invoked_);
+    table << opts_.policy_name << PolicyUtils::PolicyToString(opts_.lb_policy)
+          << PolicyUtils::PolicyToString(opts_.cost_policy)
+          << PolicyUtils::PolicyToString(opts_.trigger_policy)
+          << std::to_string(ts_lb_succeeded_) + "/" +
+                 std::to_string(ts_lb_invoked_);
 
     stats_.LogSummary(table);
 
@@ -105,9 +105,9 @@ class PolicyExecCtx {
   }
 
   static void ComputeCostsInternal(CostEstimationPolicy cep,
-                                LoadBalanceState& state,
-                                std::vector<double> const& costlist_oracle,
-                                std::vector<double>& costlist_new) {
+                                   LoadBalanceState& state,
+                                   std::vector<double> const& costlist_oracle,
+                                   std::vector<double>& costlist_new) {
     int nblocks_cur = GetNumBlocksNext(state.costlist_prev.size(),
                                        state.refs.size(), state.derefs.size());
 
@@ -121,8 +121,8 @@ class PolicyExecCtx {
       case CostEstimationPolicy::kExtrapolatedCost:
       case CostEstimationPolicy::kCachedExtrapolatedCost:
         // If both refs and derefs are empty, these should be the same
-        Utils::ExtrapolateCosts(state.costlist_prev, state.refs, state.derefs,
-                                costlist_new);
+        PolicyUtils::ExtrapolateCosts(state.costlist_prev, state.refs,
+                                      state.derefs, costlist_new);
         break;
       default:
         ABORT("Not implemented!");

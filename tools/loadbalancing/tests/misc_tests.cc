@@ -142,7 +142,7 @@ TEST_F(MiscTest, ExtrapolateCosts1) {
   std::vector<int> derefs = {};
   std::vector<double> costs_cur;
 
-  Utils::ExtrapolateCosts(costs_prev, refs, derefs, costs_cur);
+  PolicyUtils::ExtrapolateCosts(costs_prev, refs, derefs, costs_cur);
   logf(LOG_DBUG, "Costs Prev: %s", SerializeVector(costs_prev, 10).c_str());
   logf(LOG_DBUG, "Costs Cur: %s", SerializeVector(costs_cur, 10).c_str());
   AssertApproxEqual(costs_cur, {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
@@ -154,7 +154,7 @@ TEST_F(MiscTest, ExtrapolateCosts2) {
   std::vector<int> derefs = {0, 1, 2, 3, 4, 5, 6, 7};
   std::vector<double> costs_cur;
 
-  Utils::ExtrapolateCosts(costs_prev, refs, derefs, costs_cur);
+  PolicyUtils::ExtrapolateCosts(costs_prev, refs, derefs, costs_cur);
   logf(LOG_DBUG, "Costs Prev: %s", SerializeVector(costs_prev, 10).c_str());
   logf(LOG_DBUG, "Costs Cur: %s", SerializeVector(costs_cur, 10).c_str());
   AssertApproxEqual(costs_cur, {4.5});
@@ -166,7 +166,7 @@ TEST_F(MiscTest, ExtrapolateCosts3) {
   std::vector<int> derefs = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<double> costs_cur;
 
-  Utils::ExtrapolateCosts(costs_prev, refs, derefs, costs_cur);
+  PolicyUtils::ExtrapolateCosts(costs_prev, refs, derefs, costs_cur);
   logf(LOG_DBUG, "Costs Prev: %s", SerializeVector(costs_prev, 10).c_str());
   logf(LOG_DBUG, "Costs Cur: %s", SerializeVector(costs_cur, 10).c_str());
   AssertApproxEqual(costs_cur, {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 5.5});

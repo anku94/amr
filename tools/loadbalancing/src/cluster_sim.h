@@ -6,7 +6,7 @@
 
 #include "cluster.h"
 #include "prof_set_reader.h"
-#include "utils.h"
+#include "trace_utils.h"
 
 #include <pdlfs-common/env.h>
 #include <string>

@@ -4,9 +4,14 @@
 
 #pragma once
 
-#include <pdlfs-common/env.h>
+#include <vector>
+
+namespace pdlfs {
+class Env;
+}
+
 namespace amr {
-enum class LoadBalancingPolicy {
+enum class LoadBalancePolicy {
   kPolicyContiguous,
   kPolicyRoundRobin,
   kPolicySkewed,
@@ -24,16 +29,23 @@ enum class CostEstimationPolicy {
 
 enum class TriggerPolicy { kEveryTimestep, kOnMeshChange };
 
-std::string PolicyToString(LoadBalancingPolicy policy);
+class PolicyUtils {
+ public:
+  static std::string PolicyToString(LoadBalancePolicy policy);
 
-std::string PolicyToString(CostEstimationPolicy policy);
+  static std::string PolicyToString(CostEstimationPolicy policy);
 
-std::string PolicyToString(TriggerPolicy policy);
+  static std::string PolicyToString(TriggerPolicy policy);
+
+  static void ExtrapolateCosts(std::vector<double> const& costs_prev,
+                               std::vector<int>& refs, std::vector<int>& derefs,
+                               std::vector<double>& costs_cur);
+};
 
 struct PolicyExecOpts {
   const char* policy_name;
 
-  LoadBalancingPolicy lb_policy;
+  LoadBalancePolicy lb_policy;
   CostEstimationPolicy cost_policy;
   TriggerPolicy trigger_policy;
 
@@ -45,7 +57,7 @@ struct PolicyExecOpts {
 
   PolicyExecOpts()
       : policy_name("<undefined>"),
-        lb_policy(LoadBalancingPolicy::kPolicyContiguous),
+        lb_policy(LoadBalancePolicy::kPolicyContiguous),
         cost_policy(CostEstimationPolicy::kUnitCost),
         trigger_policy(TriggerPolicy::kEveryTimestep),
         output_dir(nullptr),
@@ -53,7 +65,7 @@ struct PolicyExecOpts {
         nranks(0),
         nblocks_init(0) {}
 
-  void SetPolicy(const char* name, LoadBalancingPolicy lp,
+  void SetPolicy(const char* name, LoadBalancePolicy lp,
                  CostEstimationPolicy cep, TriggerPolicy tp) {
     policy_name = name;
     lb_policy = lp;

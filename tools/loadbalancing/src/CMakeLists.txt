@@ -20,8 +20,11 @@ add_library(lb ${lb_srcs} ${common_srcs})
 target_compile_features(lb PRIVATE cxx_std_11)
 
 target_include_directories(lb PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<BUILD_INTERFACE:${common_include}>)
+        $<BUILD_INTERFACE:${common_include}>
+        $<INSTALL_INTERFACE:include/lb>
+        )
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
 target_link_libraries(lb PUBLIC pdlfs-common fort)
 target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
@@ -39,3 +42,16 @@ target_link_libraries(block-sim lb)
 
 add_executable(cluster-sim cluster_main.cc)
 target_link_libraries(cluster-sim lb)
+
+#
+# "make install" rules
+#
+install(TARGETS lb EXPORT lb-targets
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)
+install(EXPORT lb-targets
+        FILE lb-targets.cmake
+        DESTINATION lib/cmake/lb)
+install(DIRECTORY ../include
+        DESTINATION include/lb
+        FILES_MATCHING PATTERN "*.h")
