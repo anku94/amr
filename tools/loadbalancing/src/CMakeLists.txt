@@ -23,8 +23,9 @@ target_include_directories(lb PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<BUILD_INTERFACE:${common_include}>
-        $<INSTALL_INTERFACE:include/lb>
+        $<INSTALL_INTERFACE:include>
         )
+
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
 target_link_libraries(lb PRIVATE pdlfs-common fort)
 target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
@@ -53,5 +54,5 @@ install(EXPORT lb-targets
         FILE lb-targets.cmake
         DESTINATION lib/cmake/lb)
 install(DIRECTORY ../include
-        DESTINATION include/lb
+        DESTINATION .
         FILES_MATCHING PATTERN "*.h")
