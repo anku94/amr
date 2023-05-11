@@ -12,4 +12,4 @@ add_library(TAU-amr SHARED ${PLUGIN_SOURCES})
 target_link_libraries(TAU-amr TAU::TAU)
 
 install(TARGETS TAU-amr
-  LIBRARY DESTINATION .)
+  LIBRARY DESTINATION lib)
