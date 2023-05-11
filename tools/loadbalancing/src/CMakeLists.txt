@@ -47,11 +47,11 @@ target_link_libraries(cluster-sim PRIVATE lb pdlfs-common fort)
 #
 # "make install" rules
 #
-install(TARGETS lb EXPORT lb-targets
+install(TARGETS lb EXPORT lb
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
-install(EXPORT lb-targets
-        FILE lb-targets.cmake
+install(EXPORT lb
+        FILE lb-config.cmake
         DESTINATION lib/cmake/lb)
 install(DIRECTORY ../include
         DESTINATION .
