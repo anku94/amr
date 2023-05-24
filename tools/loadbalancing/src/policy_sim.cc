@@ -58,7 +58,9 @@ int PolicySim::InvokePolicies(std::vector<int>& cost_oracle) {
   std::vector<int> refs(0), derefs(0);
 
   for (auto& policy: policies_) {
-    rv = policy.ExecuteTimestep(cost_oracle_lf, refs, derefs);
+    // PolicySim is no longer functional at all
+//    rv = policy.ExecuteTimestep(cost_oracle_lf, <#initializer #>, refs, derefs,
+//                                0);
     if (rv) return rv;
   }
 

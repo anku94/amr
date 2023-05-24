@@ -13,14 +13,21 @@ class Env;
 
 namespace amr {
 enum class LoadBalancePolicy {
-  kPolicyContiguous,
+  kPolicyActual,
+  kPolicyContiguousUnitCost,
+  kPolicyContiguousActualCost,
   kPolicyRoundRobin,
   kPolicySkewed,
   kPolicySPT,
   kPolicyLPT,
-  kPolicyILP
+  kPolicyILP,
+  kPolicyContigImproved
 };
 
+/** Policy kUnitCost is not really necessary
+ * as the LB policy kPolicyContiguousUnitCost implicitly includes it
+ * Keeping this here anyway.
+ */
 enum class CostEstimationPolicy {
   kUnitCost,
   kExtrapolatedCost,
@@ -58,7 +65,7 @@ struct PolicyExecOpts {
 
   PolicyExecOpts()
       : policy_name("<undefined>"),
-        lb_policy(LoadBalancePolicy::kPolicyContiguous),
+        lb_policy(LoadBalancePolicy::kPolicyContiguousActualCost),
         cost_policy(CostEstimationPolicy::kUnitCost),
         trigger_policy(TriggerPolicy::kEveryTimestep),
         output_dir(nullptr),

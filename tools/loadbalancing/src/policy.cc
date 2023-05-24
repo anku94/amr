@@ -11,7 +11,7 @@
 namespace amr {
 std::string PolicyUtils::PolicyToString(LoadBalancePolicy policy) {
   switch (policy) {
-    case LoadBalancePolicy::kPolicyContiguous:
+    case LoadBalancePolicy::kPolicyContiguousActualCost:
       return "Contiguous";
     case LoadBalancePolicy::kPolicyRoundRobin:
       return "RoundRobin";

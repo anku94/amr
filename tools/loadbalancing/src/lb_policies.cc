@@ -40,7 +40,10 @@ int LoadBalancePolicies::AssignBlocksInternal(
   ranklist.resize(costlist.size());
 
   switch (policy) {
-    case LoadBalancePolicy::kPolicyContiguous:
+    case LoadBalancePolicy::kPolicyContiguousUnitCost:
+      return AssignBlocksContiguous(std::vector<double>(costlist.size(), 1.0),
+                                    ranklist, nranks);
+    case LoadBalancePolicy::kPolicyContiguousActualCost:
       return AssignBlocksContiguous(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicySkewed:
       return AssignBlocksSkewed(costlist, ranklist, nranks);
@@ -52,6 +55,8 @@ int LoadBalancePolicies::AssignBlocksInternal(
       return AssignBlocksLPT(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyILP:
       return AssignBlocksILP(costlist, ranklist, nranks);
+    case LoadBalancePolicy::kPolicyContigImproved:
+      return AssignBlocksContigImproved(costlist, ranklist, nranks);
     default:
       ABORT("LoadBalancePolicy not implemented!!");
   }

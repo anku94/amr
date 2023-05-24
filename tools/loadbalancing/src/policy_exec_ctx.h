@@ -42,6 +42,7 @@ class PolicyExecCtx {
   }
 
   int ExecuteTimestep(std::vector<double> const& costlist_oracle,
+                      std::vector<int> const& ranklist_actual,
                       std::vector<int>& refs, std::vector<int>& derefs);
 
   static int GetNumBlocksNext(int nblocks, int nrefs, int nderefs) {

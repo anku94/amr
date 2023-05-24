@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(lb_srcs
         block_alloc_sim.cc
         lb_ilp.cc
+        lb_contig_improv.cc
         lb_lspt.cc
         policy.cc
         policy_exec_ctx.cc

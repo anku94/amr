@@ -48,12 +48,22 @@ class BlockSimulator {
     policy_opts.nblocks_init = options_.nblocks;
 
     policy_opts.SetPolicy(
-        "Contiguous/Unit-Cost", LoadBalancePolicy::kPolicyContiguous,
+        "Actual/Actual-Cost", LoadBalancePolicy::kPolicyActual,
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
+        "Contiguous/Unit-Cost", LoadBalancePolicy::kPolicyContiguousActualCost,
         CostEstimationPolicy::kUnitCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "Contiguous/Actual-Cost", LoadBalancePolicy::kPolicyContiguous,
+        "Contiguous/Unit-Cost-Alt", LoadBalancePolicy::kPolicyContiguousUnitCost,
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy(
+        "Contiguous/Actual-Cost", LoadBalancePolicy::kPolicyContiguousActualCost,
         CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
@@ -90,11 +100,12 @@ class BlockSimulator {
   }
 
   int InvokePolicies(std::vector<double> const& cost_oracle,
-                     std::vector<int>& refs, std::vector<int>& derefs) {
+                     std::vector<int>& refs, std::vector<int>& derefs,
+                     std::vector<int>& times_actual) {
     int rv = 0;
 
     for (auto& policy : policies_) {
-      rv = policy.ExecuteTimestep(cost_oracle, refs, derefs);
+      rv = policy.ExecuteTimestep(cost_oracle, times_actual, refs, derefs);
     }
 
     return rv;

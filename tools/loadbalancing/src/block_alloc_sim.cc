@@ -94,7 +94,7 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
        (int)assignments.size(), nblocks_next_expected_);
 
   std::vector<double> costs(times.begin(), times.end());
-  InvokePolicies(costs, refs, derefs);
+  InvokePolicies(costs, times, refs, derefs);
 
   return 0;
 }

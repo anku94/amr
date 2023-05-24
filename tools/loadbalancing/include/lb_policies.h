@@ -46,9 +46,13 @@ class LoadBalancePolicies {
   static int AssignBlocksILP(std::vector<double> const& costlist,
                              std::vector<int>& ranklist, int nranks);
 
+  static int AssignBlocksContigImproved(std::vector<double> const& costlist,
+                             std::vector<int>& ranklist, int nranks);
+
   const LoadBalancePolicy policy_;
 
   friend class LoadBalancingPoliciesTest;
+  friend class PolicyTest;
   friend class PolicyExecCtx;
 };
 }  // namespace amr
