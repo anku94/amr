@@ -111,7 +111,12 @@ class NormalGenerator {
 template <typename T>
 std::string SerializeVector(std::vector<T> const& v, int trunc_count = -1) {
   std::stringstream ss;
-  ss << "(" << v.size() << " items): ";
+
+  if (v.empty()) {
+    ss << "<empty>";
+  } else {
+    ss << "(" << v.size() << " items): ";
+  }
 
   int idx = 0;
   for (auto n : v) {
