@@ -114,13 +114,14 @@ int PolicyExecCtx::ExecuteTimestep(std::vector<double> const& costlist_oracle,
     }
   }
 
-  assert(lb_state_.ranklist.size() == costlist_oracle.size());
-  assert(ranklist_actual.size() == costlist_oracle.size());
-
   // Timestep is always evaluated using the oracle cost
   if (opts_.lb_policy == LoadBalancePolicy::kPolicyActual) {
+    assert(ranklist_actual.size() == costlist_oracle.size());
+    logf(LOG_DBUG, "Logging with ranklist_actual (%zu)", ranklist_actual.size());
     stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle, ranklist_actual);
   } else {
+    assert(lb_state_.ranklist.size() == costlist_oracle.size());
+    logf(LOG_DBUG, "Logging with lb.ranklist (%zu)", lb_state_.ranklist.size());
     stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle, lb_state_.ranklist);
   }
 

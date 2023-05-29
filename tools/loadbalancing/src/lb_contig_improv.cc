@@ -5,6 +5,9 @@
 #include "common.h"
 #include "lb_policies.h"
 
+#include <algorithm>
+#include <cassert>
+#include <climits>
 #include <queue>
 #include <vector>
 

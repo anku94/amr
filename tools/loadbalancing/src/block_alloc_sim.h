@@ -17,9 +17,11 @@ namespace amr {
 struct BlockSimulatorOpts {
   int nblocks;
   int nranks;
+  int nts;
   std::string prof_dir;
   std::string output_dir;
   pdlfs::Env* env;
+  std::vector<int> events;
 };
 
 #define FAIL_IF(cond, msg) \
@@ -34,7 +36,8 @@ class BlockSimulator {
       : options_(opts),
         ref_reader_(options_.prof_dir),
         assign_reader_(options_.prof_dir),
-        prof_reader_(Utils::LocateTraceFiles(options_.env, options_.prof_dir)),
+        prof_reader_(Utils::LocateTraceFiles(options_.env, options_.prof_dir,
+                                             options_.events)),
         nblocks_next_expected_(-1),
         num_lb_(0) {}
 
@@ -57,14 +60,16 @@ class BlockSimulator {
         CostEstimationPolicy::kUnitCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy(
-        "Contiguous/Unit-Cost-Alt", LoadBalancePolicy::kPolicyContiguousUnitCost,
-        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policy_opts.SetPolicy("Contiguous/Unit-Cost-Alt",
+                          LoadBalancePolicy::kPolicyContiguousUnitCost,
+                          CostEstimationPolicy::kExtrapolatedCost,
+                          TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy(
-        "Contiguous/Actual-Cost", LoadBalancePolicy::kPolicyContiguousActualCost,
-        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policy_opts.SetPolicy("Contiguous/Actual-Cost",
+                          LoadBalancePolicy::kPolicyContiguousActualCost,
+                          CostEstimationPolicy::kExtrapolatedCost,
+                          TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
@@ -77,10 +82,10 @@ class BlockSimulator {
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy(
-        "LPT/Actual-Cost-Cached",
+    policy_opts.SetPolicy("LPT/Actual-Cost-Cached",
                           LoadBalancePolicy::kPolicyLPT,
-        CostEstimationPolicy::kCachedExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+                          CostEstimationPolicy::kCachedExtrapolatedCost,
+                          TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
@@ -100,18 +105,18 @@ class BlockSimulator {
   }
 
   int InvokePolicies(std::vector<double> const& cost_oracle,
-                     std::vector<int>& refs, std::vector<int>& derefs,
-                     std::vector<int>& times_actual) {
+                     std::vector<int>& ranklist_actual, std::vector<int>& refs,
+                     std::vector<int>& derefs) {
     int rv = 0;
 
     for (auto& policy : policies_) {
-      rv = policy.ExecuteTimestep(cost_oracle, times_actual, refs, derefs);
+      rv = policy.ExecuteTimestep(cost_oracle, ranklist_actual, refs, derefs);
     }
 
     return rv;
   }
 
-  void Run(int nts = INT_MAX);
+  void Run();
 
   int RunTimestep(int& ts, int sub_ts);
 

@@ -1,5 +1,6 @@
 #include "block_alloc_sim.h"
 
+#include <climits>
 #include <getopt.h>
 
 amr::BlockSimulatorOpts options;
@@ -8,16 +9,37 @@ void PrintHelp(int argc, char* argv[]) {
   fprintf(stderr, "\n\tUsage: %s -p <profile_dir>\n", argv[0]);
 }
 
+void ParseCsvStr(const char* str, std::vector<int>& vals) {
+  vals.clear();
+  int num, nb;
+
+  while (sscanf(str, "%d%n", &num, &nb) >= 1) {
+    vals.push_back(num);
+    str += nb;
+    if (str[nb] != ',') break;
+  }
+
+  logf(LOG_INFO, "Read %zu items", vals.size());
+}
+
 void ParseOptions(int argc, char* argv[]) {
   extern char* optarg;
   extern int optind;
   int c;
 
   options.prof_dir = "";
-  while ((c = getopt(argc, argv, "hp:")) != -1) {
+  options.nts = INT_MAX;
+
+  while ((c = getopt(argc, argv, "e:hn:p:")) != -1) {
     switch (c) {
+      case 'e':
+        ParseCsvStr(optarg, options.events);
+        break;
       case 'p':
         options.prof_dir = optarg;
+        break;
+      case 'n':
+        options.nts = atoi(optarg);
         break;
       case 'h':
         PrintHelp(argc, argv);

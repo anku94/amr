@@ -27,13 +27,20 @@ class Utils {
   }
 
   static std::vector<std::string> FilterByRegex(
-      std::vector<std::string>& strings, std::string regex_pattern) {
+      std::vector<std::string>& strings, std::string regex_pattern,
+      std::vector<int> const& events) {
     std::vector<std::string> matches;
     const std::regex regex_obj(regex_pattern);
 
     for (auto& s : strings) {
       std::smatch match_obj;
       if (std::regex_match(s, match_obj, regex_obj)) {
+        auto sub_match = match_obj[1];
+        int sub_match_int = std::stoi(sub_match.str());
+        if (std::find(events.begin(), events.end(), sub_match_int) ==
+            events.end())
+          continue;
+        logf(LOG_INFO, "Sub Match: %d", sub_match_int);
         matches.push_back(s);
       }
     }
@@ -41,7 +48,8 @@ class Utils {
   }
 
   static std::vector<std::string> LocateTraceFiles(
-      pdlfs::Env* env, const std::string& search_dir) {
+      pdlfs::Env* env, const std::string& search_dir,
+      const std::vector<int>& events) {
     logf(LOG_INFO, "[SimulateTrace] Looking for trace files in: \n\t%s",
          search_dir.c_str());
 
@@ -53,16 +61,17 @@ class Utils {
       logf(LOG_DBG2, "- File: %s", f.c_str());
     }
 
+    // Disabled \d as we only need two specific evts
     std::vector<std::string> regex_patterns = {
-        R"(prof\.merged\.evt\d+\.csv)",
-        R"(prof\.merged\.evt\d+\.mini\.csv)",
-        R"(prof\.aggr\.evt\d+\.csv)",
+        R"(prof\.merged\.evt(\d+)\.csv)",
+        R"(prof\.merged\.evt(\d+)\.mini\.csv)",
+        R"(prof\.aggr\.evt(\d+)\.csv)",
     };
 
     std::vector<std::string> relevant_files;
     for (auto& pattern : regex_patterns) {
       logf(LOG_DBG2, "Searching by pattern: %s", pattern.c_str());
-      relevant_files = FilterByRegex(all_files, pattern);
+      relevant_files = FilterByRegex(all_files, pattern, events);
 
       for (auto& f : relevant_files) {
         logf(LOG_DBG2, "- Match: %s", f.c_str());

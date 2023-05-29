@@ -24,7 +24,7 @@ void PolicySim::SetupAll() {
 }
 
 void PolicySim::SimulateTrace(int ts_beg, int ts_end) {
-  ProfSetReader psr(Utils::LocateTraceFiles(options_.env, options_.prof_dir));
+  ProfSetReader psr(Utils::LocateTraceFiles(options_.env, options_.prof_dir, {0, 1}));
 
   nts_ = 0;
   bad_ts_ = 0;

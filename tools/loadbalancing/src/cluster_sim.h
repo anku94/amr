@@ -24,7 +24,7 @@ class ClusterSim {
       : options_(options), nts_(0), fd_(nullptr) {}
 
   int Run() {
-    ProfSetReader psr(Utils::LocateTraceFiles(options_.env, options_.prof_dir));
+    ProfSetReader psr(Utils::LocateTraceFiles(options_.env, options_.prof_dir, {0, 1}));
 
     std::vector<int> block_times;
     while (psr.ReadTimestep(block_times) > 0) {

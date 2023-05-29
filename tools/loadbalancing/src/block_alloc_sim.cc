@@ -8,7 +8,7 @@
 
 namespace amr {
 
-void BlockSimulator::Run(int nts) {
+void BlockSimulator::Run() {
   logf(LOG_INFO, "Using prof dir: %s", options_.prof_dir.c_str());
   logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
 
@@ -22,7 +22,7 @@ void BlockSimulator::Run(int nts) {
    * The code below sets the ts for the current sub_ts
    */
   int sub_ts;
-  for (sub_ts = 0; sub_ts < nts; sub_ts++) {
+  for (sub_ts = 0; sub_ts < options_.nts; sub_ts++) {
     int ts;
     int rv = RunTimestep(ts, sub_ts);
     if (rv == 0) break;
@@ -64,9 +64,9 @@ int BlockSimulator::RunTimestep(int& ts, int sub_ts) {
   logf(LOG_DBUG, "[BlockSim] [ProfSetReader] RV: %d, Times: %s", rv,
        SerializeVector(times, 10).c_str());
   if (times.size() != block_assignments.size()) {
-    logf(LOG_WARN, "times.size() != block_assignments.size() (%d, %d)",
-         times.size(), block_assignments.size());
-    times.resize(block_assignments.size());
+    logf(LOG_WARN, "[ts%d/%d] times.size() != block_assignments.size() (%d, %d)",
+         sub_ts, ts, times.size(), block_assignments.size());
+    times.resize(block_assignments.size(), 1);
   }
 
   ReadTimestepInternal(ts, sub_ts, refs, derefs, block_assignments, times);
@@ -94,7 +94,7 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
        (int)assignments.size(), nblocks_next_expected_);
 
   std::vector<double> costs(times.begin(), times.end());
-  InvokePolicies(costs, times, refs, derefs);
+  InvokePolicies(costs, assignments, refs, derefs);
 
   return 0;
 }

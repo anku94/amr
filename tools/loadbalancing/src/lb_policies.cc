@@ -40,6 +40,8 @@ int LoadBalancePolicies::AssignBlocksInternal(
   ranklist.resize(costlist.size());
 
   switch (policy) {
+    case LoadBalancePolicy::kPolicyActual:
+      return 0;
     case LoadBalancePolicy::kPolicyContiguousUnitCost:
       return AssignBlocksContiguous(std::vector<double>(costlist.size(), 1.0),
                                     ranklist, nranks);
