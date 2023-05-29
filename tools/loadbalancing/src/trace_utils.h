@@ -95,5 +95,36 @@ class Utils {
 
     return all_fpaths;
   }
+
+  static ProfTimeCombinePolicy ParseProfTimeCombinePolicy(
+      const char* policy_str) {
+    std::string policy(policy_str);
+
+    if (policy == "first") {
+      return ProfTimeCombinePolicy::kUseFirst;
+    } else if (policy == "last") {
+      return ProfTimeCombinePolicy::kUseLast;
+    } else if (policy == "add") {
+      return ProfTimeCombinePolicy::kAdd;
+    } else {
+      logf(LOG_ERRO, "Invalid time combine policy: %s", policy.c_str());
+      ABORT("Invalid time combine policy");
+    }
+
+    return ProfTimeCombinePolicy::kAdd;
+  }
+
+  static std::string GetProfTimeCombinePolicyStr(ProfTimeCombinePolicy policy) {
+    switch (policy) {
+      case ProfTimeCombinePolicy::kUseFirst:
+        return "first";
+      case ProfTimeCombinePolicy::kUseLast:
+        return "last";
+      case ProfTimeCombinePolicy::kAdd:
+        return "add";
+      default:
+        ABORT("Invalid time combine policy");
+    }
+  }
 };
 }  // namespace amr

@@ -5,9 +5,14 @@
 namespace amr {
 class ProfSetReader {
  public:
-  explicit ProfSetReader(const std::vector<std::string>& fpaths) : nblocks_prev_(0) {
+  explicit ProfSetReader(const std::vector<std::string>& fpaths,
+                         ProfTimeCombinePolicy combine_policy)
+      : nblocks_prev_(0) {
+    logf(LOG_INFO, "[ProfSetReader] Combine Policy: %s",
+         Utils::GetProfTimeCombinePolicyStr(combine_policy).c_str());
+
     for (auto& fpath : fpaths) {
-      all_readers_.emplace_back(fpath.c_str());
+      all_readers_.emplace_back(fpath.c_str(), combine_policy);
     }
   }
 

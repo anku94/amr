@@ -1,5 +1,8 @@
-set (common_include "${CMAKE_SOURCE_DIR}/tools/common/")
-set (common_srcs "${CMAKE_SOURCE_DIR}/tools/common/common.cc")
+project(amr-tools)
+cmake_minimum_required(VERSION 3.10)
+
+set (common_include "${CMAKE_CURRENT_SOURCE_DIR}/common/")
+set (common_srcs "${CMAKE_CURRENT_SOURCE_DIR}/common/common.cc")
 
 # BEGIN GTest
 include(FetchContent)

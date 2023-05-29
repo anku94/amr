@@ -12,6 +12,8 @@ class Env;
 }
 
 namespace amr {
+enum class ProfTimeCombinePolicy { kUseFirst, kUseLast, kAdd };
+
 enum class LoadBalancePolicy {
   kPolicyActual,
   kPolicyContiguousUnitCost,

@@ -6,7 +6,7 @@
 void PrintHelp() {
   printf(
       "\n\t./prog -b <blocks_per_rank> -r <num_rounds>"
-      " -s <msg_sz> -t <topology:1234> -p <trace_root>\n");
+      " -s <msg_sz> -t <topology:1234> -p <prof_dir>\n");
 }
 
 NeighborTopology parse_topology(int topo_id) {

@@ -28,10 +28,14 @@ void ParseOptions(int argc, char* argv[]) {
   int c;
 
   options.prof_dir = "";
+  options.prof_time_combine_policy = "add";
   options.nts = INT_MAX;
 
-  while ((c = getopt(argc, argv, "e:hn:p:")) != -1) {
+  while ((c = getopt(argc, argv, "c:e:hn:p:")) != -1) {
     switch (c) {
+      case 'c':
+        options.prof_time_combine_policy = optarg;
+        break;
       case 'e':
         ParseCsvStr(optarg, options.events);
         break;

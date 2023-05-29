@@ -22,6 +22,7 @@ struct BlockSimulatorOpts {
   std::string output_dir;
   pdlfs::Env* env;
   std::vector<int> events;
+  const char* prof_time_combine_policy;
 };
 
 #define FAIL_IF(cond, msg) \
@@ -37,7 +38,9 @@ class BlockSimulator {
         ref_reader_(options_.prof_dir),
         assign_reader_(options_.prof_dir),
         prof_reader_(Utils::LocateTraceFiles(options_.env, options_.prof_dir,
-                                             options_.events)),
+                                             options_.events),
+                     Utils::ParseProfTimeCombinePolicy(
+                         options_.prof_time_combine_policy)),
         nblocks_next_expected_(-1),
         num_lb_(0) {}
 
