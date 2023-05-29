@@ -24,7 +24,10 @@ class ClusterSim {
       : options_(options), nts_(0), fd_(nullptr) {}
 
   int Run() {
-    ProfSetReader psr(Utils::LocateTraceFiles(options_.env, options_.prof_dir, {0, 1}));
+    auto trace_files = Utils::LocateTraceFiles(options_.env, options_.prof_dir,
+                                               /* evts */ {0, 1});
+    auto policy = ProfTimeCombinePolicy::kAdd;
+    ProfSetReader psr(trace_files, policy);
 
     std::vector<int> block_times;
     while (psr.ReadTimestep(block_times) > 0) {
@@ -51,8 +54,9 @@ class ClusterSim {
     while (k_beg < k_end) {
       Cluster(block_times_orig, block_times_new, cur_k, mean_rel_error,
               max_rel_error);
-//      BinSearchIterateBoundMean(mean_rel_error, max_rel_error, cur_k, k_beg,
-//                                k_end);
+      //      BinSearchIterateBoundMean(mean_rel_error, max_rel_error, cur_k,
+      //      k_beg,
+      //                                k_end);
       BinSearchIterateBoundMax(mean_rel_error, max_rel_error, cur_k, k_beg,
                                k_end);
     }

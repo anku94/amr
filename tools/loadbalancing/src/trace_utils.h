@@ -125,6 +125,8 @@ class Utils {
       default:
         ABORT("Invalid time combine policy");
     }
+
+    return "<unknown>";
   }
 };
 }  // namespace amr
