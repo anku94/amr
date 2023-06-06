@@ -78,7 +78,35 @@ TEST_F(PolicyTest, LPTTest1) {
 }
 
 TEST_F(PolicyTest, ContigImprovedTest1) {
+  std::vector<double> costlist = { 1, 2, 3, 2, 1};
+  int nranks = 3;
+  std::vector<int> ranklist(costlist.size(), -1);
+
+  int rv = AssignBlocksContigImproved(costlist, ranklist, nranks);
+  ASSERT_EQ(rv, 0);
+
+  EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
+  ASSERT_TRUE(ranklist[0] == 0);
+  ASSERT_TRUE(ranklist[1] == 0);
+  ASSERT_TRUE(ranklist[2] == 1);
+  ASSERT_TRUE(ranklist[3] == 2);
+  ASSERT_TRUE(ranklist[4] == 2);
+}
+
+TEST_F(PolicyTest, ContigImprovedTest2) {
 #include "lb_test1.h"
+  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  int nranks = 512;
+  std::vector<int> ranklist(costlist.size(), -1);
+
+  int rv = AssignBlocksContigImproved(costlist, ranklist, nranks);
+  ASSERT_EQ(rv, 0);
+
+  EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
+}
+
+TEST_F(PolicyTest, ContigImprovedTest3) {
+#include "lb_test2.h"
   logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
