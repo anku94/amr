@@ -69,42 +69,49 @@ class BlockSimulator {
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy("Contiguous/Actual-Cost",
+    policy_opts.SetPolicy("Contiguous/Extrapolated-Cost",
                           LoadBalancePolicy::kPolicyContiguousActualCost,
                           CostEstimationPolicy::kExtrapolatedCost,
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
-        "RoundRobin/Actual-Cost", LoadBalancePolicy::kPolicyRoundRobin,
+        "RoundRobin/Extrapolated-Cost", LoadBalancePolicy::kPolicyRoundRobin,
         CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancePolicy::kPolicyLPT,
+    policy_opts.SetPolicy(
+        "LPT/Extrapolated-Cost", LoadBalancePolicy::kPolicyLPT,
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy("kContigImproved/Extrapolated-Cost",
+                          LoadBalancePolicy::kPolicyContigImproved,
                           CostEstimationPolicy::kExtrapolatedCost,
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy("LPT/Actual-Cost-Cached",
-                          LoadBalancePolicy::kPolicyLPT,
-                          CostEstimationPolicy::kCachedExtrapolatedCost,
-                          TriggerPolicy::kOnMeshChange);
-    policies_.emplace_back(policy_opts);
-
-    policy_opts.SetPolicy(
-        "LPT/Actual-Cost-Oracle", LoadBalancePolicy::kPolicyLPT,
-        CostEstimationPolicy::kOracleCost, TriggerPolicy::kOnMeshChange);
-    policies_.emplace_back(policy_opts);
-
-    policy_opts.SetPolicy(
-        "LPT/Actual-Cost-EveryTS", LoadBalancePolicy::kPolicyLPT,
-        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kEveryTimestep);
-    policies_.emplace_back(policy_opts);
-
-    policy_opts.SetPolicy(
-        "LPT/Actual-Cost-Oracle-EveryTS", LoadBalancePolicy::kPolicyLPT,
-        CostEstimationPolicy::kOracleCost, TriggerPolicy::kEveryTimestep);
-    policies_.emplace_back(policy_opts);
+    //    policy_opts.SetPolicy("LPT/Extrapolated-Cost-Cached",
+    //                          LoadBalancePolicy::kPolicyLPT,
+    //                          CostEstimationPolicy::kCachedExtrapolatedCost,
+    //                          TriggerPolicy::kOnMeshChange);
+    //    policies_.emplace_back(policy_opts);
+    //
+    //    policy_opts.SetPolicy(
+    //        "LPT/Actual-Cost-Oracle", LoadBalancePolicy::kPolicyLPT,
+    //        CostEstimationPolicy::kOracleCost, TriggerPolicy::kOnMeshChange);
+    //    policies_.emplace_back(policy_opts);
+    //
+    //    policy_opts.SetPolicy(
+    //        "LPT/Extrapolated-Cost-EveryTS", LoadBalancePolicy::kPolicyLPT,
+    //        CostEstimationPolicy::kExtrapolatedCost,
+    //        TriggerPolicy::kEveryTimestep);
+    //    policies_.emplace_back(policy_opts);
+    //
+    //    policy_opts.SetPolicy(
+    //        "LPT/Actual-Cost-Oracle-EveryTS", LoadBalancePolicy::kPolicyLPT,
+    //        CostEstimationPolicy::kOracleCost, TriggerPolicy::kEveryTimestep);
+    //    policies_.emplace_back(policy_opts);
   }
 
   int InvokePolicies(std::vector<double> const& cost_oracle,

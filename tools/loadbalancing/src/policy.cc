@@ -21,6 +21,8 @@ std::string PolicyUtils::PolicyToString(LoadBalancePolicy policy) {
       return "SPT";
     case LoadBalancePolicy::kPolicyLPT:
       return "LPT";
+    case LoadBalancePolicy::kPolicyContigImproved:
+      return "kContigImproved";
     case LoadBalancePolicy::kPolicyILP:
       return "ILP";
     default:
