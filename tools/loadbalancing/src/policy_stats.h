@@ -55,6 +55,24 @@ class PolicyStats {
     ts_++;
   }
 
+  void LogTimestepVerbose(int nranks, pdlfs::WritableFile* fd,
+                          std::vector<double> const& cost_actual,
+                          std::vector<int> const& rank_list) {
+    std::stringstream ss;
+    for (auto c : cost_actual) {
+      ss << (int)c << ",";
+    }
+    ss << std::endl;
+
+    for (auto r : rank_list) {
+      ss << r << ",";
+    }
+    ss << std::endl;
+
+    pdlfs::Status s;
+    SAFE_IO(fd->Append(ss.str()), "Write failed");
+  }
+
   static void LogHeader(fort::char_table& table);
 
   void LogSummary(fort::char_table& table) const;
