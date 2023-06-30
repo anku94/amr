@@ -8,6 +8,35 @@
 #include "policy.h"
 
 namespace amr {
+void PolicyStats::LogTimestep(PolicyExecCtx* pctx, int nranks,
+                              std::vector<double> const& cost_actual,
+                              std::vector<int> const& rank_list) {
+  int nblocks = cost_actual.size();
+  std::vector<double> rank_times(nranks, 0);
+
+  for (int bid = 0; bid < nblocks; bid++) {
+    int block_rank = rank_list[bid];
+    rank_times[block_rank] += cost_actual[bid];
+  }
+
+  int const& (*max_func)(int const&, int const&) = std::max<int>;
+  int rtmax = std::accumulate(rank_times.begin(), rank_times.end(),
+                              rank_times.front(), max_func);
+  uint64_t rtsum = std::accumulate(rank_times.begin(), rank_times.end(), 0ull);
+  double rtavg = rtsum * 1.0 / nranks;
+
+  excess_cost_ += (rtmax - rtavg);
+  total_cost_avg_ += rtavg;
+  total_cost_max_ += rtmax;
+  locality_score_sum_ += ComputeLocScore(rank_list);
+
+  WriteSummary(pctx->fd_summ_, rtavg, rtmax);
+  WriteDetailed(pctx->fd_det_, cost_actual, rank_list);
+  WriteRankSums(pctx->fd_ranksum_, rank_times);
+
+  ts_++;
+}
+
 void PolicyStats::LogHeader(fort::char_table& table) {
   table << "ExcessCost"
         << "AvgCost"
@@ -26,29 +55,14 @@ PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
     : opts_(opts),
       use_cost_cache_(opts_.cost_policy ==
                       CostEstimationPolicy::kCachedExtrapolatedCost),
-      fd_(nullptr),
+      fd_summ_(opts.env, GetLogPath(opts_.output_dir, opts_.policy_name, "summ")),
+      fd_det_(opts.env, GetLogPath(opts_.output_dir, opts_.policy_name, "det")),
+      fd_ranksum_(opts.env, GetLogPath(opts_.output_dir, opts_.policy_name, "ranksum")),
       ts_(0),
       ts_lb_invoked_(0),
       ts_lb_succeeded_(0),
       exec_time_us_(0) {
-  EnsureOutputFile();
   Bootstrap();
-}
-
-PolicyExecCtx::PolicyExecCtx(PolicyExecCtx&& rhs) noexcept
-    : opts_(rhs.opts_),
-      cost_cache_(rhs.cost_cache_),
-      use_cost_cache_(rhs.use_cost_cache_),
-      lb_state_(rhs.lb_state_),
-      stats_(rhs.stats_),
-      fd_(rhs.fd_),
-      ts_(rhs.ts_),
-      ts_lb_invoked_(rhs.ts_lb_invoked_),
-      ts_lb_succeeded_(rhs.ts_lb_succeeded_),
-      exec_time_us_(rhs.exec_time_us_) {
-  if (this != &rhs) {
-    rhs.fd_ = nullptr;
-  }
 }
 
 void PolicyExecCtx::LogHeader(fort::char_table& table) {
@@ -119,11 +133,11 @@ int PolicyExecCtx::ExecuteTimestep(std::vector<double> const& costlist_oracle,
     assert(ranklist_actual.size() == costlist_oracle.size());
     logf(LOG_DBUG, "Logging with ranklist_actual (%zu)",
          ranklist_actual.size());
-    stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle, ranklist_actual);
+    stats_.LogTimestep(this, opts_.nranks, costlist_oracle, ranklist_actual);
   } else {
     assert(lb_state_.ranklist.size() == costlist_oracle.size());
     logf(LOG_DBUG, "Logging with lb.ranklist (%zu)", lb_state_.ranklist.size());
-    stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle, lb_state_.ranklist);
+    stats_.LogTimestep(this, opts_.nranks, costlist_oracle, lb_state_.ranklist);
   }
 
   lb_state_.costlist_prev = costlist_oracle;
@@ -157,30 +171,13 @@ int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist) {
   return rv;
 }
 
-void PolicyExecCtx::EnsureOutputFile() {
-  std::string fname = GetLogPath(opts_.output_dir, opts_.policy_name);
-  if (opts_.env->FileExists(fname.c_str())) {
-    logf(LOG_WARN, "Overwriting file: %s", fname.c_str());
-    opts_.env->DeleteFile(fname.c_str());
-  }
-
-  if (fd_ != nullptr) {
-    logf(LOG_WARN, "File already exists!");
-    return;
-  }
-
-  pdlfs::Status s = opts_.env->NewWritableFile(fname.c_str(), &fd_);
-  if (!s.ok()) {
-    ABORT("Unable to open WriteableFile!");
-  }
-}
-
 std::string PolicyExecCtx::GetLogPath(const char* output_dir,
-                                      const char* policy_name) {
+                                      const char* policy_name,
+                                      const char* suffix) {
   std::regex rm_unsafe("[/-]");
   std::string result = std::regex_replace(policy_name, rm_unsafe, "_");
   std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-  result = std::string(output_dir) + "/" + result + ".csv";
+  result = std::string(output_dir) + "/" + result + "." + suffix + ".csv";
   logf(LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s", policy_name,
        result.c_str());
   return result;

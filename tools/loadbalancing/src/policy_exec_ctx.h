@@ -6,10 +6,12 @@
 
 #include "common.h"
 #include "cost_cache.h"
+#include "fort.hpp"
 #include "lb_policies.h"
 #include "policy.h"
 #include "policy_stats.h"
 #include "trace_utils.h"
+#include "writable_file.h"
 
 #include <pdlfs-common/env.h>
 #include <regex>
@@ -23,23 +25,11 @@ struct LoadBalanceState {
   std::vector<int> derefs;
 };
 
+class PolicyStats;
+
 class PolicyExecCtx {
  public:
   PolicyExecCtx(PolicyExecOpts& opts);
-
-  // Safe move constructor for fd_
-  PolicyExecCtx(PolicyExecCtx&& rhs) noexcept;
-
-  PolicyExecCtx(const PolicyExecCtx& rhs) = delete;
-
-  PolicyExecCtx& operator=(PolicyExecCtx&& rhs) = delete;
-
-  ~PolicyExecCtx() {
-    if (fd_) {
-      pdlfs::Status s;
-      SAFE_IO(fd_->Close(), "Close failed");
-    }
-  }
 
   int ExecuteTimestep(std::vector<double> const& costlist_oracle,
                       std::vector<int> const& ranklist_actual,
@@ -112,10 +102,9 @@ class PolicyExecCtx {
 
   int TriggerLB(const std::vector<double>& costlist);
 
-  void EnsureOutputFile();
-
   static std::string GetLogPath(const char* output_dir,
-                                const char* policy_name);
+                                const char* policy_name,
+                                const char* suffix);
 
   const PolicyExecOpts opts_;
   bool use_cost_cache_;
@@ -124,7 +113,9 @@ class PolicyExecCtx {
   PolicyStats stats_;
   CostCache cost_cache_;
 
-  pdlfs::WritableFile* fd_;
+  WritableFile fd_summ_;
+  WritableFile fd_det_;
+  WritableFile fd_ranksum_;
 
   int ts_;
   int ts_lb_invoked_;
@@ -132,5 +123,6 @@ class PolicyExecCtx {
   double exec_time_us_;
 
   friend class MiscTest;
+  friend class PolicyStats;
 };
 }  // namespace amr

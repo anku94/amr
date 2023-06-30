@@ -5,16 +5,14 @@
 #pragma once
 
 #include "fort.hpp"
+#include "writable_file.h"
 
 #include <pdlfs-common/env.h>
 
-#define SAFE_IO(func, msg) \
-  s = func;                \
-  if (!s.ok()) {           \
-    ABORT(msg);            \
-  }
-
 namespace amr {
+// fwd decl
+class PolicyExecCtx;
+
 class PolicyStats {
  public:
   PolicyStats()
@@ -24,34 +22,9 @@ class PolicyStats {
         total_cost_max_(0),
         locality_score_sum_(0) {}
 
-  void LogTimestep(int nranks, pdlfs::WritableFile* fd,
+  void LogTimestep(PolicyExecCtx* pctx, int nranks,
                    std::vector<double> const& cost_actual,
-                   std::vector<int> const& rank_list) {
-    int nblocks = cost_actual.size();
-    std::vector<double> rank_times(nranks, 0);
-
-    for (int bid = 0; bid < nblocks; bid++) {
-      int block_rank = rank_list[bid];
-      rank_times[block_rank] += cost_actual[bid];
-    }
-
-    int const& (*max_func)(int const&, int const&) = std::max<int>;
-    int rtmax = std::accumulate(rank_times.begin(), rank_times.end(),
-                                rank_times.front(), max_func);
-    uint64_t rtsum =
-        std::accumulate(rank_times.begin(), rank_times.end(), 0ull);
-    double rtavg = rtsum * 1.0 / nranks;
-
-    excess_cost_ += (rtmax - rtavg);
-    total_cost_avg_ += rtavg;
-    total_cost_max_ += rtmax;
-    locality_score_sum_ += ComputeLocScore(rank_list);
-
-    // WriteSummary(fd, rtavg, rtmax);
-    WriteDetailed(fd, cost_actual, rank_list);
-
-    ts_++;
-  }
+                   std::vector<int> const& rank_list);
 
   static void LogHeader(fort::char_table& table);
 
@@ -64,21 +37,18 @@ class PolicyStats {
   }
 
  private:
-  void WriteSummary(pdlfs::WritableFile* fd, double avg, double max) {
-    pdlfs::Status s;
-
+  void WriteSummary(WritableFile& fd, double avg, double max) {
     if (ts_ == 0) {
       const char* header = "ts,avg_us,max_us\n";
-      SAFE_IO(fd->Append(header), "Write failed");
+      fd.Append(header);
     }
 
     char buf[1024];
     int buf_len = snprintf(buf, 1024, " %d,%.0lf,%.0lf\n", ts_, avg, max);
-    SAFE_IO(fd->Append(pdlfs::Slice(buf, buf_len)), "Write failed");
+    fd.Append(std::string(buf, buf_len));
   }
 
-  void WriteDetailed(pdlfs::WritableFile* fd,
-                     std::vector<double> const& cost_actual,
+  void WriteDetailed(WritableFile& fd, std::vector<double> const& cost_actual,
                      std::vector<int> const& rank_list) {
     std::stringstream ss;
     for (auto c : cost_actual) {
@@ -91,8 +61,16 @@ class PolicyStats {
     }
     ss << std::endl;
 
-    pdlfs::Status s;
-    SAFE_IO(fd->Append(ss.str()), "Write failed");
+    fd.Append(ss.str());
+  }
+
+  void WriteRankSums(WritableFile& fd, std::vector<double>& rank_times) {
+    int nranks = rank_times.size();
+    if (ts_ == 0) {
+      fd.Append(reinterpret_cast<const char*>(&nranks), sizeof(int));
+    }
+    fd.Append(reinterpret_cast<const char*>(rank_times.data()),
+              sizeof(double) * nranks);
   }
 
   //
