@@ -119,17 +119,11 @@ int PolicyExecCtx::ExecuteTimestep(std::vector<double> const& costlist_oracle,
     assert(ranklist_actual.size() == costlist_oracle.size());
     logf(LOG_DBUG, "Logging with ranklist_actual (%zu)",
          ranklist_actual.size());
-    //    stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle,
-    //    ranklist_actual);
-    stats_.LogTimestepVerbose(opts_.nranks, fd_, costlist_oracle,
-                              ranklist_actual);
+    stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle, ranklist_actual);
   } else {
     assert(lb_state_.ranklist.size() == costlist_oracle.size());
     logf(LOG_DBUG, "Logging with lb.ranklist (%zu)", lb_state_.ranklist.size());
-    //    stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle,
-    //    lb_state_.ranklist);
-    stats_.LogTimestepVerbose(opts_.nranks, fd_, costlist_oracle,
-                              lb_state_.ranklist);
+    stats_.LogTimestep(opts_.nranks, fd_, costlist_oracle, lb_state_.ranklist);
   }
 
   lb_state_.costlist_prev = costlist_oracle;

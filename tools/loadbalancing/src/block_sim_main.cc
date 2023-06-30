@@ -16,10 +16,11 @@ void ParseCsvStr(const char* str, std::vector<int>& vals) {
   while (sscanf(str, "%d%n", &num, &nb) >= 1) {
     vals.push_back(num);
     str += nb;
-    if (str[nb] != ',') break;
+    if (str[0] != ',') break;
+    str += 1;
   }
 
-  logf(LOG_INFO, "Read %zu items", vals.size());
+  logf(LOG_INFO, "BlockSim: parsed %zu events", vals.size());
 }
 
 void ParseOptions(int argc, char* argv[]) {

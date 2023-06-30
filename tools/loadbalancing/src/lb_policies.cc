@@ -71,8 +71,6 @@ int LoadBalancePolicies::AssignBlocksRoundRobin(
     int nranks) {
   for (int block_id = 0; block_id < costlist.size(); block_id++) {
     int block_rank = block_id % nranks;
-    logf(LOG_DBG2, "Block %d: Rank %d", block_id, block_rank);
-
     ranklist[block_id] = block_rank;
   }
 

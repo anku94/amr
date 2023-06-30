@@ -40,7 +40,6 @@ class Utils {
         if (std::find(events.begin(), events.end(), sub_match_int) ==
             events.end())
           continue;
-        logf(LOG_INFO, "Sub Match: %d", sub_match_int);
         matches.push_back(s);
       }
     }
@@ -70,7 +69,8 @@ class Utils {
 
     std::vector<std::string> relevant_files;
     for (auto& pattern : regex_patterns) {
-      logf(LOG_DBG2, "Searching by pattern: %s", pattern.c_str());
+      logf(LOG_DBG2, "Searching by pattern: %s (nevents: %zu)", pattern.c_str(),
+           events.size());
       relevant_files = FilterByRegex(all_files, pattern, events);
 
       for (auto& f : relevant_files) {

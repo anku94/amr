@@ -47,30 +47,10 @@ class PolicyStats {
     total_cost_max_ += rtmax;
     locality_score_sum_ += ComputeLocScore(rank_list);
 
-    if (ts_ == 0) {
-      WriteHeader(fd);
-    }
-    WriteData(fd, ts_, rtavg, rtmax);
+    // WriteSummary(fd, rtavg, rtmax);
+    WriteDetailed(fd, cost_actual, rank_list);
 
     ts_++;
-  }
-
-  void LogTimestepVerbose(int nranks, pdlfs::WritableFile* fd,
-                          std::vector<double> const& cost_actual,
-                          std::vector<int> const& rank_list) {
-    std::stringstream ss;
-    for (auto c : cost_actual) {
-      ss << (int)c << ",";
-    }
-    ss << std::endl;
-
-    for (auto r : rank_list) {
-      ss << r << ",";
-    }
-    ss << std::endl;
-
-    pdlfs::Status s;
-    SAFE_IO(fd->Append(ss.str()), "Write failed");
   }
 
   static void LogHeader(fort::char_table& table);
@@ -84,18 +64,35 @@ class PolicyStats {
   }
 
  private:
-  static void WriteHeader(pdlfs::WritableFile* fd) {
-    const char* header = "ts,avg_us,max_us\n";
+  void WriteSummary(pdlfs::WritableFile* fd, double avg, double max) {
     pdlfs::Status s;
-    SAFE_IO(fd->Append(header), "Write failed");
+
+    if (ts_ == 0) {
+      const char* header = "ts,avg_us,max_us\n";
+      SAFE_IO(fd->Append(header), "Write failed");
+    }
+
+    char buf[1024];
+    int buf_len = snprintf(buf, 1024, " %d,%.0lf,%.0lf\n", ts_, avg, max);
+    SAFE_IO(fd->Append(pdlfs::Slice(buf, buf_len)), "Write failed");
   }
 
-  static void WriteData(pdlfs::WritableFile* fd, int ts, double avg,
-                        double max) {
-    char buf[1024];
-    int buf_len = snprintf(buf, 1024, " %d,%.0lf,%.0lf\n", ts, avg, max);
+  void WriteDetailed(pdlfs::WritableFile* fd,
+                     std::vector<double> const& cost_actual,
+                     std::vector<int> const& rank_list) {
+    std::stringstream ss;
+    for (auto c : cost_actual) {
+      ss << (int)c << ",";
+    }
+    ss << std::endl;
+
+    for (auto r : rank_list) {
+      ss << r << ",";
+    }
+    ss << std::endl;
+
     pdlfs::Status s;
-    SAFE_IO(fd->Append(pdlfs::Slice(buf, buf_len)), "Write failed");
+    SAFE_IO(fd->Append(ss.str()), "Write failed");
   }
 
   //
