@@ -34,6 +34,10 @@ class WritableFile {
     fd_ptr_.reset(fd);
   }
 
+  WritableFile(const WritableFile& rhs) = delete;
+
+  WritableFile(WritableFile&& rhs) = default;
+
   ~WritableFile() {
     if (fd_ptr_) {
       pdlfs::Status s;
