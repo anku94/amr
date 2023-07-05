@@ -63,11 +63,11 @@ class BlockSimulator {
         CostEstimationPolicy::kUnitCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy("Contiguous/Unit-Cost-Alt",
-                          LoadBalancePolicy::kPolicyContiguousUnitCost,
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kOnMeshChange);
-    policies_.emplace_back(policy_opts);
+    // policy_opts.SetPolicy("Contiguous/Unit-Cost-Alt",
+                          // LoadBalancePolicy::kPolicyContiguousUnitCost,
+                          // CostEstimationPolicy::kExtrapolatedCost,
+                          // TriggerPolicy::kOnMeshChange);
+    // policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy("Contiguous/Extrapolated-Cost",
                           LoadBalancePolicy::kPolicyContiguousActualCost,
@@ -75,10 +75,10 @@ class BlockSimulator {
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy(
-        "RoundRobin/Extrapolated-Cost", LoadBalancePolicy::kPolicyRoundRobin,
-        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
-    policies_.emplace_back(policy_opts);
+    // policy_opts.SetPolicy(
+        // "RoundRobin/Extrapolated-Cost", LoadBalancePolicy::kPolicyRoundRobin,
+        // CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    // policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
         "LPT/Extrapolated-Cost", LoadBalancePolicy::kPolicyLPT,
@@ -87,6 +87,12 @@ class BlockSimulator {
 
     policy_opts.SetPolicy("kContigImproved/Extrapolated-Cost",
                           LoadBalancePolicy::kPolicyContigImproved,
+                          CostEstimationPolicy::kExtrapolatedCost,
+                          TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy("CppIter/Extrapolated-Cost",
+                          LoadBalancePolicy::kPolicyCppIter,
                           CostEstimationPolicy::kExtrapolatedCost,
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);

@@ -118,7 +118,7 @@ int AssignBlocksDP(std::vector<double> const& costlist,
     }
   }
 
-  logf(LOG_INFO, "DP Cost: %.2lf", dp[nalloc_a][nalloc_b]);
+  logf(LOG_DBG2, "DP Cost: %.2lf", dp[nalloc_a][nalloc_b]);
 
   int i = nalloc_a;
   int j = nalloc_b;

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 namespace amr {
 class Rank {
  public:

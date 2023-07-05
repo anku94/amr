@@ -6,6 +6,8 @@
 
 #include "rank.h"
 
+#include <algorithm>
+#include <cassert>
 #include <queue>
 
 namespace amr {
@@ -48,6 +50,11 @@ class Solver {
       GetRankStats(ranks_, avg_cost, max_cost);
       LogRankStats(niters, avg_cost, max_cost);
       niters++;
+
+      if (niters == kMaxIters) {
+        logf(LOG_WARN, "Solver hit kMaxIters. Ending prem...");
+        break;
+      }
     }
 
     LogRankStats("FINAL", avg_cost, max_cost);
@@ -176,5 +183,7 @@ class Solver {
   int nranks_;
   std::vector<Rank> ranks_;
   std::vector<std::pair<double, int>> rank_cost_vec_;
+
+  static constexpr int kMaxIters = 250;
 };
 }  // namespace amr
