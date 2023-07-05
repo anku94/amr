@@ -9,6 +9,7 @@ set(lb_srcs
         block_alloc_sim.cc
         lb_ilp.cc
         lb_contig_improv.cc
+        lb_cpp_iter.cc
         lb_lspt.cc
         policy.cc
         policy_exec_ctx.cc

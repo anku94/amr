@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "policy.h"
+#include "iterative/solver.h"
 
 namespace amr {
 int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,

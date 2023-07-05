@@ -3,6 +3,7 @@
 //
 
 #include "common.h"
+#include "iterative/solver.h"
 #include "lb_policies.h"
 
 #include <gtest/gtest.h>
@@ -18,15 +19,15 @@ class PolicyTest : public ::testing::Test {
   }
 
   static int AssignBlocksLPT(std::vector<double> const& costlist,
-                                    std::vector<int>& ranklist, int nranks) {
-    return LoadBalancePolicies::AssignBlocksLPT(costlist, ranklist,
-                                                       nranks);
+                             std::vector<int>& ranklist, int nranks) {
+    return LoadBalancePolicies::AssignBlocksLPT(costlist, ranklist, nranks);
   }
 
   static int AssignBlocksContigImproved(std::vector<double> const& costlist,
-                             std::vector<int>& ranklist, int nranks) {
+                                        std::vector<int>& ranklist,
+                                        int nranks) {
     return LoadBalancePolicies::AssignBlocksContigImproved(costlist, ranklist,
-                                                nranks);
+                                                           nranks);
   }
 
   testing::AssertionResult AssertAllRanksAssigned(
@@ -78,7 +79,7 @@ TEST_F(PolicyTest, LPTTest1) {
 }
 
 TEST_F(PolicyTest, ContigImprovedTest1) {
-  std::vector<double> costlist = { 1, 2, 3, 2, 1};
+  std::vector<double> costlist = {1, 2, 3, 2, 1};
   int nranks = 3;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -115,5 +116,61 @@ TEST_F(PolicyTest, ContigImprovedTest3) {
   ASSERT_EQ(rv, 0);
 
   EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
+}
+
+TEST_F(PolicyTest, IterTest) {
+#include "lb_test3.h"
+  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  int nranks = 512;
+  std::vector<int> ranklist(costlist.size(), -1);
+
+  int rv = AssignBlocksContigImproved(costlist, ranklist, nranks);
+  ASSERT_EQ(rv, 0);
+
+  EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
+
+  auto solver = Solver();
+  solver.AssignBlocks(costlist, ranklist, nranks, 100);
+
+  double avg_cost, max_cost;
+  Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost);
+  logf(LOG_DBUG, "IterativeSolver. Avg Cost: %.0lf, Max Cost: %.0lf\n",
+       avg_cost, max_cost);
+}
+
+TEST_F(PolicyTest, IterTest2) {
+#include "lb_test3.h"
+  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  int nranks = 512;
+  std::vector<int> ranklist(costlist.size(), -1);
+
+  int rv = AssignBlocksLPT(costlist, ranklist, nranks);
+  ASSERT_EQ(rv, 0);
+
+  EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
+
+  double avg_cost, max_cost_lpt, max_cost_cpp, max_cost_iter;
+  Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_lpt);
+  logf(LOG_INFO, "LPT. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
+       max_cost_lpt);
+
+  rv = AssignBlocksContigImproved(costlist, ranklist, nranks);
+  ASSERT_EQ(rv, 0);
+  EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
+
+  Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_cpp);
+  logf(LOG_INFO, "Contig++. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
+       max_cost_cpp);
+
+  auto solver = Solver();
+  int iters;
+  solver.AssignBlocks(costlist, ranklist, nranks, max_cost_lpt, iters);
+  Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_iter);
+
+  logf(LOG_INFO, "IterativeSolver finished. Took %d iters.", iters);
+  logf(LOG_INFO,
+       "Initial Cost: %.0lf, Target Cost: %.0lf.\n"
+       "\t- Avg Cost: %.0lf, Max Cost: %.0lf",
+       max_cost_cpp, max_cost_lpt, avg_cost, max_cost_iter);
 }
 }  // namespace amr

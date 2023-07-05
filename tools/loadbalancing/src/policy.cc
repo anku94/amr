@@ -23,6 +23,8 @@ std::string PolicyUtils::PolicyToString(LoadBalancePolicy policy) {
       return "LPT";
     case LoadBalancePolicy::kPolicyContigImproved:
       return "kContigImproved";
+    case LoadBalancePolicy::kPolicyCppIter:
+      return "kContig++Iter";
     case LoadBalancePolicy::kPolicyILP:
       return "ILP";
     default:
