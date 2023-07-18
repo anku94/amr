@@ -18,16 +18,7 @@ class LoadBalancePolicies {
                           std::vector<double> const& costlist,
                           std::vector<int>& ranklist, int nranks);
 
-  LoadBalancePolicies(LoadBalancePolicies const&) = delete;
-  void operator=(LoadBalancePolicies const&) = delete;
-
  private:
-  explicit LoadBalancePolicies(LoadBalancePolicy policy);
-
-  static int AssignBlocksInternal(LoadBalancePolicy policy,
-                                  std::vector<double> const& costlist,
-                                  std::vector<int>& ranklist, int nranks);
-
   static int AssignBlocksRoundRobin(std::vector<double> const& costlist,
                                     std::vector<int>& ranklist, int nranks);
 
@@ -52,10 +43,9 @@ class LoadBalancePolicies {
   static int AssignBlocksCppIter(std::vector<double> const& costlist,
                                  std::vector<int>& ranklist, int nranks);
 
-  const LoadBalancePolicy policy_;
-
   friend class LoadBalancingPoliciesTest;
   friend class PolicyTest;
-  friend class PolicyExecCtx;
+  //  friend class PolicyExecCtx;
+  //  friend class ScaleExecCtx;
 };
 }  // namespace amr

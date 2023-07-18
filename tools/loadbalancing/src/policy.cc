@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 #include <string>
 
 namespace amr {
@@ -94,5 +95,26 @@ void PolicyUtils::ExtrapolateCosts(std::vector<double> const& costs_prev,
   }
 
   assert(costs_cur.size() == nblocks_cur);
+}
+
+void PolicyUtils::ComputePolicyCosts(int nranks,
+                                     std::vector<double> const& cost_list,
+                                     std::vector<int> const& rank_list,
+                                     std::vector<double>& rank_times,
+                                     double& rank_time_avg,
+                                     double& rank_time_max) {
+  rank_times.resize(nranks, 0);
+  int nblocks = cost_list.size();
+
+  for (int bid = 0; bid < nblocks; bid++) {
+    int block_rank = rank_list[bid];
+    rank_times[block_rank] += cost_list[bid];
+  }
+
+  int const& (*max_func)(int const&, int const&) = std::max<int>;
+  rank_time_max = std::accumulate(rank_times.begin(), rank_times.end(),
+                                  rank_times.front(), max_func);
+  uint64_t rtsum = std::accumulate(rank_times.begin(), rank_times.end(), 0ull);
+  rank_time_avg = rtsum * 1.0 / nranks;
 }
 }  // namespace amr

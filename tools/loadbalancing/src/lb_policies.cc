@@ -5,35 +5,13 @@
 #include "lb_policies.h"
 
 #include "common.h"
+#include "policies/iterative/solver.h"
 #include "policy.h"
-#include "iterative/solver.h"
 
 namespace amr {
 int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
-                                      const std::vector<double>& costlist,
+                                      std::vector<double> const& costlist,
                                       std::vector<int>& ranklist, int nranks) {
-  // Two reasons to have a static object:
-  // - once per lifetime lb_policy selection
-  // - once-per-lifetime logging of lb_policy selection
-
-  static LoadBalancePolicies lb_instance(policy);
-  if (lb_instance.policy_ != policy) {
-    ABORT("Only one lb_policy supported during program lifetime!");
-  }
-
-  return AssignBlocksInternal(lb_instance.policy_, costlist, ranklist, nranks);
-}
-
-LoadBalancePolicies::LoadBalancePolicies(LoadBalancePolicy policy)
-    : policy_(policy) {
-  std::string policy_str = PolicyUtils::PolicyToString(policy);
-  logf(LOG_INFO, "[LoadBalancePolicies] Selected LoadBalancePolicy: %s",
-       policy_str.c_str());
-}
-
-int LoadBalancePolicies::AssignBlocksInternal(
-    LoadBalancePolicy policy, std::vector<double> const& costlist,
-    std::vector<int>& ranklist, int nranks) {
   std::string policy_str = PolicyUtils::PolicyToString(policy);
   logf(LOG_DBG2, "[LoadBalancePolicies] Assignment LoadBalancePolicy: %s",
        policy_str.c_str());

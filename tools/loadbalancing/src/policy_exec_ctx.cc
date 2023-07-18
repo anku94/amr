@@ -11,19 +11,10 @@ namespace amr {
 void PolicyStats::LogTimestep(PolicyExecCtx* pctx, int nranks,
                               std::vector<double> const& cost_actual,
                               std::vector<int> const& rank_list) {
-  int nblocks = cost_actual.size();
   std::vector<double> rank_times(nranks, 0);
+  double rtavg, rtmax;
 
-  for (int bid = 0; bid < nblocks; bid++) {
-    int block_rank = rank_list[bid];
-    rank_times[block_rank] += cost_actual[bid];
-  }
-
-  int const& (*max_func)(int const&, int const&) = std::max<int>;
-  int rtmax = std::accumulate(rank_times.begin(), rank_times.end(),
-                              rank_times.front(), max_func);
-  uint64_t rtsum = std::accumulate(rank_times.begin(), rank_times.end(), 0ull);
-  double rtavg = rtsum * 1.0 / nranks;
+  PolicyUtils::ComputePolicyCosts(nranks, cost_actual, rank_list, rank_times, rtavg, rtmax);
 
   excess_cost_ += (rtmax - rtavg);
   total_cost_avg_ += rtavg;
@@ -51,13 +42,15 @@ void PolicyStats::LogSummary(fort::char_table& table) const {
         << FormatProp(locality_score_sum_ * 100 / ts_, "%");
 }
 
+#define LOG_PATH(x) PolicyUtils::GetLogPath(opts_.output_dir, opts_.policy_name, x)
+
 PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
     : opts_(opts),
       use_cost_cache_(opts_.cost_policy ==
                       CostEstimationPolicy::kCachedExtrapolatedCost),
-      fd_summ_(opts.env, GetLogPath(opts_.output_dir, opts_.policy_name, "summ")),
-      fd_det_(opts.env, GetLogPath(opts_.output_dir, opts_.policy_name, "det")),
-      fd_ranksum_(opts.env, GetLogPath(opts_.output_dir, opts_.policy_name, "ranksum")),
+      fd_summ_(opts.env, LOG_PATH("summ")),
+      fd_det_(opts.env, LOG_PATH("det")),
+      fd_ranksum_(opts.env, LOG_PATH("ranksum")),
       ts_(0),
       ts_lb_invoked_(0),
       ts_lb_succeeded_(0),
@@ -155,8 +148,8 @@ int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist) {
   ts_lb_invoked_++;
 
   uint64_t lb_beg = pdlfs::Env::NowMicros();
-  rv = LoadBalancePolicies::AssignBlocksInternal(opts_.lb_policy, costlist,
-                                                 ranklist_lb, opts_.nranks);
+  rv = LoadBalancePolicies::AssignBlocks(opts_.lb_policy, costlist, ranklist_lb,
+                                         opts_.nranks);
   uint64_t lb_end = pdlfs::Env::NowMicros();
 
   if (rv) return rv;
@@ -169,17 +162,5 @@ int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist) {
   assert(lb_state_.ranklist.size() == costlist.size());
 
   return rv;
-}
-
-std::string PolicyExecCtx::GetLogPath(const char* output_dir,
-                                      const char* policy_name,
-                                      const char* suffix) {
-  std::regex rm_unsafe("[/-]");
-  std::string result = std::regex_replace(policy_name, rm_unsafe, "_");
-  std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-  result = std::string(output_dir) + "/" + result + "." + suffix + ".csv";
-  logf(LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s", policy_name,
-       result.c_str());
-  return result;
 }
 };  // namespace amr

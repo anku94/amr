@@ -102,10 +102,6 @@ class PolicyExecCtx {
 
   int TriggerLB(const std::vector<double>& costlist);
 
-  static std::string GetLogPath(const char* output_dir,
-                                const char* policy_name,
-                                const char* suffix);
-
   const PolicyExecOpts opts_;
   bool use_cost_cache_;
 

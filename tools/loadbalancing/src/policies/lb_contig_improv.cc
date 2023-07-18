@@ -113,7 +113,6 @@ int AssignBlocksDP(std::vector<double> const& costlist,
 
       if (dp_cost != kBigDouble) {
         dp[i][j] = dp_cost;
-        logf(LOG_DBG2, "DP[%d][%d] = %.2lf", i, j, dp_cost);
       }
     }
   }

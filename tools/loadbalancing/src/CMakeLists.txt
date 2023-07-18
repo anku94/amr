@@ -6,15 +6,15 @@ find_package(GUROBI REQUIRED)
 set(CMAKE_CXX_STANDARD 11)
 
 set(lb_srcs
+        policies/lb_contig_improv.cc
+        policies/lb_ilp.cc
+        policies/lb_lspt.cc
+        policies/lb_cpp_iter.cc
         block_alloc_sim.cc
-        lb_ilp.cc
-        lb_contig_improv.cc
-        lb_cpp_iter.cc
-        lb_lspt.cc
         policy.cc
         policy_exec_ctx.cc
-        policy_sim.cc
-        lb_policies.cc)
+        lb_policies.cc
+        scaling/scale_sim.cc)
 
 add_library(lb ${lb_srcs} ${common_srcs})
 
@@ -35,13 +35,13 @@ target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
 # FindGUROBI does not unify both these into a single target :(
 target_include_directories(lb PRIVATE ${GUROBI_INCLUDE_DIRS})
 
-add_executable(lb-sim policy_main.cc)
-#target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
-target_link_libraries(lb-sim PRIVATE lb pdlfs-common fort)
-
 add_executable(block-sim block_sim_main.cc)
 #target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
 target_link_libraries(block-sim PRIVATE lb pdlfs-common fort)
+
+add_executable(scale-sim scaling/scale_sim_main.cc)
+#target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
+target_link_libraries(scale-sim PRIVATE lb pdlfs-common fort)
 
 add_executable(cluster-sim cluster_main.cc)
 target_link_libraries(cluster-sim PRIVATE lb pdlfs-common fort)

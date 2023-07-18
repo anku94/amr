@@ -139,7 +139,7 @@ TEST_F(PolicyTest, IterTest) {
 }
 
 TEST_F(PolicyTest, IterTest2) {
-#include "lb_test3.h"
+#include "lb_test4.h"
   logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
@@ -172,5 +172,25 @@ TEST_F(PolicyTest, IterTest2) {
        "Initial Cost: %.0lf, Target Cost: %.0lf.\n"
        "\t- Avg Cost: %.0lf, Max Cost: %.0lf",
        max_cost_cpp, max_cost_lpt, avg_cost, max_cost_iter);
+}
+
+TEST_F(PolicyTest, IterTest3) {
+#include "lb_test4.h"
+  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  int nranks = 512;
+  std::vector<int> ranklist(costlist.size(), -1);
+
+  int rv = AssignBlocksContigImproved(costlist, ranklist, nranks);
+  ASSERT_EQ(rv, 0);
+
+  EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
+
+  auto solver = Solver();
+  solver.AssignBlocks(costlist, ranklist, nranks, 100);
+
+  double avg_cost, max_cost;
+  Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost);
+  logf(LOG_DBUG, "IterativeSolver. Avg Cost: %.0lf, Max Cost: %.0lf\n",
+       avg_cost, max_cost);
 }
 }  // namespace amr
