@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <iomanip>
 #include <random>
 #include <sstream>
 #include <stdio.h>
@@ -111,6 +112,8 @@ class NormalGenerator {
 template <typename T>
 std::string SerializeVector(std::vector<T> const& v, int trunc_count = -1) {
   std::stringstream ss;
+
+  ss << std::setprecision(3) << std::fixed;
 
   if (v.empty()) {
     ss << "<empty>";
