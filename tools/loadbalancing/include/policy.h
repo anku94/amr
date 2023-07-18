@@ -62,12 +62,23 @@ class PolicyUtils {
                                  std::vector<double>& rank_times,
                                  double& rank_time_avg, double& rank_time_max);
 
+  static std::string GetSafePolicyName(const char* policy_name) {
+    std::string result = policy_name;
+
+    std::regex rm_unsafe("[/-]");
+    result = std::regex_replace(result, rm_unsafe, "_");
+
+    std::regex clean_suffix("actual_cost");
+    result = std::regex_replace(result, clean_suffix, "ac");
+
+    std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+    return result;
+  }
+
   static std::string GetLogPath(const char* output_dir, const char* policy_name,
                                 const char* suffix) {
-    std::regex rm_unsafe("[/-]");
-    std::string result = std::regex_replace(policy_name, rm_unsafe, "_");
-    std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-    result = std::string(output_dir) + "/" + result + "." + suffix + ".csv";
+    std::string result = GetSafePolicyName(policy_name);
+    result = std::string(output_dir) + "/" + result + "." + suffix;
     logf(LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s", policy_name,
          result.c_str());
     return result;

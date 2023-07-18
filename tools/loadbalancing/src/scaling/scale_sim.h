@@ -25,7 +25,9 @@ struct RunProfile {
 
 class ScaleSim {
  public:
-  explicit ScaleSim(ScaleSimOpts opts) : options_(std::move(opts)) {}
+  explicit ScaleSim(ScaleSimOpts opts)
+      : options_(std::move(opts)),
+        log_(options_.env, options_.output_dir + "/scalesim.log.csv") {}
 
   void SetupAllPolicies() {
     PolicyExecOpts policy_opts;
@@ -34,18 +36,25 @@ class ScaleSim {
     policy_opts.nranks = -1;
     policy_opts.nblocks_init = -1;
 
-    policy_opts.SetPolicy("Contiguous/Unit-Cost",
-                          LoadBalancePolicy::kPolicyContiguousActualCost,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
+        policy_opts.SetPolicy("Contiguous/Unit-Cost",
+                              LoadBalancePolicy::kPolicyContiguousActualCost,
+                              CostEstimationPolicy::kUnitCost);
+        policies_.emplace_back(policy_opts);
+    //
+    //    policy_opts.SetPolicy("LPT/Actual-Cost",
+    //    LoadBalancePolicy::kPolicyLPT,
+    //                          CostEstimationPolicy::kUnitCost);
+    //    policies_.emplace_back(policy_opts);
+    //
+    //    policy_opts.SetPolicy("CPP/Actual-Cost",
+    //    LoadBalancePolicy::kPolicyContigImproved,
+    //                          CostEstimationPolicy::kUnitCost);
+    //    policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancePolicy::kPolicyLPT,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
-
-    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancePolicy::kPolicyLPT,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
+//    policy_opts.SetPolicy("CPP-Iter/Actual-Cost",
+//                          LoadBalancePolicy::kPolicyCppIter,
+//                          CostEstimationPolicy::kUnitCost);
+//    policies_.emplace_back(policy_opts);
   }
 
   void Run() {
@@ -70,9 +79,11 @@ class ScaleSim {
           Inputs::GenerateCosts(costs);
         }
 
-        policy.AssignBlocks(r.nranks, costs, table);
+        policy.AssignBlocks(r.nranks, costs, log_);
       }
     }
+
+    logf(LOG_INFO, "\n%s", log_.GetTabularStr().c_str());
   }
 
  private:
@@ -81,7 +92,7 @@ class ScaleSim {
     v.clear();
 
     for (int nblocks = nb_beg; nblocks <= nb_end; nblocks *= 2) {
-      for (int nranks = nblocks; nranks <= nblocks; nranks *= 2) {
+      for (int nranks = nblocks / 5; nranks <= nblocks / 5; nranks *= 2) {
         v.emplace_back(RunProfile{nranks, nblocks});
       }
     }
@@ -89,5 +100,6 @@ class ScaleSim {
 
   ScaleSimOpts const options_;
   std::vector<ScaleExecCtx> policies_;
+  ScaleExecLog log_;
 };
 }  // namespace amr

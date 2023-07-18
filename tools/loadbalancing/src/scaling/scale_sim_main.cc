@@ -44,6 +44,8 @@ void ParseOptions(int argc, char* argv[]) {
     }
   }
 
+  options.env = pdlfs::Env::Default();
+
   if (options.output_dir.empty()) {
     logf(LOG_ERRO, "Output directory not specified\n");
     PrintHelp(argc, argv);
@@ -58,8 +60,6 @@ void ParseOptions(int argc, char* argv[]) {
     logf(LOG_ERRO, "Block size not specified\n");
     PrintHelp(argc, argv);
   }
-
-  options.env = pdlfs::Env::Default();
 }
 
 int main(int argc, char* argv[]) {

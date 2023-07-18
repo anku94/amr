@@ -68,7 +68,7 @@ class WritableCSVFile : public WritableFile {
   virtual void WriteHeader() = 0;
  public:
 
-  void Append(const std::string& data) override {
+  void AppendRow(const std::string& data) {
     if (!header_written_) {
       WriteHeader();
       header_written_ = true;
@@ -77,7 +77,7 @@ class WritableCSVFile : public WritableFile {
     WritableFile::Append(data);
   }
 
-  void Append(const char* data, int data_len) override {
+  void AppendRow(const char* data, int data_len) {
     if (!header_written_) {
       WriteHeader();
       header_written_ = true;
