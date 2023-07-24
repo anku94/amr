@@ -58,25 +58,25 @@ class ScaleSim {
     PolicyOptsILP ilp_opts;
     ilp_opts.mip_gap = 0.05;
     ilp_opts.obj_lb_rel_gap = 0.05;
+    policy_opts.SetLBOpts(ilp_opts);
     policy_opts.SetPolicy("ILP_5PCT/Actual-Cost", LoadBalancePolicy::kPolicyILP,
                           CostEstimationPolicy::kUnitCost);
-    policy_opts.SetLBOpts(ilp_opts);
     policies_.emplace_back(policy_opts);
 
     ilp_opts.mip_gap = 0.10;
     ilp_opts.obj_lb_rel_gap = 0.10;
+    policy_opts.SetLBOpts(ilp_opts);
     policy_opts.SetPolicy("ILP_10PCT/Actual-Cost",
                           LoadBalancePolicy::kPolicyILP,
                           CostEstimationPolicy::kUnitCost);
-    policy_opts.SetLBOpts(ilp_opts);
     policies_.emplace_back(policy_opts);
 
     ilp_opts.mip_gap = 0.20;
     ilp_opts.obj_lb_rel_gap = 0.20;
+    policy_opts.SetLBOpts(ilp_opts);
     policy_opts.SetPolicy("ILP_20PCT/Actual-Cost",
                           LoadBalancePolicy::kPolicyILP,
                           CostEstimationPolicy::kUnitCost);
-    policy_opts.SetLBOpts(ilp_opts);
     policies_.emplace_back(policy_opts);
   }
 

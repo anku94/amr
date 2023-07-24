@@ -2,7 +2,6 @@
 // Created by Ankush J on 4/14/23.
 //
 
-#include "ilp_callback.h"
 #include "lb_policies.h"
 #include "policy.h"
 #include "tools.h"
@@ -48,8 +47,6 @@ class ILPSolver {
     std::vector<int> rank_list_ref;
     InitDecisionVarsWithHeuristic(model, rank_list_ref);
 
-    // Create continuous variable load_sum to represent the maximum load on
-    // any rank
     GRBVar load_sum = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
     GRBLinExpr load_sum_expr(load_sum);
 
@@ -70,13 +67,6 @@ class ILPSolver {
   }
 
   void InitEnv(GRBEnv& env) const {
-    //    env.set("LogFile", "gurobi.log");
-    //      env.set("TimeLimit", "60.0");
-    // Illustrative parameter configs below:
-    // Illustrative parameter configs below:
-    // env.set("Threads", "8");
-    // model.getEnv().set(GRB_IntParam_Threads, 8);
-    // model.getEnv().set(GRB_DoubleParam_TimeLimit, 45.0);
     env.set(GRB_DoubleParam_MIPGap, opts_.mip_gap);
     env.start();
   }
@@ -185,9 +175,7 @@ class ILPSolver {
     }
   }
 
-  //
   // Use contig-improved ranks as reference for locality score
-  //
   void SetupGenLocalityExpr(GRBModel& model, GRBLinExpr& loc_score,
                             std::vector<int>& rank_list_ref) {
     loc_score = 0;
@@ -206,9 +194,7 @@ class ILPSolver {
     }
   }
 
-  //
   // Use array disorder as definition for locality score
-  //
   void SetupGenLocalityExpr2(GRBModel& model, GRBLinExpr& loc_score) {
     loc_score = 0;
     GRBLinExpr prev_block_rank = 0;
@@ -269,15 +255,6 @@ class ILPSolver {
         }
       }
     }
-  }
-
-  void UseHeuristicSolution(SolutionCallback& cb) {
-    std::vector<int> rank_list_heuristic;
-    amr::LoadBalancePolicies::AssignBlocks(
-        amr::LoadBalancePolicy::kPolicyContigImproved, cost_list_,
-        rank_list_heuristic, nranks_);
-
-    cb.SetHeuristicSolution(rank_list_heuristic);
   }
 
   const amr::PolicyOptsILP opts_;

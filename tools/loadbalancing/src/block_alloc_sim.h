@@ -58,15 +58,16 @@ class BlockSimulator {
         CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy(
-        "Contiguous/Unit-Cost", LoadBalancePolicy::kPolicyContiguousActualCost,
-        CostEstimationPolicy::kUnitCost, TriggerPolicy::kOnMeshChange);
-    policies_.emplace_back(policy_opts);
+    //    policy_opts.SetPolicy(
+    //        "Contiguous/Unit-Cost",
+    //        LoadBalancePolicy::kPolicyContiguousActualCost,
+    //        CostEstimationPolicy::kUnitCost, TriggerPolicy::kOnMeshChange);
+    //    policies_.emplace_back(policy_opts);
 
     // policy_opts.SetPolicy("Contiguous/Unit-Cost-Alt",
-                          // LoadBalancePolicy::kPolicyContiguousUnitCost,
-                          // CostEstimationPolicy::kExtrapolatedCost,
-                          // TriggerPolicy::kOnMeshChange);
+    // LoadBalancePolicy::kPolicyContiguousUnitCost,
+    // CostEstimationPolicy::kExtrapolatedCost,
+    // TriggerPolicy::kOnMeshChange);
     // policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy("Contiguous/Extrapolated-Cost",
@@ -76,8 +77,8 @@ class BlockSimulator {
     policies_.emplace_back(policy_opts);
 
     // policy_opts.SetPolicy(
-        // "RoundRobin/Extrapolated-Cost", LoadBalancePolicy::kPolicyRoundRobin,
-        // CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    // "RoundRobin/Extrapolated-Cost", LoadBalancePolicy::kPolicyRoundRobin,
+    // CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
     // policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
@@ -91,10 +92,18 @@ class BlockSimulator {
                           TriggerPolicy::kOnMeshChange);
     policies_.emplace_back(policy_opts);
 
-    policy_opts.SetPolicy("CppIter/Extrapolated-Cost",
-                          LoadBalancePolicy::kPolicyCppIter,
-                          CostEstimationPolicy::kExtrapolatedCost,
+    policy_opts.SetPolicy(
+        "CppIter/Extrapolated-Cost", LoadBalancePolicy::kPolicyCppIter,
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+    policies_.emplace_back(policy_opts);
+
+    PolicyOptsILP ilp_opts;
+    ilp_opts.mip_gap = 0.05;
+    ilp_opts.obj_lb_rel_gap = 0.05;
+    policy_opts.SetPolicy("ILP_5PCT/Actual-Cost", LoadBalancePolicy::kPolicyILP,
+                          CostEstimationPolicy::kCachedExtrapolatedCost,
                           TriggerPolicy::kOnMeshChange);
+    policy_opts.SetLBOpts(ilp_opts);
     policies_.emplace_back(policy_opts);
 
     //    policy_opts.SetPolicy("LPT/Extrapolated-Cost-Cached",

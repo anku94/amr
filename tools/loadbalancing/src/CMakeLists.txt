@@ -52,6 +52,8 @@ target_link_libraries(cluster-sim PRIVATE lb pdlfs-common fort)
 install(TARGETS lb EXPORT lb
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
+install(TARGETS block-sim scale-sim cluster-sim
+        RUNTIME DESTINATION bin)
 install(EXPORT lb
         FILE lb-config.cmake
         DESTINATION lib/cmake/lb)
