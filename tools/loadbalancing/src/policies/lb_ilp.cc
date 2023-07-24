@@ -46,54 +46,21 @@ class ILPSolver {
     InitModel(model);
 
     std::vector<int> rank_list_ref;
-    double max_disorder = InitDecisionVarsWithHeuristic(model, rank_list_ref);
-
-    SolutionCallback cb(assign_vars_);
-    model.setCallback(&cb);
+    InitDecisionVarsWithHeuristic(model, rank_list_ref);
 
     // Create continuous variable load_sum to represent the maximum load on
     // any rank
     GRBVar load_sum = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
     GRBLinExpr load_sum_expr(load_sum);
 
-    //      GRBVar load_cnt = model.addVar(0.0, GRB_INFINITY, 0.0,
-    //      GRB_CONTINUOUS); GRBLinExpr load_cnt_expr(load_cnt);
-
-    // Set the objective to minimize the maximum load
-    //      model.setObjective(load_sum_expr, GRB_MINIMIZE);
-
     SetUniqueAllocationConstraints(model);
-
     SetLoadConstraints(model, load_sum);
-    //      SetLoadConstraints(model, load_sum, load_cnt);
 
-    //    double disorder_constraint = 0.9 * max_disorder;
-    //    logf(LOG_INFO, "Heuristic disorder: %.2lf, Disorder constraint:
-    //    %.2lf",
-    //         max_disorder, disorder_constraint);
-
-    //      GRBLinExpr loc_score = 0;
-    //      SetupLocalityExpr(loc_score);
-    //      model.addConstr(loc_score >= disorder_constraint);
-
-    //            GRBQuadExpr loc_score_quad;
-    //            SetupQuadraticLocalityExpr(loc_score_quad);
-    //            model.addQConstr(loc_score_quad <= 10 * nblocks_);
     GRBLinExpr loc_score;
     SetupGenLocalityExpr3(model, loc_score, rank_list_ref);
 
     model.setObjectiveN(load_sum_expr, 0, 2, 1, 0, opts_.obj_lb_rel_gap);
-    //    model.setObjectiveN(load_sum_expr, 0, 2, 1);
-    //      model.setObjectiveN(load_cnt_expr, 1, 1, 1);
     model.setObjectiveN(loc_score, 1, 1, 1);
-    //      model.setObjectiveN(load_sum_expr, /* index */ 0, /* priority */
-    //      5,
-    //                          /* weight */ 1.0, 0.2);
-    //      model.setObjectiveN(loc_score_quad, /* index */ 1, /* priority */
-    //      4,
-    //                          /* weight */ -1.0,
-    //                          /* relTol */ 0.00, /* absTol */ 0.0,
-    //                          /* objNName */ "loc score");
 
     // Optimize the model
     model.optimize();
@@ -102,7 +69,7 @@ class ILPSolver {
     return 0;
   }
 
-  void InitEnv(GRBEnv& env) {
+  void InitEnv(GRBEnv& env) const {
     //    env.set("LogFile", "gurobi.log");
     //      env.set("TimeLimit", "60.0");
     // Illustrative parameter configs below:
@@ -114,7 +81,7 @@ class ILPSolver {
     env.start();
   }
 
-  void InitModel(GRBModel& model) {
+  void InitModel(GRBModel& model) const {
     model.set(GRB_IntAttr_ModelSense, GRB_MINIMIZE);
 
     GRBEnv env_lb = model.getMultiobjEnv(0);
@@ -133,8 +100,8 @@ class ILPSolver {
   }
 
   // returns baseline disorder
-  double InitDecisionVarsWithHeuristic(GRBModel& model,
-                                       std::vector<int>& rank_list_heuristic) {
+  void InitDecisionVarsWithHeuristic(GRBModel& model,
+                                     std::vector<int>& rank_list_heuristic) {
     amr::LoadBalancePolicies::AssignBlocks(
         amr::LoadBalancePolicy::kPolicyContigImproved, cost_list_,
         rank_list_heuristic, nranks_);
@@ -144,16 +111,13 @@ class ILPSolver {
                                          rank_list_heuristic, rt_avg, rt_max);
 
     double disorder = amr::PolicyTools::GetDisorder(rank_list_heuristic);
-    double lin_disorder =
-        amr::PolicyTools::GetLinearDisorder(rank_list_heuristic);
 
     logf(LOG_INFO,
          "Heuristic solution stats.\n"
          "\tdisord:\t%.2lf\n"
-         "\tlin_disord:\t%.2lf\n"
          "\trt_avg: \t%.2lf\n"
          "\trt_max:\t%.2lf",
-         disorder, lin_disorder, rt_avg, rt_max);
+         disorder, rt_avg, rt_max);
 
     for (int i = 0; i < nblocks_; ++i) {
       for (int j = 0; j < nranks_; ++j) {
@@ -161,8 +125,6 @@ class ILPSolver {
         assign_vars_[i][j] = model.addVar(0.0, 1.0, flag, GRB_BINARY);
       }
     }
-
-    return lin_disorder;
   }
 
   void SetUniqueAllocationConstraints(GRBModel& model) {
