@@ -2,6 +2,7 @@
 // Created by Ankush J on 5/4/23.
 //
 
+#include "constants.h"
 #include "policy.h"
 
 #include <algorithm>
@@ -116,5 +117,39 @@ void PolicyUtils::ComputePolicyCosts(int nranks,
                                   rank_times.front(), max_func);
   uint64_t rtsum = std::accumulate(rank_times.begin(), rank_times.end(), 0ull);
   rank_time_avg = rtsum * 1.0 / nranks;
+}
+
+//
+// Use an arbitary model to compute
+// Intuition: amount of linear locality captured (lower is better)
+// cost of 1 for neighboring ranks
+// cost of 2 for same node (hardcoded rn)
+// cost of 3 for arbitrary communication
+//
+double PolicyUtils::ComputeLocCost(std::vector<int> const& rank_list) {
+  int nb = rank_list.size();
+  int local_score = 0;
+
+  for (int bidx = 0; bidx < nb - 1; bidx++) {
+    int p = rank_list[bidx];
+    int q = rank_list[bidx + 1];
+
+    // Nodes for p and q, computed using assumptions
+    int pn = p / Constants::kRanksPerNode;
+    int qn = q / Constants::kRanksPerNode;
+
+    if (p == q) {
+      // nothing
+    } else if (abs(q - p) == 1) {
+      local_score += 1;
+    } else if (qn == pn) {
+      local_score += 2;
+    } else {
+      local_score += 3;
+    }
+  }
+
+  double norm_score = local_score * 1.0 / nb;
+  return norm_score;
 }
 }  // namespace amr

@@ -37,7 +37,7 @@ class PolicyStats {
   }
 
  private:
-  void WriteSummary(WritableFile& fd, double avg, double max) {
+  void WriteSummary(WritableFile& fd, double avg, double max) const {
     if (ts_ == 0) {
       const char* header = "ts,avg_us,max_us\n";
       fd.Append(header);
@@ -48,7 +48,7 @@ class PolicyStats {
     fd.Append(std::string(buf, buf_len));
   }
 
-  void WriteDetailed(WritableFile& fd, std::vector<double> const& cost_actual,
+  static void WriteDetailed(WritableFile& fd, std::vector<double> const& cost_actual,
                      std::vector<int> const& rank_list) {
     std::stringstream ss;
     for (auto c : cost_actual) {
@@ -64,47 +64,13 @@ class PolicyStats {
     fd.Append(ss.str());
   }
 
-  void WriteRankSums(WritableFile& fd, std::vector<double>& rank_times) {
+  void WriteRankSums(WritableFile& fd, std::vector<double>& rank_times) const {
     int nranks = rank_times.size();
     if (ts_ == 0) {
       fd.Append(reinterpret_cast<const char*>(&nranks), sizeof(int));
     }
     fd.Append(reinterpret_cast<const char*>(rank_times.data()),
               sizeof(double) * nranks);
-  }
-
-  //
-  // Use an arbitary model to compute
-  // Intuition: amount of linear locality captured (lower is better)
-  // cost of 1 for neighboring ranks
-  // cost of 2 for same node (hardcoded rn)
-  // cost of 3 for arbitrary communication
-  //
-  static double ComputeLocScore(std::vector<int> const& rank_list) {
-    int nb = rank_list.size();
-    int local_score = 0;
-
-    for (int bidx = 0; bidx < nb - 1; bidx++) {
-      int p = rank_list[bidx];
-      int q = rank_list[bidx + 1];
-
-      // Nodes for p and q, computed using assumptions
-      int pn = p / 16;
-      int qn = q / 16;
-
-      if (p == q) {
-        // nothing
-      } else if (abs(q - p) == 1) {
-        local_score += 1;
-      } else if (qn == pn) {
-        local_score += 2;
-      } else {
-        local_score += 3;
-      }
-    }
-
-    double norm_score = local_score * 1.0 / nb;
-    return norm_score;
   }
 
   int ts_;

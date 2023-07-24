@@ -36,34 +36,54 @@ class ScaleSim {
     policy_opts.nranks = -1;
     policy_opts.nblocks_init = -1;
 
-        policy_opts.SetPolicy("Contiguous/Unit-Cost",
-                              LoadBalancePolicy::kPolicyContiguousActualCost,
-                              CostEstimationPolicy::kUnitCost);
-        policies_.emplace_back(policy_opts);
-    //
-    //    policy_opts.SetPolicy("LPT/Actual-Cost",
-    //    LoadBalancePolicy::kPolicyLPT,
+    //    policy_opts.SetPolicy("Contiguous/Unit-Cost",
+    //                          LoadBalancePolicy::kPolicyContiguousActualCost,
     //                          CostEstimationPolicy::kUnitCost);
     //    policies_.emplace_back(policy_opts);
     //
-    //    policy_opts.SetPolicy("CPP/Actual-Cost",
-    //    LoadBalancePolicy::kPolicyContigImproved,
+    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancePolicy::kPolicyLPT,
+                          CostEstimationPolicy::kUnitCost);
+    policies_.emplace_back(policy_opts);
+
+    policy_opts.SetPolicy("CPP/Actual-Cost",
+                          LoadBalancePolicy::kPolicyContigImproved,
+                          CostEstimationPolicy::kUnitCost);
+    policies_.emplace_back(policy_opts);
+    //
+    //    policy_opts.SetPolicy("CPP-Iter/Actual-Cost",
+    //                          LoadBalancePolicy::kPolicyCppIter,
     //                          CostEstimationPolicy::kUnitCost);
     //    policies_.emplace_back(policy_opts);
 
-//    policy_opts.SetPolicy("CPP-Iter/Actual-Cost",
-//                          LoadBalancePolicy::kPolicyCppIter,
-//                          CostEstimationPolicy::kUnitCost);
-//    policies_.emplace_back(policy_opts);
+    PolicyOptsILP ilp_opts;
+    ilp_opts.mip_gap = 0.05;
+    ilp_opts.obj_lb_rel_gap = 0.05;
+    policy_opts.SetPolicy("ILP_5PCT/Actual-Cost", LoadBalancePolicy::kPolicyILP,
+                          CostEstimationPolicy::kUnitCost);
+    policy_opts.SetLBOpts(ilp_opts);
+    policies_.emplace_back(policy_opts);
+
+    ilp_opts.mip_gap = 0.10;
+    ilp_opts.obj_lb_rel_gap = 0.10;
+    policy_opts.SetPolicy("ILP_10PCT/Actual-Cost",
+                          LoadBalancePolicy::kPolicyILP,
+                          CostEstimationPolicy::kUnitCost);
+    policy_opts.SetLBOpts(ilp_opts);
+    policies_.emplace_back(policy_opts);
+
+    ilp_opts.mip_gap = 0.20;
+    ilp_opts.obj_lb_rel_gap = 0.20;
+    policy_opts.SetPolicy("ILP_20PCT/Actual-Cost",
+                          LoadBalancePolicy::kPolicyILP,
+                          CostEstimationPolicy::kUnitCost);
+    policy_opts.SetLBOpts(ilp_opts);
+    policies_.emplace_back(policy_opts);
   }
 
   void Run() {
     logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
     SetupAllPolicies();
-
-    fort::char_table table;
-    ScaleExecCtx::LogHeader(table);
 
     std::vector<RunProfile> run_profiles;
     GenRunProfiles(run_profiles, options_.nblocks_beg, options_.nblocks_end);

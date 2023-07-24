@@ -2,19 +2,19 @@
 // Created by Ankush J on 4/11/23.
 //
 
-// #include "approx_pq.h"
 #include "bin_readers.h"
 #include "block_alloc_sim.h"
 #include "policy_exec_ctx.h"
 #include "prof_set_reader.h"
 
 #include <gtest/gtest.h>
+#include <pdlfs-common/env.h>
 
 namespace amr {
 class MiscTest : public ::testing::Test {
  protected:
   std::string GetLogPath(const char* output_dir, const char* policy_name) {
-    return PolicyExecCtx::GetLogPath(output_dir, policy_name);
+    return PolicyUtils::GetLogPath(output_dir, policy_name, ".csv");
   }
 
   void AssertApproxEqual(std::vector<double> const& a,
@@ -73,13 +73,12 @@ TEST_F(MiscTest, BlockAllocSimTest) {
   BlockSimulatorOpts opts{};
   opts.nranks = 512;
   opts.nblocks = 512;
-  opts.prof_dir =
-      "/Users/schwifty/Repos/amr-data/20230424-prof-tags/ref-mini";
+  opts.prof_dir = "/Users/schwifty/Repos/amr-data/20230424-prof-tags/ref-mini";
   opts.output_dir = opts.prof_dir + "/output";
   opts.env = pdlfs::Env::Default();
 
   BlockSimulator sim(opts);
-  sim.Run(20);
+  sim.Run();
 }
 
 TEST_F(MiscTest, prof_reader_test) {
@@ -161,7 +160,8 @@ TEST_F(MiscTest, ExtrapolateCosts2) {
 }
 
 TEST_F(MiscTest, ExtrapolateCosts3) {
-  std::vector<double> costs_prev = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0};
+  std::vector<double> costs_prev = {1.0, 2.0, 3.0, 4.0, 5.0,
+                                    6.0, 7.0, 8.0, 9.0};
   std::vector<int> refs = {0};
   std::vector<int> derefs = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<double> costs_cur;

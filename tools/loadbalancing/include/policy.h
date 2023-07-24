@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common.h"
+#include "lb_policies.h"
 
 #include <regex>
 #include <string>
@@ -62,6 +63,8 @@ class PolicyUtils {
                                  std::vector<double>& rank_times,
                                  double& rank_time_avg, double& rank_time_max);
 
+  static double ComputeLocCost(std::vector<int> const& rank_list);
+
   static std::string GetSafePolicyName(const char* policy_name) {
     std::string result = policy_name;
 
@@ -98,6 +101,10 @@ struct PolicyExecOpts {
   int nranks;
   int nblocks_init;
 
+ private:
+  PolicyOptsILP lb_opts_ilp;
+
+ public:
   PolicyExecOpts()
       : policy_name("<undefined>"),
         lb_policy(LoadBalancePolicy::kPolicyContiguousActualCost),
@@ -123,5 +130,9 @@ struct PolicyExecOpts {
     cost_policy = cep;
     trigger_policy = TriggerPolicy::kUnspecified;
   }
+
+  void SetLBOpts(PolicyOptsILP& opts) { lb_opts_ilp = opts; }
+
+  void* GetLBOpts() const { return (void*)&lb_opts_ilp; }
 };
 }  // namespace amr

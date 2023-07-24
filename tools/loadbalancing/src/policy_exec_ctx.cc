@@ -14,12 +14,13 @@ void PolicyStats::LogTimestep(PolicyExecCtx* pctx, int nranks,
   std::vector<double> rank_times(nranks, 0);
   double rtavg, rtmax;
 
-  PolicyUtils::ComputePolicyCosts(nranks, cost_actual, rank_list, rank_times, rtavg, rtmax);
+  PolicyUtils::ComputePolicyCosts(nranks, cost_actual, rank_list, rank_times,
+                                  rtavg, rtmax);
 
   excess_cost_ += (rtmax - rtavg);
   total_cost_avg_ += rtavg;
   total_cost_max_ += rtmax;
-  locality_score_sum_ += ComputeLocScore(rank_list);
+  locality_score_sum_ += PolicyUtils::ComputeLocCost(rank_list);
 
   WriteSummary(pctx->fd_summ_, rtavg, rtmax);
   WriteDetailed(pctx->fd_det_, cost_actual, rank_list);
@@ -42,7 +43,8 @@ void PolicyStats::LogSummary(fort::char_table& table) const {
         << FormatProp(locality_score_sum_ * 100 / ts_, "%");
 }
 
-#define LOG_PATH(x) PolicyUtils::GetLogPath(opts_.output_dir, opts_.policy_name, x)
+#define LOG_PATH(x) \
+  PolicyUtils::GetLogPath(opts_.output_dir, opts_.policy_name, x)
 
 PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
     : opts_(opts),

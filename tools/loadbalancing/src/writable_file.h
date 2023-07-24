@@ -64,19 +64,6 @@ class WritableCSVFile : public WritableFile {
   WritableCSVFile(pdlfs::Env* const env, const std::string& fpath)
       : WritableFile(env, fpath), header_written_(false) {}
 
- protected:
-  virtual void WriteHeader() = 0;
- public:
-
-  void AppendRow(const std::string& data) {
-    if (!header_written_) {
-      WriteHeader();
-      header_written_ = true;
-    }
-
-    WritableFile::Append(data);
-  }
-
   void AppendRow(const char* data, int data_len) {
     if (!header_written_) {
       WriteHeader();
@@ -85,6 +72,9 @@ class WritableCSVFile : public WritableFile {
 
     WritableFile::Append(data, data_len);
   }
+
+ protected:
+  virtual void WriteHeader() = 0;
 
  private:
   bool header_written_;

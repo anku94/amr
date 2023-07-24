@@ -11,7 +11,8 @@
 namespace amr {
 int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
                                       std::vector<double> const& costlist,
-                                      std::vector<int>& ranklist, int nranks) {
+                                      std::vector<int>& ranklist, int nranks,
+                                      void* opts) {
   std::string policy_str = PolicyUtils::PolicyToString(policy);
   logf(LOG_DBG2, "[LoadBalancePolicies] Assignment LoadBalancePolicy: %s",
        policy_str.c_str());
@@ -35,7 +36,7 @@ int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
     case LoadBalancePolicy::kPolicyLPT:
       return AssignBlocksLPT(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyILP:
-      return AssignBlocksILP(costlist, ranklist, nranks);
+      return AssignBlocksILP(costlist, ranklist, nranks, opts);
     case LoadBalancePolicy::kPolicyContigImproved:
       return AssignBlocksContigImproved(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyCppIter:
