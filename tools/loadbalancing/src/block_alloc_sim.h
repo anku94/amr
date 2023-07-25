@@ -98,8 +98,12 @@ class BlockSimulator {
     policies_.emplace_back(policy_opts);
 
     PolicyOptsILP ilp_opts;
-    ilp_opts.mip_gap = 0.05;
-    ilp_opts.obj_lb_rel_gap = 0.05;
+    ilp_opts.obj_lb_time_limit = 10;
+    ilp_opts.obj_loc_time_limit = 10;
+    
+    ilp_opts.obj_lb_rel_tol = 0.05;
+    ilp_opts.obj_lb_mip_gap = 0.05;
+    ilp_opts.obj_loc_mip_gap = 0.20;
     policy_opts.SetPolicy("ILP_5PCT/Actual-Cost", LoadBalancePolicy::kPolicyILP,
                           CostEstimationPolicy::kCachedExtrapolatedCost,
                           TriggerPolicy::kOnMeshChange);

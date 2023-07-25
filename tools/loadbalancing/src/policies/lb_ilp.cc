@@ -56,7 +56,7 @@ class ILPSolver {
     GRBLinExpr loc_score;
     SetupGenLocalityExpr3(model, loc_score, rank_list_ref);
 
-    model.setObjectiveN(load_sum_expr, 0, 2, 1, 0, opts_.obj_lb_rel_gap);
+    model.setObjectiveN(load_sum_expr, 0, 2, 1, 0, opts_.obj_lb_rel_tol);
     model.setObjectiveN(loc_score, 1, 1, 1);
 
     // Optimize the model
@@ -67,7 +67,6 @@ class ILPSolver {
   }
 
   void InitEnv(GRBEnv& env) const {
-    env.set(GRB_DoubleParam_MIPGap, opts_.mip_gap);
     env.start();
   }
 
@@ -76,9 +75,11 @@ class ILPSolver {
 
     GRBEnv env_lb = model.getMultiobjEnv(0);
     env_lb.set(GRB_DoubleParam_TimeLimit, opts_.obj_lb_time_limit);
+    env_lb.set(GRB_DoubleParam_MIPGap, opts_.obj_lb_mip_gap);
 
     GRBEnv env_loc = model.getMultiobjEnv(1);
     env_loc.set(GRB_DoubleParam_TimeLimit, opts_.obj_loc_time_limit);
+    env_loc.set(GRB_DoubleParam_MIPGapAbs, opts_.obj_loc_mip_gap * nblocks_);
   }
 
   void InitDecisionVars(GRBModel& model) {
