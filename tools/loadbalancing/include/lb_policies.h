@@ -13,25 +13,28 @@
 
 namespace amr {
 struct PolicyOptsILP {
-  float mip_gap;
   float obj_lb_time_limit;
+  float obj_lb_rel_tol;
+  float obj_lb_mip_gap;
+
   float obj_loc_time_limit;
-  float obj_lb_rel_gap;
+  float obj_loc_mip_gap;
 
   PolicyOptsILP()
-      : mip_gap(0.1),
-        obj_lb_time_limit(10),
-        obj_loc_time_limit(90),
-        obj_lb_rel_gap(0.2) {}
+      : obj_lb_time_limit(10),
+        obj_lb_rel_tol(0.2),
+        obj_lb_mip_gap(0.2),
+        obj_loc_time_limit(10),
+        obj_loc_mip_gap(0.2) {}
 
   std::string ToString() const {
     std::stringstream ss;
     ss << std::fixed << std::setprecision(0);
-    ss << "\n\tmip_gap: \t" << std::to_string(mip_gap)
-       << "\tobj_lb_time_limit: \t" << std::to_string(obj_lb_time_limit)
+    ss << "\n\tobj_lb_time_limit: \t" << std::to_string(obj_lb_time_limit)
+       << "\n\tobj_lb_rel_tol:\t" << std::to_string(obj_lb_rel_tol)
+       << "\n\tobj_lb_mip_gap:\t" << std::to_string(obj_lb_mip_gap)
        << "\n\tobj_loc_time_limit: \t" << std::to_string(obj_loc_time_limit)
-       << "\n\tobj_lb_rel_gap:\t" << std::to_string(obj_lb_rel_gap);
-
+       << "\n\tobj_loc_mip_gap:\t" << std::to_string(obj_loc_mip_gap);
     return ss.str();
   }
 };
