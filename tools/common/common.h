@@ -11,7 +11,7 @@
 #include <string.h>
 
 // TODO: log_levels should probably be ordered the other way
-#define LOG_LEVEL 1
+#define LOG_LEVEL 3
 
 #define LOG_ERRO 5
 #define LOG_WARN 4

@@ -22,10 +22,10 @@ struct PolicyOptsILP {
 
   PolicyOptsILP()
       : obj_lb_time_limit(10),
-        obj_lb_rel_tol(0.2),
-        obj_lb_mip_gap(0.2),
+        obj_lb_rel_tol(0.1),
+        obj_lb_mip_gap(0.1),
         obj_loc_time_limit(10),
-        obj_loc_mip_gap(0.2) {}
+        obj_loc_mip_gap(0.1) {}
 
   std::string ToString() const {
     std::stringstream ss;

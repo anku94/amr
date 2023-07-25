@@ -275,6 +275,8 @@ int LoadBalancePolicies::AssignBlocksILP(const std::vector<double>& costlist,
   PolicyOptsILP opts_obj;
   if (opts) {
     opts_obj = *(PolicyOptsILP*)opts;
+  } else {
+    logf(LOG_WARN, "[ILPSolver] No opts configured. Using defaults.");
   }
 
   ILPSolver solver(opts_obj, costlist, ranklist, nranks);

@@ -56,7 +56,8 @@ PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
       ts_(0),
       ts_lb_invoked_(0),
       ts_lb_succeeded_(0),
-      exec_time_us_(0) {
+      exec_time_us_(0),
+      cost_cache_(opts_.cache_ttl) {
   Bootstrap();
 }
 
@@ -151,7 +152,7 @@ int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist) {
 
   uint64_t lb_beg = pdlfs::Env::NowMicros();
   rv = LoadBalancePolicies::AssignBlocks(opts_.lb_policy, costlist, ranklist_lb,
-                                         opts_.nranks);
+                                         opts_.nranks, opts_.GetLBOpts());
   uint64_t lb_end = pdlfs::Env::NowMicros();
 
   if (rv) return rv;
