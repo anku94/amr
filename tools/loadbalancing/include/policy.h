@@ -101,6 +101,8 @@ struct PolicyExecOpts {
   int nranks;
   int nblocks_init;
 
+  int cache_ttl;
+
  private:
   PolicyOptsILP lb_opts_ilp;
 
@@ -113,7 +115,8 @@ struct PolicyExecOpts {
         output_dir(nullptr),
         env(nullptr),
         nranks(0),
-        nblocks_init(0) {}
+        nblocks_init(0),
+        cache_ttl(15) {}
 
   void SetPolicy(const char* name, LoadBalancePolicy lp,
                  CostEstimationPolicy cep, TriggerPolicy tp) {
