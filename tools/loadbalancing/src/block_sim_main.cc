@@ -35,7 +35,7 @@ void ParseOptions(int argc, char* argv[]) {
   options.nranks = -1;
   options.nblocks = -1;
 
-  while ((c = getopt(argc, argv, "c:e:hn:p:")) != -1) {
+  while ((c = getopt(argc, argv, "b:c:e:hn:p:r:")) != -1) {
     switch (c) {
       case 'b':
         options.nblocks = atoi(optarg);
