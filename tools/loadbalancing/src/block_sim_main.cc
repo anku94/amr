@@ -7,6 +7,7 @@ amr::BlockSimulatorOpts options;
 
 void PrintHelp(int argc, char* argv[]) {
   fprintf(stderr, "\n\tUsage: %s -p <profile_dir>\n", argv[0]);
+  exit(-1);
 }
 
 void ParseCsvStr(const char* str, std::vector<int>& vals) {
@@ -31,9 +32,13 @@ void ParseOptions(int argc, char* argv[]) {
   options.prof_dir = "";
   options.prof_time_combine_policy = "add";
   options.nts = INT_MAX;
+  options.nranks = -1;
+  options.nblocks = -1;
 
   while ((c = getopt(argc, argv, "c:e:hn:p:")) != -1) {
     switch (c) {
+      case 'b':
+        options.nblocks = atoi(optarg);
       case 'c':
         options.prof_time_combine_policy = optarg;
         break;
@@ -43,33 +48,46 @@ void ParseOptions(int argc, char* argv[]) {
       case 'p':
         options.prof_dir = optarg;
         break;
+      case 'r':
+        options.nranks = atoi(optarg);
       case 'n':
         options.nts = atoi(optarg);
         break;
       case 'h':
         PrintHelp(argc, argv);
-        exit(0);
     }
   }
 
   pdlfs::Env* env = pdlfs::Env::Default();
   options.env = env;
-  options.nranks = 512;
-  options.nblocks = 512;
 
   if (options.prof_dir.empty()) {
     logf(LOG_ERRO, "No profile_dir specified!");
     PrintHelp(argc, argv);
-    exit(-1);
   }
 
   if (!options.env->FileExists(options.prof_dir.c_str())) {
     logf(LOG_ERRO, "Directory does not exist!!!");
     PrintHelp(argc, argv);
-    exit(-1);
+  }
+
+  if (options.nblocks < 0) {
+    logf(LOG_ERRO, "No nblocks specified!");
+    PrintHelp(argc, argv);
+  }
+
+  if (options.nranks < 0) {
+    logf(LOG_ERRO, "No nranks specified!");
+    PrintHelp(argc, argv);
   }
 
   options.output_dir = options.prof_dir + "/block_sim";
+
+  logf(LOG_INFO,
+       "[Initial Parameters] nranks=%d, nblocks=%d, nts=%d\n"
+       "output_dir=%s",
+       options.nranks, options.nblocks, options.nts,
+       options.output_dir.c_str());
 }
 
 void Run() {
