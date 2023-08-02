@@ -39,22 +39,25 @@ void ParseOptions(int argc, char* argv[]) {
     switch (c) {
       case 'b':
         options.nblocks = atoi(optarg);
+        break;
       case 'c':
         options.prof_time_combine_policy = optarg;
         break;
       case 'e':
         ParseCsvStr(optarg, options.events);
         break;
+      case 'h':
+        PrintHelp(argc, argv);
+        break;
+      case 'n':
+        options.nts = atoi(optarg);
+        break;
       case 'p':
         options.prof_dir = optarg;
         break;
       case 'r':
         options.nranks = atoi(optarg);
-      case 'n':
-        options.nts = atoi(optarg);
         break;
-      case 'h':
-        PrintHelp(argc, argv);
     }
   }
 
