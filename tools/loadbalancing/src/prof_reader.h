@@ -1,3 +1,5 @@
+#include "prof_base.h"
+
 #include <common.h>
 #include <cstdio>
 #include <sstream>
@@ -5,14 +7,13 @@
 #include <vector>
 
 namespace amr {
-class ProfileReader {
+class CSVProfileReader : public ProfileReader {
  public:
-  explicit ProfileReader(const char* prof_csv_path, ProfTimeCombinePolicy combine_policy)
-      : csv_path_(prof_csv_path),
-        csv_fd_(nullptr),
+  explicit CSVProfileReader(const char* prof_csv_path,
+                            ProfTimeCombinePolicy combine_policy)
+      : ProfileReader(prof_csv_path, combine_policy),
         ts_(-1),
         eof_(false),
-        combine_policy_(combine_policy),
         prev_ts_(-1),
         prev_sub_ts_(-1),
         prev_bid_(-1),
@@ -22,35 +23,9 @@ class ProfileReader {
     Reset();
   }
 
-  ProfileReader(const ProfileReader& other) = delete;
+  CSVProfileReader(const CSVProfileReader& other) = delete;
 
-  /* Following two snippets are to support move semantics
-   * for classes with non-RAII resources (in this case, FILE* ptrs)
-   * Another way to do this is to wrap the FILE* in a RAII class
-   * or a unique pointer
-   */
-  ProfileReader(ProfileReader&& rhs) noexcept
-      : csv_path_(rhs.csv_path_),
-        csv_fd_(rhs.csv_fd_),
-        ts_(rhs.ts_),
-        eof_(rhs.eof_),
-        combine_policy_(rhs.combine_policy_),
-        prev_ts_(rhs.prev_ts_),
-        prev_sub_ts_(rhs.prev_sub_ts_),
-        prev_bid_(rhs.prev_bid_),
-        prev_time_(rhs.prev_time_),
-        first_read_(rhs.first_read_),
-        prev_set_(rhs.prev_set_) {
-    if (this != &rhs) {
-      rhs.csv_fd_ = nullptr;
-    }
-  }
-
-  ProfileReader& operator=(ProfileReader&& rhs) = delete;
-
-  ~ProfileReader() { SafeCloseFile(); }
-
-  int ReadNextTimestep(std::vector<int>& times) {
+  int ReadNextTimestep(std::vector<int>& times) override {
     if (eof_) return -1;
 
     int nlines_read = 0;
@@ -71,9 +46,9 @@ class ProfileReader {
     logf(LOG_DBG2, "[ProfReader] Reset: %s", csv_path_.c_str());
     SafeCloseFile();
 
-    csv_fd_ = fopen(csv_path_.c_str(), "r");
+    fd_ = fopen(csv_path_.c_str(), "r");
 
-    if (csv_fd_ == nullptr) {
+    if (fd_ == nullptr) {
       logf(LOG_ERRO, "[ProfReader] Unable to open: %s", csv_path_.c_str());
       ABORT("Unable to open specified CSV");
     }
@@ -84,8 +59,8 @@ class ProfileReader {
   }
 
  private:
-  void ReadLine(char* buf, int max_sz) {
-    char* ret = fgets(buf, max_sz, csv_fd_);
+  void ReadLine(char* buf, int max_sz) const {
+    char* ret = fgets(buf, max_sz, fd_);
     int nbread = strlen(ret);
     if (ret[nbread - 1] != '\n') {
       ABORT("buffer too small for line");
@@ -104,8 +79,12 @@ class ProfileReader {
    * Returns: Number of blocks in current ts
    * (assuming contiguous bid allocation)
    */
-  int ReadTimestep(int ts_to_read, std::vector<int>& times, int& nlines_read) {
+  int ReadTimestep(int ts_to_read, std::vector<int>& times,
+                   int& nlines_read) override {
     if (eof_) return -1;
+
+    // Initialization hack
+    if (fd_ == nullptr) Reset();
 
     if (first_read_) {
       ReadHeader();
@@ -136,7 +115,7 @@ class ProfileReader {
 
     while (true) {
       int nread;
-      if ((nread = fscanf(csv_fd_, "%d,%d,%d,%d,%d", &ts, &sub_ts, &rank, &bid,
+      if ((nread = fscanf(fd_, "%d,%d,%d,%d,%d", &ts, &sub_ts, &rank, &bid,
                           &time_us)) == EOF) {
         eof_ = true;
         break;
@@ -172,17 +151,10 @@ class ProfileReader {
 
     if (combine_policy_ == ProfTimeCombinePolicy::kUseFirst) {
       if (times[bid] == 0) times[bid] = time_us;
-    } else if(combine_policy_ == ProfTimeCombinePolicy::kUseLast) {
+    } else if (combine_policy_ == ProfTimeCombinePolicy::kUseLast) {
       times[bid] = time_us;
     } else if (combine_policy_ == ProfTimeCombinePolicy::kAdd) {
-     times[bid] += time_us;
-    }
-  }
-
-  void SafeCloseFile() {
-    if (csv_fd_) {
-      fclose(csv_fd_);
-      csv_fd_ = nullptr;
+      times[bid] += time_us;
     }
   }
 
@@ -196,12 +168,8 @@ class ProfileReader {
     }
   }
 
-  const std::string csv_path_;
-  FILE* csv_fd_;
   int ts_;
   bool eof_;
-
-  ProfTimeCombinePolicy combine_policy_;
 
   int prev_ts_;
   int prev_sub_ts_;

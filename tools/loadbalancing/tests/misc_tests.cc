@@ -90,7 +90,7 @@ TEST_F(MiscTest, prof_reader_test) {
       "/Users/schwifty/Repos/amr-data/20230424-prof-tags/ref-mini/"
       "prof.merged.evt1.csv"};
 
-  ProfileReader reader(all_profs[1].c_str());
+  CSVProfileReader reader(all_profs[1].c_str(), ProfTimeCombinePolicy::kAdd);
 
   std::vector<int> times;
   int nlines_read;
@@ -123,7 +123,7 @@ TEST_F(MiscTest, prof_set_reader_test) {
       "/Users/schwifty/Repos/amr-data/20230424-prof-tags/ref-mini/"
       "prof.merged.evt1.csv"};
 
-  ProfSetReader reader(all_profs);
+  ProfSetReader reader(all_profs, ProfTimeCombinePolicy::kAdd);
   std::vector<int> times;
   int sub_ts = -1, rv;
 
@@ -170,5 +170,16 @@ TEST_F(MiscTest, ExtrapolateCosts3) {
   logf(LOG_DBUG, "Costs Prev: %s", SerializeVector(costs_prev, 10).c_str());
   logf(LOG_DBUG, "Costs Cur: %s", SerializeVector(costs_cur, 10).c_str());
   AssertApproxEqual(costs_cur, {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 5.5});
+}
+
+TEST_F(MiscTest, BinProfReaderTest) {
+  BinProfileReader bpreader("/Users/schwifty/CRAP/tmp.bin",
+                            ProfTimeCombinePolicy::kAdd);
+  std::vector<int> times;
+  while (true) {
+    int nread = bpreader.ReadNextTimestep(times);
+    if (nread == -1) break;
+    logf(LOG_INFO, "Times: %s", SerializeVector(times, 10).c_str());
+  }
 }
 }  // namespace amr

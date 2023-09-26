@@ -1,8 +1,11 @@
 #pragma once
 
 #include "policy.h"
+#include "prof_base.h"
 #include "prof_reader.h"
 #include "trace_utils.h"
+
+#include <filesystem>
 
 namespace amr {
 class ProfSetReader {
@@ -14,7 +17,13 @@ class ProfSetReader {
          Utils::GetProfTimeCombinePolicyStr(combine_policy).c_str());
 
     for (auto& fpath : fpaths) {
-      all_readers_.emplace_back(fpath.c_str(), combine_policy);
+      if (fpath.size() >= 4 and fpath.substr(fpath.size() - 4) == ".csv") {
+        all_readers_.emplace_back(
+            new CSVProfileReader(fpath.c_str(), combine_policy));
+      } else {
+        all_readers_.emplace_back(
+            new BinProfileReader(fpath.c_str(), combine_policy));
+      }
     }
   }
 
@@ -29,7 +38,7 @@ class ProfSetReader {
 
     for (auto& reader : all_readers_) {
       std::fill(times.begin(), times.end(), 0);
-      int rnblocks = reader.ReadNextTimestep(times);
+      int rnblocks = reader->ReadNextTimestep(times);
       nblocks = std::max(nblocks, rnblocks);
     }
 
@@ -53,7 +62,7 @@ class ProfSetReader {
 
     for (auto& reader : all_readers_) {
       int nlines_read = 0;
-      int rnblocks = reader.ReadTimestep(timestep, times, nlines_read);
+      int rnblocks = reader->ReadTimestep(timestep, times, nlines_read);
       nblocks = std::max(nblocks, rnblocks);
     }
 
@@ -71,7 +80,7 @@ class ProfSetReader {
   }
 
  private:
-  std::vector<ProfileReader> all_readers_;
+  std::vector<ProfileReader*> all_readers_;
   int nblocks_prev_;
 };
 }  // namespace amr
