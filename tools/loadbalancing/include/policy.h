@@ -43,7 +43,12 @@ enum class CostEstimationPolicy {
   kCachedExtrapolatedCost,
 };
 
-enum class TriggerPolicy { kUnspecified, kEveryTimestep, kOnMeshChange };
+enum class TriggerPolicy {
+  kUnspecified,
+  kEveryTimestep,
+  kEveryNTimesteps,
+  kOnMeshChange
+};
 
 class PolicyUtils {
  public:
@@ -102,6 +107,7 @@ struct PolicyExecOpts {
   int nblocks_init;
 
   int cache_ttl;
+  int trigger_interval;
 
  private:
   PolicyOptsILP lb_opts_ilp;
@@ -116,7 +122,8 @@ struct PolicyExecOpts {
         env(nullptr),
         nranks(0),
         nblocks_init(0),
-        cache_ttl(15) {}
+        cache_ttl(15),
+        trigger_interval(100) {}
 
   void SetPolicy(const char* name, LoadBalancePolicy lp,
                  CostEstimationPolicy cep, TriggerPolicy tp) {

@@ -52,10 +52,14 @@ class BlockSimulator {
     policy_opts.env = options_.env;
     policy_opts.nranks = options_.nranks;
     policy_opts.nblocks_init = options_.nblocks;
+    // XXX: hardcoded for now
+    policy_opts.trigger_interval = 1000;
+    logf(LOG_INFO, "Hardcoded trigger interval: %d\n",
+         policy_opts.trigger_interval);
 
     policy_opts.SetPolicy(
         "Actual/Actual-Cost", LoadBalancePolicy::kPolicyActual,
-        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kEveryNTimesteps);
     policies_.emplace_back(policy_opts);
 
     //    policy_opts.SetPolicy(
@@ -73,7 +77,7 @@ class BlockSimulator {
     policy_opts.SetPolicy("Contiguous/Extrapolated-Cost",
                           LoadBalancePolicy::kPolicyContiguousActualCost,
                           CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kOnMeshChange);
+                          TriggerPolicy::kEveryNTimesteps);
     policies_.emplace_back(policy_opts);
 
     // policy_opts.SetPolicy(
@@ -83,39 +87,39 @@ class BlockSimulator {
 
     policy_opts.SetPolicy(
         "LPT/Extrapolated-Cost", LoadBalancePolicy::kPolicyLPT,
-        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kEveryNTimesteps);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy("kContigImproved/Extrapolated-Cost",
                           LoadBalancePolicy::kPolicyContigImproved,
                           CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kOnMeshChange);
+                          TriggerPolicy::kEveryNTimesteps);
     policies_.emplace_back(policy_opts);
 
     policy_opts.SetPolicy(
         "CppIter/Extrapolated-Cost", LoadBalancePolicy::kPolicyCppIter,
-        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kOnMeshChange);
+        CostEstimationPolicy::kExtrapolatedCost, TriggerPolicy::kEveryNTimesteps);
     policies_.emplace_back(policy_opts);
 
     PolicyOptsILP ilp_opts;
     ilp_opts.obj_lb_time_limit = 100;
     ilp_opts.obj_loc_time_limit = 100;
-    
+
     ilp_opts.obj_lb_rel_tol = 0.10;
     ilp_opts.obj_lb_mip_gap = 0.10;
     ilp_opts.obj_loc_mip_gap = 0.10;
-    policy_opts.SetPolicy("ILP_10PCT/Actual-Cost", LoadBalancePolicy::kPolicyILP,
+    policy_opts.SetPolicy("ILP_10PCT/Actual-Cost",
+                          LoadBalancePolicy::kPolicyILP,
                           CostEstimationPolicy::kCachedExtrapolatedCost,
-                          TriggerPolicy::kOnMeshChange);
+                          TriggerPolicy::kEveryNTimesteps);
     policy_opts.SetLBOpts(ilp_opts);
 
-
-   policy_opts.cache_ttl = 400;
-   policy_opts.SetPolicy("LPT/Extrapolated-Cost-Cached",
-                         LoadBalancePolicy::kPolicyLPT,
-                         CostEstimationPolicy::kCachedExtrapolatedCost,
-                         TriggerPolicy::kOnMeshChange);
-   policies_.emplace_back(policy_opts);
+    policy_opts.cache_ttl = 400;
+    policy_opts.SetPolicy("LPT/Extrapolated-Cost-Cached",
+                          LoadBalancePolicy::kPolicyLPT,
+                          CostEstimationPolicy::kCachedExtrapolatedCost,
+                          TriggerPolicy::kEveryNTimesteps);
+    policies_.emplace_back(policy_opts);
     //
     //    policy_opts.SetPolicy(
     //        "LPT/Actual-Cost-Oracle", LoadBalancePolicy::kPolicyLPT,

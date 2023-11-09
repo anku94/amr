@@ -51,6 +51,8 @@ std::string PolicyUtils::PolicyToString(CostEstimationPolicy policy) {
 
 std::string PolicyUtils::PolicyToString(TriggerPolicy policy) {
   switch (policy) {
+    case TriggerPolicy::kEveryNTimesteps:
+      return "EveryNTimesteps";
     case TriggerPolicy::kEveryTimestep:
       return "EveryTimestep";
     case TriggerPolicy::kOnMeshChange:

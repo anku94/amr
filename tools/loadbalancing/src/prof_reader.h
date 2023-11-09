@@ -139,33 +139,9 @@ class CSVProfileReader : public ProfileReader {
          SerializeVector(times_cur, 10).c_str());
     AddVec2Vec(times, times_cur);
     logf(LOG_DBG2, "[ProfReader] Times (tot): %s",
-         SerializeVector(times_cur, 10).c_str());
+         SerializeVector(times, 10).c_str());
 
     return max_bid + 1;
-  }
-
-  void LogTime(std::vector<int>& times, int bid, int time_us) const {
-    if (times.size() <= bid) {
-      times.resize(bid + 1, 0);
-    }
-
-    if (combine_policy_ == ProfTimeCombinePolicy::kUseFirst) {
-      if (times[bid] == 0) times[bid] = time_us;
-    } else if (combine_policy_ == ProfTimeCombinePolicy::kUseLast) {
-      times[bid] = time_us;
-    } else if (combine_policy_ == ProfTimeCombinePolicy::kAdd) {
-      times[bid] += time_us;
-    }
-  }
-
-  static void AddVec2Vec(std::vector<int>& dest, std::vector<int> const& src) {
-    if (dest.size() < src.size()) {
-      dest.resize(src.size(), 0);
-    }
-
-    for (int i = 0; i < src.size(); i++) {
-      dest[i] += src[i];
-    }
   }
 
   int ts_;

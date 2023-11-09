@@ -3,6 +3,7 @@
 //
 
 #include "lb_policies.h"
+#include "common.h"
 
 #include <gtest/gtest.h>
 

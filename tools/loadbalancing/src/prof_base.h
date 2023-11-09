@@ -45,6 +45,31 @@ class ProfileReader {
     }
   }
 
+  static void AddVec2Vec(std::vector<int>& dest, std::vector<int> const& src) {
+    if (dest.size() < src.size()) {
+      dest.resize(src.size(), 0);
+    }
+
+    for (int i = 0; i < src.size(); i++) {
+      dest[i] += src[i];
+    }
+  }
+
+  void LogTime(std::vector<int>& times, int bid, int time_us) const {
+    if (times.size() <= bid) {
+      times.resize(bid + 1, 0);
+    }
+
+    if (combine_policy_ == ProfTimeCombinePolicy::kUseFirst) {
+      if (times[bid] == 0) times[bid] = time_us;
+    } else if (combine_policy_ == ProfTimeCombinePolicy::kUseLast) {
+      times[bid] = time_us;
+    } else if (combine_policy_ == ProfTimeCombinePolicy::kAdd) {
+      times[bid] += time_us;
+    }
+  }
+
+
   const std::string csv_path_;
   ProfTimeCombinePolicy combine_policy_;
   FILE* fd_;
@@ -75,8 +100,9 @@ class BinProfileReader : public ProfileReader {
     }
 
     if (ts_to_read < 0) {
-      logf(LOG_ERRO, "[ProfReader] Invalid ts_to_read: %d", ts_to_read);
-      ABORT("Invalid ts_to_read.");
+      logf(LOG_WARN, "[ProfReader] Invalid ts_to_read: %d", ts_to_read);
+      // ABORT("Invalid ts_to_read.");
+      return 0;
     }
 
     int ts_read;
@@ -91,13 +117,23 @@ class BinProfileReader : public ProfileReader {
     nitems = fread(&nblocks, sizeof(int), 1, fd_);
     ASSERT_NREAD(nitems, 1);
 
-    times.resize(nblocks);
-    nitems = fread(times.data(), sizeof(int), nblocks, fd_);
+    std::vector<int> times_cur(nblocks, 0);
+    if (times.size() < nblocks) {
+      times.resize(nblocks, 0);
+    }
+
+    nitems = fread(times_cur.data(), sizeof(int), nblocks, fd_);
     ASSERT_NREAD(nitems, nblocks);
 
     if (ts_to_read != ts_read) {
       logf(LOG_WARN, "Expected: %d, Read: %d", ts_to_read, ts_read);
     }
+
+    logf(LOG_DBG2, "[ProfReader] Times (cur): %s",
+         SerializeVector(times_cur, 10).c_str());
+    AddVec2Vec(times, times_cur);
+    logf(LOG_DBG2, "[ProfReader] Times (tot): %s",
+         SerializeVector(times, 10).c_str());
 
     nlines_read = nblocks;
     return nblocks;
@@ -107,21 +143,23 @@ class BinProfileReader : public ProfileReader {
     if (eof_) return -1;
     ReadHeader();
 
-    int ts_read;
-    int nblocks;
+    logf(LOG_WARN, "Not implemented.");
 
-    int nitems = fread(&ts_read, sizeof(int), 1, fd_);
-    if (nitems < 1) {
-      eof_ = true;
-      return -1;
-    }
+    // int ts_read;
+    // int nblocks;
 
-    nitems = fread(&nblocks, sizeof(int), 1, fd_);
-    ASSERT_NREAD(nitems, 1);
+    // int nitems = fread(&ts_read, sizeof(int), 1, fd_);
+    // if (nitems < 1) {
+      // eof_ = true;
+      // return -1;
+    // }
 
-    times.resize(nblocks);
-    nitems = fread(times.data(), sizeof(int), nblocks, fd_);
-    ASSERT_NREAD(nitems, nblocks);
+    // nitems = fread(&nblocks, sizeof(int), 1, fd_);
+    // ASSERT_NREAD(nitems, 1);
+
+    // times.resize(nblocks);
+    // nitems = fread(times.data(), sizeof(int), nblocks, fd_);
+    // ASSERT_NREAD(nitems, nblocks);
 
     return 0;
   }

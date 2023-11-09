@@ -61,10 +61,17 @@ class Utils {
     }
 
     // Disabled \d as we only need two specific evts
+    // std::vector<std::string> regex_patterns = {
+        // R"(prof\.merged\.evt(\d+)\.csv)",
+        // R"(prof\.merged\.evt(\d+)\.mini\.csv)",
+        // R"(prof\.aggr\.evt(\d+)\.csv)",
+    // };
+
     std::vector<std::string> regex_patterns = {
         R"(prof\.merged\.evt(\d+)\.csv)",
         R"(prof\.merged\.evt(\d+)\.mini\.csv)",
         R"(prof\.aggr\.evt(\d+)\.csv)",
+        R"(evt(\d+)\.mat\.bin)",
     };
 
     std::vector<std::string> relevant_files;

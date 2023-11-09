@@ -56,6 +56,7 @@ PolicyExecCtx::PolicyExecCtx(PolicyExecOpts& opts)
       ts_(0),
       ts_lb_invoked_(0),
       ts_lb_succeeded_(0),
+      ts_since_last_lb_(0),
       exec_time_us_(0),
       cost_cache_(opts_.cache_ttl) {
   Bootstrap();

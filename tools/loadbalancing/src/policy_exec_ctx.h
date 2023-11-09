@@ -49,10 +49,14 @@ class PolicyExecCtx {
  private:
   void Bootstrap();
 
-  static bool ComputeLBTrigger(TriggerPolicy tp, LoadBalanceState& state) {
-    if (tp == TriggerPolicy::kEveryTimestep) return true;
-
-    return (!state.refs.empty() || !state.derefs.empty());
+  bool ComputeLBTrigger(TriggerPolicy tp, LoadBalanceState& state) {
+    if (tp == TriggerPolicy::kEveryTimestep) {
+      return true;
+    } else if (tp == TriggerPolicy::kEveryNTimesteps) {
+      return (ts_ % opts_.trigger_interval == 0) ? true : false;
+    } else {
+      return (!state.refs.empty() || !state.derefs.empty());
+    }
   }
 
   void ComputeCosts(int ts, std::vector<double> const& costlist_oracle,
@@ -116,6 +120,7 @@ class PolicyExecCtx {
   int ts_;
   int ts_lb_invoked_;
   int ts_lb_succeeded_;
+  int ts_since_last_lb_;
   double exec_time_us_;
 
   friend class MiscTest;
