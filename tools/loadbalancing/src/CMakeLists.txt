@@ -26,7 +26,7 @@ target_include_directories(lb PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<BUILD_INTERFACE:${common_include}>
         $<INSTALL_INTERFACE:include>
-        )
+)
 
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
 target_link_libraries(lb PRIVATE pdlfs-common fort)
@@ -45,6 +45,9 @@ target_link_libraries(scale-sim PRIVATE lb pdlfs-common fort)
 
 add_executable(cluster-sim cluster_main.cc)
 target_link_libraries(cluster-sim PRIVATE lb pdlfs-common fort)
+
+add_executable(benchmark benchmarks/benchmark_main.cc benchmarks/benchmark.cc benchmarks/alias_method.cc)
+target_link_libraries(benchmark PRIVATE lb pdlfs-common fort)
 
 #
 # "make install" rules

@@ -36,7 +36,8 @@ class Solver {
 
   int AssignBlocks(std::vector<double> const& costlist,
                    std::vector<int>& ranklist, int nranks,
-                   const double target_cost, int& niters) {
+                   const double target_cost, int& niters,
+                   const int max_iters = kMaxIters) {
     nranks_ = nranks;
     double avg_cost, max_cost;
 
@@ -51,8 +52,8 @@ class Solver {
       LogRankStats(niters, avg_cost, max_cost);
       niters++;
 
-      if (niters == kMaxIters) {
-        logf(LOG_WARN, "Solver hit kMaxIters. Ending prem...");
+      if (niters == max_iters) {
+        logf(LOG_WARN, "Solver hit kMaxIters (%d). Ending prem...", max_iters);
         break;
       }
     }
@@ -96,7 +97,7 @@ class Solver {
     for (int block_idx = 0; block_idx < costlist.size(); block_idx++) {
       int rank = ranklist[block_idx];
       if (rank >= ranks.size()) {
-        ABORT("Rank > nranks");
+        ABORT("Rank > nranks_");
       }
 
       ranks[rank].AddBlock(block_idx, costlist[block_idx]);
@@ -184,6 +185,7 @@ class Solver {
   std::vector<Rank> ranks_;
   std::vector<std::pair<double, int>> rank_cost_vec_;
 
+ public:
   static constexpr int kMaxIters = 250;
 };
 }  // namespace amr

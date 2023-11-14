@@ -38,7 +38,7 @@ class ScaleExecLog : public WritableCSVFile {
  private:
   void WriteHeader() override {
     const char* str =
-        "policy,nblocks,nranks,iter_time,rt_avg,rt_max,loc_cost\n";
+        "policy,nblocks,nranks_,iter_time,rt_avg,rt_max,loc_cost\n";
     Append(str);
 
     table_ << fort::header << "Policy"

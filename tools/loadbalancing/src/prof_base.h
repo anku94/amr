@@ -69,7 +69,6 @@ class ProfileReader {
     }
   }
 
-
   const std::string csv_path_;
   ProfTimeCombinePolicy combine_policy_;
   FILE* fd_;
@@ -79,9 +78,7 @@ class BinProfileReader : public ProfileReader {
  public:
   BinProfileReader(const char* prof_csv_path,
                    ProfTimeCombinePolicy combine_policy)
-      : ProfileReader(prof_csv_path, combine_policy),
-        eof_(false),
-        nts_(-1) {}
+      : ProfileReader(prof_csv_path, combine_policy), eof_(false), nts_(-1) {}
 
 #define ASSERT_NREAD(a, b)                                                     \
   if (a != b) {                                                                \
@@ -150,8 +147,8 @@ class BinProfileReader : public ProfileReader {
 
     // int nitems = fread(&ts_read, sizeof(int), 1, fd_);
     // if (nitems < 1) {
-      // eof_ = true;
-      // return -1;
+    // eof_ = true;
+    // return -1;
     // }
 
     // nitems = fread(&nblocks, sizeof(int), 1, fd_);

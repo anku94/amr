@@ -170,7 +170,7 @@ int LoadBalancePolicies::AssignBlocksContigImproved(
   int nblocks = costlist.size();
   if (nblocks % nranks == 0) {
     logf(LOG_DBUG,
-         "Blocks evenly divisible by nranks, using AssignBlocksContiguous");
+         "Blocks evenly divisible by nranks_, using AssignBlocksContiguous");
     return AssignBlocksContiguous(costlist, ranklist, nranks);
   } else {
     return ::AssignBlocksDP(costlist, ranklist, nranks);

@@ -80,14 +80,14 @@ void ParseOptions(int argc, char* argv[]) {
   }
 
   if (options.nranks < 0) {
-    logf(LOG_ERRO, "No nranks specified!");
+    logf(LOG_ERRO, "No nranks_ specified!");
     PrintHelp(argc, argv);
   }
 
   options.output_dir = options.prof_dir + "/block_sim";
 
   logf(LOG_INFO,
-       "[Initial Parameters] nranks=%d, nblocks=%d, nts=%d\n"
+       "[Initial Parameters] nranks_=%d, nblocks=%d, nts=%d\n"
        "output_dir=%s",
        options.nranks, options.nblocks, options.nts,
        options.output_dir.c_str());

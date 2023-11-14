@@ -71,7 +71,8 @@ class LoadBalancePolicies {
                                         std::vector<int>& ranklist, int nranks);
 
   static int AssignBlocksCppIter(std::vector<double> const& costlist,
-                                 std::vector<int>& ranklist, int nranks);
+                                 std::vector<int>& ranklist, int nranks,
+                                 void* opts = nullptr);
 
   friend class LoadBalancingPoliciesTest;
   friend class PolicyTest;

@@ -40,7 +40,7 @@ int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
     case LoadBalancePolicy::kPolicyContigImproved:
       return AssignBlocksContigImproved(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyCppIter:
-      return AssignBlocksCppIter(costlist, ranklist, nranks);
+      return AssignBlocksCppIter(costlist, ranklist, nranks, opts);
     default:
       ABORT("LoadBalancePolicy not implemented!!");
   }

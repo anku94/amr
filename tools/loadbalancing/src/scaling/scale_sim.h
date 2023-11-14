@@ -97,7 +97,7 @@ class ScaleSim {
 
     for (auto& policy : policies_) {
       for (auto& r : run_profiles) {
-        logf(LOG_DBUG, "[Running profile] nranks: %d, nblocks: %d", r.nranks,
+        logf(LOG_DBUG, "[Running profile] nranks_: %d, nblocks: %d", r.nranks,
              r.nblocks);
 
         if (costs.size() != r.nblocks) {
