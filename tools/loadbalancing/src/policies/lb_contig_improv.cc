@@ -60,7 +60,7 @@ double GetSumRange(std::vector<double> const& cum_sum, int a, int b) {
 }
 
 int AssignBlocksDP(std::vector<double> const& costlist,
-                    std::vector<int>& ranklist, int nranks) {
+                   std::vector<int>& ranklist, int nranks) {
   double cost_total = std::accumulate(costlist.begin(), costlist.end(), 0.0);
   double cost_target = cost_total / nranks;
   logf(LOG_DBG2, "Target Cost: %.2lf", cost_target);
@@ -78,7 +78,9 @@ int AssignBlocksDP(std::vector<double> const& costlist,
 
   const double kBigDouble = cost_total * 1e3;
   //  std::vector<double> dp(nblocks + 1, kBigDouble);
-  double dp[nalloc_a + 1][nalloc_b + 1];
+  //  double dp[nalloc_a + 1][nalloc_b + 1];
+  std::vector<std::vector<double>> dp(nalloc_a + 1,
+                                      std::vector<double>(nalloc_b + 1));
   for (int i = 0; i <= nalloc_a; i++) {
     for (int j = 0; j <= nalloc_b; j++) {
       dp[i][j] = kBigDouble;

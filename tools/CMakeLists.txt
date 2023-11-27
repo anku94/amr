@@ -29,3 +29,4 @@ set(BUILD_SHARED_LIBS ON)
 
 add_subdirectory(topobench)
 add_subdirectory(loadbalancing)
+add_subdirectory(ember-benchmarks)

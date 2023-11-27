@@ -9,7 +9,7 @@
 #include <utility>
 
 namespace amr {
-class BenchmarkRow : public Row {
+class BenchmarkRow : public TableRow {
  private:
   int nranks_;
   int nblocks_;

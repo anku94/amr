@@ -122,12 +122,17 @@ std::string SerializeVector(std::vector<T> const& v, int trunc_count = -1) {
   }
 
   int idx = 0;
+  ss << std::endl;
   for (auto n : v) {
     ss << n << " ";
     idx++;
     if (trunc_count == idx) {
       ss << "... <truncated>";
       break;
+    }
+
+    if (idx % 10 == 0) {
+      ss << std::endl;
     }
   }
 

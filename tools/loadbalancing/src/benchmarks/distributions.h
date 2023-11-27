@@ -6,8 +6,50 @@
 
 #include <vector>
 
+namespace amr {
+enum class Distribution {
+  kGaussian,
+  kExponential,
+  kPowerLaw,
+};
+
 class DistributionUtils {
  public:
+  static std::string DistributionToString(Distribution d) {
+    switch (d) {
+      case Distribution::kGaussian:
+        return "Gaussian";
+      case Distribution::kExponential:
+        return "Exponential";
+      case Distribution::kPowerLaw:
+        return "PowerLaw";
+      default:
+        return "Uniform";
+    }
+  }
+
+  static void GenDistribution(Distribution d, std::vector<double>& costs,
+                              int nblocks) {
+    logf(LOG_INFO, "[GenDistribution] Distribution: %s, nblocks: %d",
+         DistributionToString(d).c_str(), nblocks);
+
+    costs.resize(nblocks);
+
+    switch (d) {
+      case Distribution::kGaussian:
+        GenGaussian(costs, nblocks, 10.0, 0.5);
+        break;
+      case Distribution::kExponential:
+        GenExponential(costs, nblocks, 1);
+        break;
+      case Distribution::kPowerLaw:
+        GenPowerLaw(costs, nblocks, -3.0, 50, 100);
+        break;
+      default:
+        GenUniform(costs, nblocks);
+        break;
+    }
+  }
   static void GenUniform(std::vector<double>& costs, int nblocks) {
     costs.resize(nblocks);
     for (int i = 0; i < nblocks; i++) {
@@ -70,3 +112,4 @@ class DistributionUtils {
     }
   }
 };
+}  // namespace amr

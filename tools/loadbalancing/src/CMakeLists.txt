@@ -5,6 +5,8 @@ find_package(GUROBI REQUIRED)
 # We're essentially overriding the top-level directive... do something else?
 set(CMAKE_CXX_STANDARD 11)
 
+add_subdirectory(benchmarks)
+
 set(lb_srcs
         policies/lb_contig_improv.cc
         policies/lb_ilp.cc
@@ -46,8 +48,6 @@ target_link_libraries(scale-sim PRIVATE lb pdlfs-common fort)
 add_executable(cluster-sim cluster_main.cc)
 target_link_libraries(cluster-sim PRIVATE lb pdlfs-common fort)
 
-add_executable(benchmark benchmarks/benchmark_main.cc benchmarks/benchmark.cc benchmarks/alias_method.cc)
-target_link_libraries(benchmark PRIVATE lb pdlfs-common fort)
 
 #
 # "make install" rules
