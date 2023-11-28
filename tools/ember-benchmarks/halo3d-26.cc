@@ -21,6 +21,10 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "utils.h"
+
+const char* map_file;
+
 void get_position(const int rank, const int pex, const int pey, const int pez,
                   int* myX, int* myY, int* myZ) {
   const int plane = rank % (pex * pey);
@@ -36,18 +40,22 @@ int convert_position_to_rank(const int pX, const int pY, const int pZ,
       (myZ >= pZ)) {
     return -1;
   } else {
-    return (myZ * (pX * pY)) + (myY * pX) + myX;
+    int log_rank = (myZ * (pX * pY)) + (myY * pX) + myX;
+    return get_physical_rank(map_file, log_rank);
   }
 }
 
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
 
+  int me_real = -1;
   int me = -1;
   int world = -1;
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &me);
+  MPI_Comm_rank(MPI_COMM_WORLD, &me_real);
   MPI_Comm_size(MPI_COMM_WORLD, &world);
+
+  me = me_real;
 
   int pex = world;
   int pey = 1;
@@ -162,6 +170,17 @@ int main(int argc, char* argv[]) {
 
       sleep = atol(argv[i + 1]);
       ++i;
+    } else if (strcmp(argv[i], "-map") == 0) {
+      if (i == argc) {
+        if (me == 0) {
+          fprintf(stderr, "Error: specified -map without a value.\n");
+        }
+
+        exit(-1);
+      }
+
+      map_file = argv[i + 1];
+      ++i;
     } else {
       if (0 == me) {
         fprintf(stderr, "Unknown option: %s\n", argv[i]);
@@ -192,7 +211,11 @@ int main(int argc, char* argv[]) {
     printf("# Iterations:             %7d\n", repeats);
     printf("# Variables:              %7d\n", vars);
     printf("# Sleep:                  %7ld\n", sleep);
+    printf("# Map File:               %s\n", map_file);
   }
+  
+  me = get_logical_rank(map_file, me_real);
+  printf("Rank %d is now rank %d\n", me_real, me);
 
   int posX, posY, posZ;
   get_position(me, pex, pey, pez, &posX, &posY, &posZ);
