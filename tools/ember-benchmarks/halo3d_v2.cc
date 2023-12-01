@@ -45,8 +45,9 @@ class BufferSuite {
 
 class Communicator {
  public:
-  Communicator(Triplet my_pos, Triplet bounds, Triplet n, int nvars)
-      : my_pos_(my_pos),
+  Communicator(int rank, Triplet my_pos, Triplet bounds, Triplet n, int nvars)
+      : rank_(rank),
+        my_pos_(my_pos),
         bounds_(bounds),
         nrg_(my_pos_, bounds_),
         buffer_suite_(n, nvars),
@@ -58,6 +59,7 @@ class Communicator {
     DoEdge(req_count);
 
     MPI_Waitall(req_count, request_, status_);
+    AssertAllSuccess(status_, req_count);
   }
 
   uint64_t GetBytesExchanged() const { return bytes_total_; }
@@ -95,7 +97,7 @@ class Communicator {
   }
 
   void DoCommSingle(BufferPair& buffer_pair, int dest, int msg_size,
-                    int req_count) {
+                    int& req_count) {
     MPI_Isend(buffer_pair.send_buffer_.data(), buffer_pair.send_buffer_.size(),
               MPI_DOUBLE, dest, msg_size, MPI_COMM_WORLD,
               &request_[req_count++]);
@@ -106,7 +108,30 @@ class Communicator {
     bytes_total_ += msg_size;
   }
 
+  void LogMPIStatus(MPI_Status* all_status, int n) {
+    if (rank_ != 0) return;
+
+    int nsuccess = 0;
+    for (int i = 0; i < n; i++) {
+      if (all_status[i].MPI_ERROR == MPI_SUCCESS) {
+        nsuccess++;
+      }
+    }
+
+    printf("MPI_Status: %d/%d success\n", nsuccess, n);
+  }
+
+  void AssertAllSuccess(MPI_Status* all_status, int n) {
+    for (int i = 0; i < n; i++) {
+      if (all_status[i].MPI_ERROR != MPI_SUCCESS) {
+        printf("MPI_Status: %d/%d success\n", i, n);
+        exit(1);
+      }
+    }
+  }
+
  private:
+  int rank_;
   Triplet my_pos_;
   Triplet bounds_;
   NeighborRankGenerator nrg_;
@@ -153,12 +178,16 @@ class Block {
 
   void RunRank(int rank) {
     Triplet my_pos = PositionUtils::GetPosition(rank, proc_grid_);
-    Communicator comm(my_pos, proc_grid_, data_grid_, nvars_);
+    Communicator comm(rank, my_pos, proc_grid_, data_grid_, nvars_);
+
+    if (IsCenter(my_pos, proc_grid_)) {
+      printf("Doing communication for %d iterations.\n", iters_);
+    }
 
     auto beg_us = GetMicros();
 
     for (int i = 0; i < iters_; i++) {
-      if (i == 0) DoSleep();
+      // if (i == 0) DoSleep();
       comm.DoIteration();
     }
 
@@ -169,8 +198,9 @@ class Block {
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (IsCenter(my_pos, proc_grid_)) {
-      printf("# %20s %20s %20s\n", "Time", "KBytesXchng/Rank-Max", "MB/S/Rank");
-      printf("  %20.3f %20.3f %20.3f\n", time_us, size_kb, size_kb / time_sec);
+      printf("%20s %20s %20s\n", "Time", "KBXchng/Rank-Max", "MB/S/Rank");
+      printf("%20.3f %20.3f %20.3f\n", time_sec, size_kb,
+             (size_kb / 1024.0) / time_sec);
     }
   }
 
@@ -197,7 +227,15 @@ class Block {
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   EmberOpts opts = EmberUtils::ParseOptions(argc, argv);
+
+  if (rank == 0) {
+    printf("Running halo3d_v2\n");
+    printf("%s\n", opts.ToString().c_str());
+  }
 
   Block block(opts);
   block.Run();

@@ -33,6 +33,7 @@ class PositionUtils {
     my_pos.y = plane / bounds.x;
     my_pos.x = (plane % bounds.x) != 0 ? (plane % bounds.x) : 0;
     my_pos.z = rank / (bounds.x * bounds.y);
+    return my_pos;
   }
 
   static int GetRank(Triplet bounds, Triplet my) {

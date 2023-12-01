@@ -23,13 +23,13 @@ struct EmberOpts {
       : nx(10),
         ny(10),
         nz(10),
-        pex(1),
-        pey(1),
-        pez(1),
-        iterations(100),
+        pex(4),
+        pey(4),
+        pez(4),
+        iterations(10),
         vars(1),
         sleep(1000),
-        map(nullptr) {}
+        map("<undefined>") {}
 
   std::string ToString() const {
     char str_buf[1024];
@@ -72,6 +72,7 @@ class EmberUtils {
         " -v 1 -i 1000 -m map.txt";
     printf("%s\n", help_str);
   }
+
   static EmberOpts ParseOptions(int argc, char* argv[]) {
     EmberOpts opts;
 
