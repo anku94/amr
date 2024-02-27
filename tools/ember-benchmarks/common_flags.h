@@ -79,8 +79,8 @@ class EmberUtils {
     opts.iterations = FLAGS_iterations;
     opts.vars = FLAGS_vars;
     opts.sleep = FLAGS_sleep;
-    // opts.map = FLAGS_map.c_str();
-    opts.map = nullptr;
+    opts.map = FLAGS_map.c_str();
+    // opts.map = nullptr;
 
     return opts;
   }

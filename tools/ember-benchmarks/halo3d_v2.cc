@@ -3,7 +3,6 @@
 //
 
 #include "block_common.h"
-// #include "common.h"
 #include "common_flags.h"
 
 #include <cerrno>
@@ -208,8 +207,7 @@ class Block {
         proc_grid_(opts.pex, opts.pey, opts.pez),
         iters_(opts.iterations),
         nvars_(opts.vars),
-        sleep_(opts.sleep),
-        rank_map_(opts.map) {}
+        sleep_(opts.sleep) {}
 
   void Run() {
     int my_rank;
@@ -218,7 +216,7 @@ class Block {
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    int log_rank = rank_map_.GetLogicalRank(my_rank);
+    int log_rank = RANK_MAP->GetLogicalRank(my_rank);
     if (my_rank == 0) {
       printf("Rank %d is mapped to %d\n", my_rank, log_rank);
     }
@@ -285,7 +283,6 @@ class Block {
   int iters_;
   int nvars_;
   int sleep_;
-  RankMap rank_map_;
 };
 
 int main(int argc, char* argv[]) {
@@ -297,8 +294,11 @@ int main(int argc, char* argv[]) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+  int nranks;
+  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+
   EmberOpts opts = EmberUtils::ParseOptions(argc, argv);
-  kRankMapFile = opts.map;
+  RANK_MAP = std::make_unique<RankMap>(nranks, opts.map);
 
   if (rank == 0) {
     printf("Running halo3d_v2\n");
