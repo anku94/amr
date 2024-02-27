@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "common.h"
 #include "lb_policies.h"
 
 #include <regex>
@@ -52,6 +51,8 @@ enum class TriggerPolicy {
 
 class PolicyUtils {
  public:
+  static LoadBalancePolicy StringToPolicy(std::string const& policy_str);
+
   static std::string PolicyToString(LoadBalancePolicy policy);
 
   static std::string PolicyToString(CostEstimationPolicy policy);
@@ -84,13 +85,7 @@ class PolicyUtils {
   }
 
   static std::string GetLogPath(const char* output_dir, const char* policy_name,
-                                const char* suffix) {
-    std::string result = GetSafePolicyName(policy_name);
-    result = std::string(output_dir) + "/" + result + "." + suffix;
-    logf(LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s", policy_name,
-         result.c_str());
-    return result;
-  }
+                                const char* suffix);
 };
 
 struct PolicyExecOpts {

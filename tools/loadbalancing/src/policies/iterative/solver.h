@@ -53,7 +53,7 @@ class Solver {
       niters++;
 
       if (niters == max_iters) {
-        logf(LOG_WARN, "Solver hit kMaxIters (%d). Ending prem...", max_iters);
+        // logf(LOG_WARN, "Solver hit kMaxIters (%d). Ending prem...", max_iters);
         break;
       }
     }
@@ -107,13 +107,39 @@ class Solver {
   void Iterate() {
     std::sort(rank_cost_vec_.begin(), rank_cost_vec_.end());
 
-    int lb_bidx, sb_bidx, lb_rank, sb_rank;
-    double lb_cost, sb_cost;
+    int sb_rank, lb_rank;
 
     lb_rank = rank_cost_vec_.back().second;
+    sb_rank = rank_cost_vec_.front().second;
+
+    if (ranks_[sb_rank].HasBlocks()) {
+      IterateUtilBothWays(sb_rank, lb_rank);
+    } else {
+      logf(LOG_WARN, "[Solver][Iterate] Rank %d has no blocks!", sb_rank);
+      IterateUtilOneWay(sb_rank, lb_rank);
+    }
+  }
+
+  void IterateUtilOneWay(int sb_rank, int lb_rank) {
+    int lb_bidx;
+    double lb_cost;
+
     ranks_[lb_rank].GetLargestBlock(lb_bidx, lb_cost);
 
-    sb_rank = rank_cost_vec_.front().second;
+    logf(LOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank,
+         0, lb_rank, ranks_[lb_rank].GetCost());
+    logf(LOG_DBG2,
+         "Swapping blocks (c%.0lf, r%d) and (c%.0lf, r%d). (Reduction: %.0lf)",
+         0, sb_rank, lb_cost, lb_rank, lb_cost);
+
+    TransferBlock(lb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
+  }
+
+  void IterateUtilBothWays(int sb_rank, int lb_rank) {
+    int lb_bidx, sb_bidx;
+    double lb_cost, sb_cost;
+
+    ranks_[lb_rank].GetLargestBlock(lb_bidx, lb_cost);
     ranks_[sb_rank].GetSmallestBlock(sb_bidx, sb_cost);
 
     logf(LOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank,
@@ -125,8 +151,6 @@ class Solver {
     TransferBlock(lb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
     TransferBlock(sb_bidx, sb_rank, lb_rank, 0, nranks_ - 1);
 
-    logf(LOG_DBG2, "After. r%d: %.0lf, r%d: %.0lf", sb_rank,
-         ranks_[sb_rank].GetCost(), lb_rank, ranks_[lb_rank].GetCost());
   }
 
   void TransferBlock(int bidx, int src_rank, int dest_rank, int src_ridx,

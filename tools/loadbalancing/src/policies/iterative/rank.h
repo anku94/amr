@@ -78,6 +78,10 @@ class Rank {
     }
   }
 
+  bool HasBlocks() const {
+    return !block_vec_.empty();
+  }
+
   const int rank_;
 
  private:

@@ -15,9 +15,9 @@ int LoadBalancePolicies::AssignBlocksCppIter(
 
   int max_iters = Solver::kMaxIters;
 
-  if (opts != nullptr) {
-    max_iters = *(int*)opts;
-  }
+  // if (opts != nullptr) {
+    // max_iters = *(int*)opts;
+  // }
 
   double avg_cost, max_cost_lpt, max_cost_cpp, max_cost_iter;
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_lpt);
@@ -28,8 +28,8 @@ int LoadBalancePolicies::AssignBlocksCppIter(
   if (rv) return rv;
 
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_cpp);
-  logf(LOG_INFO, "Contig++. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
-       max_cost_cpp);
+  // logf(LOG_INFO, "Contig++. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
+       // max_cost_cpp);
 
   auto solver = Solver();
   int iters;

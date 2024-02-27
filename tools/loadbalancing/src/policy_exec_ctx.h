@@ -36,7 +36,8 @@ class PolicyExecCtx {
                       std::vector<int>& refs, std::vector<int>& derefs);
 
   static int GetNumBlocksNext(int nblocks, int nrefs, int nderefs) {
-    int nblocks_next = nblocks + (nrefs * 7) - (nderefs * 7 / 8);
+    // int nblocks_next = nblocks + (nrefs * 7) - (nderefs * 7 / 8);
+    int nblocks_next = nblocks + (nrefs * 3) - (nderefs * 3 / 4);
     return nblocks_next;
   }
 
@@ -50,13 +51,11 @@ class PolicyExecCtx {
   void Bootstrap();
 
   bool ComputeLBTrigger(TriggerPolicy tp, LoadBalanceState& state) {
-    if (tp == TriggerPolicy::kEveryTimestep) {
-      return true;
-    } else if (tp == TriggerPolicy::kEveryNTimesteps) {
-      return (ts_ % opts_.trigger_interval == 0) ? true : false;
-    } else {
-      return (!state.refs.empty() || !state.derefs.empty());
-    }
+    bool ref_trig = !state.refs.empty() || !state.derefs.empty();
+    bool trig_intvl = (tp == TriggerPolicy::kEveryTimestep) ? 1 : opts_.trigger_interval;
+    bool ts_trig = (ts_ % trig_intvl == 0);
+
+    return ts_trig | ref_trig;
   }
 
   void ComputeCosts(int ts, std::vector<double> const& costlist_oracle,

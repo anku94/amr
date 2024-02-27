@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "common.h"
+#include "policy.h"
+
 namespace amr {
 class ProfileReader {
  public:

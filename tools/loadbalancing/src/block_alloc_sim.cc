@@ -60,7 +60,9 @@ int BlockSimulator::RunTimestep(int& ts, int sub_ts) {
 
   if (ts_rr != -1) assert(ts_rr == ts);
 
-  rv = prof_reader_.ReadTimestep(sub_ts - 1, times);
+  // XXX: commented out on 20240129, stochsg/mat.bin follows different convention?
+  // rv = prof_reader_.ReadTimestep(sub_ts - 1, times);
+  rv = prof_reader_.ReadTimestep(sub_ts, times);
   logf(LOG_DBUG, "[BlockSim] [ProfSetReader] RV: %d, Times: %s", rv,
        SerializeVector(times, 10).c_str());
   if (times.size() != block_assignments.size()) {

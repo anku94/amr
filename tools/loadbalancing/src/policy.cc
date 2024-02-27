@@ -2,8 +2,10 @@
 // Created by Ankush J on 5/4/23.
 //
 
-#include "constants.h"
 #include "policy.h"
+
+#include "common.h"
+#include "constants.h"
 
 #include <algorithm>
 #include <cassert>
@@ -11,6 +13,22 @@
 #include <string>
 
 namespace amr {
+LoadBalancePolicy PolicyUtils::StringToPolicy(std::string const& policy_str) {
+  if (policy_str == "baseline") {
+    return LoadBalancePolicy::kPolicyContiguousUnitCost;
+  } else if (policy_str == "lpt") {
+    return LoadBalancePolicy::kPolicyLPT;
+  } else if (policy_str == "ci") {
+    return LoadBalancePolicy::kPolicyContigImproved;
+  } else if (policy_str == "cdpp") {
+    return LoadBalancePolicy::kPolicyCppIter;
+  }
+
+  throw std::runtime_error("Unknown policy string: " + policy_str);
+
+  return LoadBalancePolicy::kPolicyContiguousUnitCost;
+}
+
 std::string PolicyUtils::PolicyToString(LoadBalancePolicy policy) {
   switch (policy) {
     case LoadBalancePolicy::kPolicyContiguousUnitCost:
@@ -155,5 +173,15 @@ double PolicyUtils::ComputeLocCost(std::vector<int> const& rank_list) {
 
   double norm_score = local_score * 1.0 / nb;
   return norm_score;
+}
+
+std::string PolicyUtils::GetLogPath(const char* output_dir,
+                                    const char* policy_name,
+                                    const char* suffix) {
+  std::string result = GetSafePolicyName(policy_name);
+  result = std::string(output_dir) + "/" + result + "." + suffix;
+  logf(LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s", policy_name,
+       result.c_str());
+  return result;
 }
 }  // namespace amr
