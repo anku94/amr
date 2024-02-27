@@ -5,16 +5,23 @@
 
 namespace tau {
 
-enum class MsgType { kBlockAssignment, kTargetCost, kTsEnd, kBlockEvent };
+enum class MsgType {
+  kBlockAssignment,
+  kTargetCost,
+  kTsEnd,
+  kBlockEvent,
+  kCommChannel,
+  kMsgSend
+};
 
 struct TriggerMsg {
   MsgType type;
-  void *data;
+  void* data;
 };
 
 struct MsgBlockAssignment {
-  std::vector<double> const *costlist;
-  std::vector<int> const *ranklist;
+  std::vector<double> const* costlist;
+  std::vector<int> const* ranklist;
 };
 
 struct MsgBlockEvent {
@@ -22,4 +29,22 @@ struct MsgBlockEvent {
   int opcode;
   int data;
 };
-} // namespace tau
+
+struct MsgCommChannel {
+  void* ptr;
+  int block_id;
+  int block_rank;
+  int nbr_id;
+  int nbr_rank;
+  int tag;
+  char is_flux;
+};
+
+struct MsgSend {
+  void* ptr;
+  int buf_sz;
+  int recv_rank;
+  int tag;
+  uint64_t timestamp;
+};
+}  // namespace tau

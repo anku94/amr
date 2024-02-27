@@ -105,8 +105,8 @@ extern "C" int Tau_plugin_init_func(int argc, char** argv, int id) {
   cb->PreEndOfExecution = Tau_plugin_event_pre_end_of_execution;
   cb->EndOfExecution = Tau_plugin_event_end_of_execution;
 
-  cb->Send = Tau_plugin_event_send;
-  cb->Recv = Tau_plugin_event_recv;
+  // cb->Send = Tau_plugin_event_send;
+  // cb->Recv = Tau_plugin_event_recv;
 
   cb->Trigger = Tau_plugin_event_trigger;
 

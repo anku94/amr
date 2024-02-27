@@ -30,8 +30,8 @@ AmrFunc ParseBlock(const char* block_name) {
   return AmrFunc::Unknown;
 }
 
-void EnsureDirOrDie(const char* dir_path, int rank) {
-  if (rank != 0) {
+void EnsureDirOrDie(const char* dir_path, int rank, int sub_rank) {
+  if (sub_rank != 0) {
     return;
   }
 
@@ -45,20 +45,32 @@ void EnsureDirOrDie(const char* dir_path, int rank) {
 
 void EnsureFileOrDie(FILE** file, const char* dir_path, const char* fprefix,
                      const char* fmt, int rank) {
+  int sub_id = rank / 64;
+  int sub_rank = rank % 64;
+
   char subdir_path[4096];
+  // snprintf(subdir_path, 4096, "%s/%s.%d", dir_path, fprefix, sub_id);
+  // EnsureDirOrDie(subdir_path, rank, sub_rank);
   snprintf(subdir_path, 4096, "%s/%s", dir_path, fprefix);
-  EnsureDirOrDie(subdir_path, rank);
+  EnsureDirOrDie(subdir_path, rank, rank);
 
-  char fpath[4096];
-  snprintf(fpath, 4096, "%s/%s/%s.%d.%s", dir_path, fprefix, fprefix, rank, fmt);
+  // sleep(10);
 
-  int attempts_rem = 3;
-  int sleep_timer = 1;
+  char fpath[8192];
+  snprintf(fpath, 8192, "%s/%s.%d.%s", subdir_path, fprefix, rank, fmt);
+
+  // logf(LOG_INFO, "Trying to create: %s", fpath);
+
+  int attempts_rem = 4;
+  int sleep_timer = 2;
 
   while((attempts_rem--) && (*file == nullptr)) {
     sleep(sleep_timer);
     sleep_timer *= 2;
     *file = fopen(fpath, "w+");
+    if (*file == nullptr) {
+      logf(LOG_INFO, "Rank: %d, error: %s", rank, strerror(errno));
+    }
   }
 
   if (*file == nullptr) {

@@ -12,24 +12,24 @@
 #include <sys/types.h>
 
 namespace {
-  const char* GetLogDir() {
-    const char* dir = getenv("TAU_AMR_LOGDIR");
+const char* GetLogDir() {
+  const char* dir = getenv("TAU_AMR_LOGDIR");
 
-    if (dir == nullptr) {
-      ABORT("TAU_AMR_LOGDIR not set!");
-    }
-
-    DIR* dir_handle = opendir(dir);
-    if (dir_handle) {
-      closedir(dir_handle);
-    } else {
-      logf(LOG_ERRO, "Unable to verify TAU_AMR_LOGDIR: %s", strerror(errno));
-      ABORT("Unable to verify TAU_AMR_LOGDIR");
-    }
-
-    return dir;
+  if (dir == nullptr) {
+    ABORT("TAU_AMR_LOGDIR not set!");
   }
+
+  DIR* dir_handle = opendir(dir);
+  if (dir_handle) {
+    closedir(dir_handle);
+  } else {
+    logf(LOG_ERRO, "Unable to verify TAU_AMR_LOGDIR: %s", strerror(errno));
+    ABORT("Unable to verify TAU_AMR_LOGDIR");
+  }
+
+  return dir;
 }
+}  // namespace
 
 namespace tau {
 
@@ -50,16 +50,16 @@ class AMRTracer {
 
     const char* dir = GetLogDir();
 
-    msglog_ = std::make_unique<MsgLog>(dir, rank_);
-    funclog_ = std::make_unique<FuncLog>(dir, rank_);
-    statelog_ = std::make_unique<StateLog>(dir, rank_);
+    // msglog_ = std::make_unique<MsgLog>(dir, rank_);
+    // funclog_ = std::make_unique<FuncLog>(dir, rank_);
+    // statelog_ = std::make_unique<StateLog>(dir, rank_);
     proflog_ = std::make_unique<ProfLog>(dir, rank_);
   }
 
   int MyRank() const { return rank_; }
 
   void MarkBegin(const char* block_name, uint64_t ts) {
-    funclog_->LogFunc(block_name, timestep_, ts, true);
+    // funclog_->LogFunc(block_name, timestep_, ts, true);
 
     AmrFunc func = ParseBlock(block_name);
     switch (func) {
@@ -87,7 +87,7 @@ class AMRTracer {
   }
 
   void MarkEnd(const char* block_name, uint64_t ts) {
-    funclog_->LogFunc(block_name, timestep_, ts, false);
+    // funclog_->LogFunc(block_name, timestep_, ts, false);
 
     AmrFunc func = ParseBlock(block_name);
     switch (func) {
@@ -116,22 +116,21 @@ class AMRTracer {
 
   void RegisterSend(uint64_t msg_tag, uint64_t dest, uint64_t msg_sz,
                     uint64_t timestamp) {
-    if (rank_ == 0) {
-      logf(LOG_DBUG, "SendMsg, Src: %" PRIu64 ", Dest: %" PRIu64, rank_, dest);
-    }
+    // if (rank_ == 0) {
+    // logf(LOG_DBUG, "SendMsg, Src: %" PRIu64 ", Dest: %" PRIu64, rank_, dest);
+    // }
 
-    msglog_->LogMsg(dest, timestep_, PhaseToStr(), msg_tag, 0, msg_sz,
-                    timestamp);
+    // msglog_->LogSend(msg_tag, dest, msg_sz, timestamp);
   }
 
   void RegisterRecv(uint64_t msg_tag, uint64_t src, uint64_t msg_sz,
                     uint64_t timestamp) {
-    if (rank_ == 0) {
-      logf(LOG_DBUG, "RecvMsg, Src: %" PRIu64 ", Dest: %" PRIu64, src, rank_);
-    }
+    // if (rank_ == 0) {
+    // logf(LOG_DBUG, "RecvMsg, Src: %" PRIu64 ", Dest: %" PRIu64, src, rank_);
+    // }
 
-    msglog_->LogMsg(src, timestep_, PhaseToStr(), msg_tag, 1, msg_sz,
-                    timestamp);
+    // msglog_->LogMsg(src, timestep_, PhaseToStr(), msg_tag, 1, msg_sz,
+    // timestamp);
   }
 
   void ProcessTriggerMsg(void* data);
@@ -216,13 +215,20 @@ class AMRTracer {
   void MarkMakeOutputsBegin() { /* noop */
   }
 
-  void MarkMakeOutputsEnd() { timestep_++; }
+  void MarkMakeOutputsEnd() {
+    // msglog_->Flush(timestep_);
+    timestep_++;
+  }
 
-  void ProcessTriggerMsgBlockAssignment(void *data);
+  void ProcessTriggerMsgBlockAssignment(void* data);
 
-  void ProcessTriggerMsgTargetCost(void *data);
+  void ProcessTriggerMsgTargetCost(void* data);
 
-  void ProcessTriggerMsgBlockEvent(void *data);
+  void ProcessTriggerMsgBlockEvent(void* data);
+
+  void ProcessTriggerMsgCommChannel(void* data);
+
+  void ProcessTriggerMsgLogSend(void* data);
 
   int rank_;
   int size_;
@@ -232,9 +238,9 @@ class AMRTracer {
   int num_redistrib_;
   AMRPhase phase_;
 
-  std::unique_ptr<MsgLog> msglog_;
-  std::unique_ptr<FuncLog> funclog_;
-  std::unique_ptr<StateLog> statelog_;
+  // std::unique_ptr<MsgLog> msglog_;
+  // std::unique_ptr<FuncLog> funclog_;
+  // std::unique_ptr<StateLog> statelog_;
   std::unique_ptr<ProfLog> proflog_;
 
   bool redistribute_ongoing_;
@@ -243,4 +249,4 @@ class AMRTracer {
   static const bool paranoid_ = false;
 };
 
-}
+}  // namespace tau

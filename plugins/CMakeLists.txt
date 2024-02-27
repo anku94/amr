@@ -18,3 +18,7 @@ target_link_libraries(TAU-amr TAU::TAU)
 
 install(TARGETS TAU-amr
   LIBRARY DESTINATION lib)
+
+# reusing this path, hacky
+install(FILES cmake/FindTAU.cmake
+  DESTINATION share/cmake/pdlfs-common)

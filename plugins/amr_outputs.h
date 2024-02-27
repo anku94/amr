@@ -1,57 +1,108 @@
 #pragma once
 
+#include "amr_util.h"
+
 #include <inttypes.h>
 #include <mutex>
 
-#include "amr_util.h"
-
 namespace tau {
-
 class MsgLog {
  public:
   MsgLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
-    EnsureFileOrDie(&file_, dir, "msgs", "csv", rank_);
-    WriteHeader();
+    EnsureFileOrDie(&file_, dir, "msgs", "bin", rank);
   }
 
-  void LogMsg(int peer, int timestep, const char* phase, uint64_t msg_id,
-              int send_or_recv, uint64_t msg_sz, uint64_t timestamp) {
-    if (paranoid_) mutex_.lock();
-
-    const char* phase_mapped = MapPhaseName(phase);
-
-    const char* fmt = "%d|%d|%d|%s|%" PRIu64 "|%d|%" PRIu64 "|%" PRIu64 "\n";
-    fprintf(file_, fmt, rank_, peer, timestep, phase_mapped, msg_id,
-            send_or_recv, msg_sz, timestamp);
-
-    if (paranoid_) mutex_.unlock();
-  }
-
- private:
-  const char* MapPhaseName(const char* phase_name) {
-#define PHASE_IS(x) (strncmp(phase_name, x, strlen(x)) == 0)
-    if (PHASE_IS("FluxExchange")) {
-      return "FE";
-    } else if (PHASE_IS("BoundaryComm")) {
-      return "BC";
-    } else if (PHASE_IS("LoadBalancing")) {
-      return "LB";
-    } else {
-      return phase_name;
+  ~MsgLog() {
+    if (file_) {
+      fclose(file_);
+      file_ = nullptr;
     }
   }
 
-  void WriteHeader() {
-    const char* const header =
-        "rank|peer|timestep|phase|msg_id|send_or_recv|msg_sz|timestamp\n";
-    fprintf(file_, header);
+  void LogChannel(void* ptr, int block_id, int rank, int nbr_id, int nbr_rank,
+                  int tag, char is_flux) {
+    static constexpr size_t recsz = 8 + 5 * sizeof(int) + sizeof(char);
+    channels_.resize(channels_.size() + recsz);
+
+    char* bufptr = channels_.data() + channels_.size() - recsz;
+
+    memcpy(bufptr, ptr, 8);
+    bufptr += 8;
+
+    memcpy(bufptr, (void*)&block_id, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&rank, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&nbr_id, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&nbr_rank, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&tag, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&is_flux, sizeof(char));
+    bufptr += sizeof(char);
+  }
+
+  void LogSend(void* ptr, int buf_sz, int recv_rank, int tag,
+               uint64_t timestamp) {
+    // uint64_t time_us = GetTimestampUs();
+    static constexpr size_t recsz = 16 + 3 * sizeof(int);
+    sends_.resize(sends_.size() + recsz);
+
+    char* bufptr = sends_.data() + sends_.size() - recsz;
+
+    memcpy(bufptr, ptr, 8);
+    bufptr += 8;
+
+    memcpy(bufptr, (void*)&buf_sz, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&recv_rank, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&tag, sizeof(int));
+    bufptr += sizeof(int);
+
+    memcpy(bufptr, (void*)&timestamp, 8);
+    bufptr += 8;
+  }
+
+  void Flush(int ts) {
+    fwrite(&ts, sizeof(int), 1, file_);
+
+    int channelsz = channels_.size();
+    fwrite(&channelsz, sizeof(int), 1, file_);
+    if (channelsz > 0) {
+      fwrite(channels_.data(), channels_.size(), 1, file_);
+    }
+    channels_.clear();
+
+    int sendsz = sends_.size();
+    fwrite(&sendsz, sizeof(int), 1, file_);
+    if (sendsz > 0) {
+      fwrite(sends_.data(), sends_.size(), 1, file_);
+    }
+    sends_.clear();
+  }
+
+ private:
+  uint64_t GetTimestampUs() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    uint64_t time_us = (ts.tv_sec * 1e6) + (ts.tv_nsec * 1e-3);
+    return time_us;
   }
 
   int rank_;
   FILE* file_;
-
-  std::mutex mutex_;
-  static const bool paranoid_ = false;
+  std::vector<char> channels_;
+  std::vector<char> sends_;
 };
 
 class FuncLog {
@@ -114,24 +165,22 @@ class StateLog {
 };
 
 class ProfLog {
-  public:
-    ProfLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
-      EnsureFileOrDie(&file_, dir, "prof", "bin", rank);
-    }
+ public:
+  ProfLog(const char* dir, int rank) : rank_(rank), file_(nullptr) {
+    EnsureFileOrDie(&file_, dir, "prof", "bin", rank);
+  }
 
-    void LogEvent(int ts, int block_id, int opcode, int data) {
-      fwrite(&ts, sizeof(int), 1, file_);
-      fwrite(&block_id, sizeof(int), 1, file_);
-      fwrite(&opcode, sizeof(int), 1, file_);
-      fwrite(&data, sizeof(int), 1, file_);
-    }
+  void LogEvent(int ts, int block_id, int opcode, int data) {
+    fwrite(&ts, sizeof(int), 1, file_);
+    fwrite(&block_id, sizeof(int), 1, file_);
+    fwrite(&opcode, sizeof(int), 1, file_);
+    fwrite(&data, sizeof(int), 1, file_);
+  }
 
-    ~ProfLog() {
-      fclose(file_);
-    }
+  ~ProfLog() { fclose(file_); }
 
-  private:
-    int rank_;
-    FILE* file_;
+ private:
+  int rank_;
+  FILE* file_;
 };
 }  // namespace tau

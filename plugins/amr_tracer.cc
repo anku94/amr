@@ -54,6 +54,12 @@ void AMRTracer::ProcessTriggerMsg(void* data) {
     case MsgType::kBlockEvent:
       ProcessTriggerMsgBlockEvent(msg->data);
       break;
+    case MsgType::kCommChannel:
+      ProcessTriggerMsgCommChannel(msg->data);
+      break;
+    case MsgType::kMsgSend:
+      ProcessTriggerMsgLogSend(msg->data);
+      break;
     default:
       logf(LOG_ERRO, "Unknown trigger msg type!");
       break;
@@ -65,24 +71,35 @@ void AMRTracer::ProcessTriggerMsg(void* data) {
 void AMRTracer::ProcessTriggerMsgBlockAssignment(void* data) {
   MsgBlockAssignment* msg = (MsgBlockAssignment*)data;
 
-  std::string clstr = JoinVec(*(msg->costlist));
-  std::string rlstr = JoinVec(*(msg->ranklist));
+  // std::string clstr = JoinVec(*(msg->costlist));
+  // std::string rlstr = JoinVec(*(msg->ranklist));
 
-  logf(LOG_DBG2, "[Rank %d: CL] %s\n", rank_, clstr.c_str());
-  logf(LOG_DBG2, "[Rank %d: RL] %s\n", rank_, rlstr.c_str());
+  // logf(LOG_DBG2, "[Rank %d: CL] %s\n", rank_, clstr.c_str());
+  // logf(LOG_DBG2, "[Rank %d: RL] %s\n", rank_, rlstr.c_str());
 
-  statelog_->LogKV(timestep_, "CL", clstr.c_str());
-  statelog_->LogKV(timestep_, "RL", rlstr.c_str());
+  // statelog_->LogKV(timestep_, "CL", clstr.c_str());
+  // statelog_->LogKV(timestep_, "RL", rlstr.c_str());
 }
 
 void AMRTracer::ProcessTriggerMsgTargetCost(void* data) {
   double target_cost = *(double*)data;
   std::string cost_str = std::to_string(target_cost);
-  statelog_->LogKV(timestep_, "TC", cost_str.c_str());
+  // statelog_->LogKV(timestep_, "TC", cost_str.c_str());
 }
 
 void AMRTracer::ProcessTriggerMsgBlockEvent(void* data) {
-  MsgBlockEvent* msg = (MsgBlockEvent *)data;
+  MsgBlockEvent* msg = (MsgBlockEvent*)data;
   proflog_->LogEvent(ts_sim_, msg->block_id, msg->opcode, msg->data);
+}
+
+void AMRTracer::ProcessTriggerMsgCommChannel(void* data) {
+  MsgCommChannel* msg = (MsgCommChannel*)data;
+  // msglog_->LogChannel(msg->ptr, msg->block_id, msg->block_rank, msg->nbr_id, msg->nbr_rank,
+                     // msg->tag, msg->is_flux);
+}
+
+void AMRTracer::ProcessTriggerMsgLogSend(void* data) {
+  MsgSend* msg = (MsgSend*)data;
+  // msglog_->LogSend(msg->ptr, msg->buf_sz, msg->recv_rank, msg->tag, msg->timestamp);
 }
 }  // namespace tau
