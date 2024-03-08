@@ -1,62 +1,99 @@
+#pragma once
+
 #include "common.h"
 #include "logging.h"
 #include "metric.h"
+#include "p2p.h"
 
 #include <pdlfs-common/env.h>
+#include <stack>
 #include <unordered_map>
 
 namespace amr {
 typedef std::unordered_map<std::string, Metric> MetricMap;
+typedef std::pair<std::string, uint64_t> StackOpenPair;
+typedef std::stack<StackOpenPair> ProfStack;
+typedef std::unordered_map<std::string, ProfStack> StackMap;
 
 class AMRMonitor {
  public:
-  AMRMonitor(pdlfs::Env* env, int rank) : env_(env), rank_(rank) {
-    Verbose(__LOG_ARGS__, 0, "AMRMonitor initialized on rank %d", rank);
+  AMRMonitor(pdlfs::Env* env, int rank, int nranks)
+      : env_(env), rank_(rank), nranks_(nranks) {
+    Verbose(__LOG_ARGS__, 1, "AMRMonitor initialized on rank %d", rank);
   }
 
   ~AMRMonitor() {
-    Collect();
-    Verbose(__LOG_ARGS__, 0, "AMRMonitor destroyed on rank %d", rank_);
+    LogAllMetrics();
+    Verbose(__LOG_ARGS__, 1, "AMRMonitor destroyed on rank %d", rank_);
   }
 
   uint64_t Now() const {
     auto now = env_->NowMicros();
     return now;
   }
-
   void LogMPICollective(const char* type, uint64_t time_us) {
     LogKey(collective_times_us_, type, time_us);
   }
 
-  void LogBegin(const char* key) { begin_times_us_[key] = Now(); }
+  void LogStackBegin(const char* type, const char* key) {
+    if (stack_map_.find(type) == stack_map_.end()) {
+      stack_map_[type] = ProfStack();
+    }
 
-  void LogEnd(const char* key) {
-    auto end_time = Now();
+    auto& s = stack_map_[type];
+    s.push(StackOpenPair(key, Now()));
+  }
 
-    if (begin_times_us_.find(key) == begin_times_us_.end()) {
-      Warn(__LOG_ARGS__, "key %s not found in begin_times_us_.", key);
+  void LogStackEnd(const char* type) {
+    if (stack_map_.find(type) == stack_map_.end()) {
+      Warn(__LOG_ARGS__, "type %s not found in stack_map_.", type);
       return;
     }
 
-    auto begin_time = begin_times_us_[key];
+    auto& s = stack_map_[type];
+    if (s.empty()) {
+      Warn(__LOG_ARGS__, "stack %s is empty.", type);
+      return;
+    }
+
+    auto end_time = Now();
+    auto begin_time = s.top().second;
     auto elapsed_time = end_time - begin_time;
 
-    LogKey(key, elapsed_time);
+    auto key = s.top().first;
+    LogKey(kokkos_reg_times_us_, key.c_str(), elapsed_time);
 
-    begin_times_us_.erase(key);
+    s.pop();
   }
 
-  void LogKey(const char* key, uint64_t val) {
-    // split key by delimiter into a vector of strings
-    auto tokens = split_string(key, '/');
-    if (tokens.size() == 2 && tokens[0] == "kreg") {
-      LogKey(kokkos_reg_times_us_, tokens[1].c_str(), val);
-    } else if (tokens.size() == 2 && tokens[0] == "mpicoll") {
-      LogKey(collective_times_us_, tokens[1].c_str(), val);
-    } else {
-      Warn(__LOG_ARGS__,
-           "Error: key %s not recognized. Should suffer silently.", key);
+  inline int GetMPITypeSizeCached(MPI_Datatype datatype) {
+    if (mpi_datatype_sizes_.find(datatype) == mpi_datatype_sizes_.end()) {
+      int size;
+      int rv = PMPI_Type_size(datatype, &size);
+      if (rv != MPI_SUCCESS) {
+        Warn(__LOG_ARGS__, "PMPI_Type_size failed");
+      }
+
+      mpi_datatype_sizes_[datatype] = size;
     }
+
+    return mpi_datatype_sizes_[datatype];
+  }
+
+  void LogMPISend(int dest_rank, MPI_Datatype datatype, int count) {
+    std::string key = "MPI_Send_" + std::to_string(dest_rank);
+    auto size = count * GetMPITypeSizeCached(datatype);
+
+    LogKey(mpi_comm_msgsz_, key.c_str(), size);
+    p2p_comm_.LogSend(dest_rank, size);
+  }
+
+  void LogMPIRecv(int src_rank, MPI_Datatype datatype, int count) {
+    std::string key = "MPI_Recv_" + std::to_string(src_rank);
+    auto size = count * GetMPITypeSizeCached(datatype);
+
+    LogKey(mpi_comm_msgsz_, key.c_str(), size);
+    p2p_comm_.LogRecv(src_rank, size);
   }
 
   static void LogKey(MetricMap& map, const char* key, uint64_t val) {
@@ -67,31 +104,46 @@ class AMRMonitor {
     map[key].LogInstance(val);
   }
 
-  void Collect() {
-    PMPI_Barrier(MPI_COMM_WORLD);
-
-    if (rank_ == 0) {
-      Metric::LogHeader();
-    }
+  std::string CollectAllMetrics() {
+    std::string metrics;
 
     for (auto& kv : collective_times_us_) {
-      kv.second.Collect(kv.first.c_str(), rank_);
+      metrics += kv.second.Collect(kv.first.c_str(), rank_);
     }
 
     for (auto& kv : kokkos_reg_times_us_) {
-      kv.second.Collect(kv.first.c_str(), rank_);
+      metrics += kv.second.Collect(kv.first.c_str(), rank_);
     }
 
-    PMPI_Barrier(MPI_COMM_WORLD);
+    metrics += p2p_comm_.CollectAndAnalyze(rank_, nranks_);
+
+    return metrics;
+  }
+
+  void LogAllMetrics() {
+    auto metrics = CollectAllMetrics();
+
+    if (rank_ == 0) {
+      auto header = MetricPrintUtils::GetHeader();
+      fprintf(stderr, "%s", metrics.c_str());
+      fprintf(stderr, "%s", header.c_str());
+    }
   }
 
  private:
   MetricMap collective_times_us_;
+  MetricMap mpi_comm_msgsz_;
   MetricMap kokkos_reg_times_us_;
+  StackMap stack_map_;
+
+  P2PCommCollector p2p_comm_;
+
+  std::unordered_map<MPI_Datatype, uint32_t> mpi_datatype_sizes_;
 
   std::unordered_map<std::string, uint64_t> begin_times_us_;
 
   pdlfs::Env* const env_;
   const int rank_;
+  const int nranks_;
 };
 }  // namespace amr

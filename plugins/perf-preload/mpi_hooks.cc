@@ -16,7 +16,10 @@ int MPI_Init(int* argc, char*** argv) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  amr::monitor = std::make_unique<amr::AMRMonitor>(pdlfs::Env::Default(), rank);
+  int nranks;
+  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+
+  amr::monitor = std::make_unique<amr::AMRMonitor>(pdlfs::Env::Default(), rank, nranks);
 
   return rv;
 }
@@ -29,7 +32,39 @@ int MPI_Finalize() {
 }
 
 //
-// Begin MPI Collective Hooks. These are all the same template.
+// MPI Point-to-Point Hooks.
+//
+
+int MPI_Send(const void* buf, int count, MPI_Datatype datatype, int dest,
+             int tag, MPI_Comm comm) {
+  int rv = PMPI_Send(buf, count, datatype, dest, tag, comm);
+  amr::monitor->LogMPISend(dest, datatype, count);
+  return rv;
+}
+
+int MPI_Isend(const void* buf, int count, MPI_Datatype datatype, int dest,
+              int tag, MPI_Comm comm, MPI_Request* request) {
+  int rv = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+  amr::monitor->LogMPISend(dest, datatype, count);
+  return rv;
+}
+
+int MPI_Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag,
+             MPI_Comm comm, MPI_Status* status) {
+  int rv = PMPI_Recv(buf, count, datatype, source, tag, comm, status);
+  amr::monitor->LogMPIRecv(source, datatype, count);
+  return rv;
+}
+
+int MPI_Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag,
+              MPI_Comm comm, MPI_Request* request) {
+  int rv = PMPI_Irecv(buf, count, datatype, source, tag, comm, request);
+  amr::monitor->LogMPIRecv(source, datatype, count);
+  return rv;
+}
+
+//
+// BEGIN MPI Collective Hooks. These are all the same template.
 // This has not been validated yet to be exhaustive.
 //
 
@@ -166,18 +201,6 @@ int MPI_Allreduce(const void* sendbuf, void* recvbuf, int count,
   auto ts_end = amr::monitor->Now();
 
   amr::monitor->LogMPICollective("MPI_Allreduce", ts_end - ts_beg);
-  return rv;
-}
-
-int MPI_Reduce_scatter(const void* sendbuf, void* recvbuf,
-                       const int* recvcounts, MPI_Datatype datatype, MPI_Op op,
-                       MPI_Comm comm) {
-  auto ts_beg = amr::monitor->Now();
-  int rv =
-      PMPI_Reduce_scatter(sendbuf, recvbuf, recvcounts, datatype, op, comm);
-  auto ts_end = amr::monitor->Now();
-
-  amr::monitor->LogMPICollective("MPI_Reduce_scatter", ts_end - ts_beg);
   return rv;
 }
 

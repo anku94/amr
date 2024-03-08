@@ -7,7 +7,8 @@ set(PRELOAD_SRCS
     common.cc
     kokkos_hooks.cc
     logging.cc
-    mpi_hooks.cc)
+    mpi_hooks.cc
+    p2p.cc)
 
 add_library(prof_preload SHARED ${PRELOAD_SRCS})
 target_link_libraries(prof_preload PRIVATE MPI::MPI_CXX Kokkos::kokkos ${CMAKE_DL_LIBS} pdlfs-common)
