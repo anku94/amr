@@ -14,10 +14,10 @@ int MPI_Init(int* argc, char*** argv) {
   }
 
   int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  PMPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   int nranks;
-  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+  PMPI_Comm_size(MPI_COMM_WORLD, &nranks);
 
   amr::monitor = std::make_unique<amr::AMRMonitor>(pdlfs::Env::Default(), rank, nranks);
 
@@ -26,6 +26,8 @@ int MPI_Init(int* argc, char*** argv) {
 
 int MPI_Finalize() {
   amr::monitor.reset();
+
+  PMPI_Barrier(MPI_COMM_WORLD);
 
   int rv = PMPI_Finalize();
   return rv;

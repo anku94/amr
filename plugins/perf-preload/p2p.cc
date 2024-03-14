@@ -1,5 +1,6 @@
 #include "p2p.h"
 
+#include "common.h"
 #include "logging.h"
 #include "print_utils.h"
 
@@ -120,6 +121,13 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithReduce(
                        MPI_COMM_WORLD),
            analysis);
 
+  analysis = AnalyzeMatrix(matrix_global.data(), nranks_, npernode_);
+
+  if (my_rank_ == 0) {
+    Verbose(__LOG_ARGS__, 1, "Global Comm Matrix: \n%s\n",
+            MetricPrintUtils::MatrixToStr(matrix_global, nranks_).c_str());
+  }
+
   return analysis;
 }
 
@@ -161,8 +169,6 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithPuts(
 
   if (my_rank_ == 0) {
     analysis = AnalyzeMatrix(matrix_global, nranks_, npernode_);
-    PMPI_Free_mem(matrix_global);
-    matrix_global = nullptr;
   }
 
   return analysis;
@@ -178,42 +184,47 @@ std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks) {
   }
 
   std::string analysis_str = "";
+  if (amr_opts.p2p_enable_matrix_reduce) {
+    analysis_str += CollectWithReduce();
+    analysis_str += "\n";
+  }
 
-#ifdef USE_RMA_PUTS
-  analysis_str = CollectWithPuts();
-#else
-  analysis_str = CollectWithReduce();
-#endif
+  if (amr_opts.p2p_enable_matrix_put) {
+    analysis_str += CollectWithPuts();
+    analysis_str += "\n";
+  }
+
   return analysis_str;
 }
 
 std::string P2PCommCollector::CollectWithReduce() {
   int rv = 0;
-  std::string analysis_str = "";
+  std::string analysis_str = MetricPrintUtils::CommMatrixAnalysisHeader();
 
   auto analysis = CollectMatrixWithReduce(send_count_, /* is_send= */ true);
-  analysis_str += MetricPrintUtils::CountMatrixAnalysisToStr(
-      "P2P_Send_Count", analysis);
+  analysis_str +=
+      MetricPrintUtils::CountMatrixAnalysisToStr("P2P_Send_Count", analysis);
 
   analysis = CollectMatrixWithReduce(send_sz_, /* is_send= */ true);
-  analysis_str += MetricPrintUtils::SizeMatrixAnalysisToStr(
-      "P2P_Send_Size", analysis);
+  analysis_str +=
+      MetricPrintUtils::SizeMatrixAnalysisToStr("P2P_Send_Size", analysis);
 
   return analysis_str;
 }
 
 std::string P2PCommCollector::CollectWithPuts() {
   int rv = 0;
-  std::string analysis_str = "";
+  std::string analysis_str = MetricPrintUtils::CommMatrixAnalysisHeader();
 
   auto analysis = CollectMatrixWithPuts(send_count_, /* is_send= */ true);
-  analysis_str += MetricPrintUtils::CountMatrixAnalysisToStr(
-      "P2P_Send_Count", analysis);
 
+  analysis_str +=
+      MetricPrintUtils::CountMatrixAnalysisToStr("P2P_Send_Count", analysis);
 
   analysis = CollectMatrixWithPuts(send_sz_, /* is_send= */ true);
-  analysis_str += MetricPrintUtils::SizeMatrixAnalysisToStr(
-      "P2P_Send_Size", analysis);
+
+  analysis_str +=
+      MetricPrintUtils::SizeMatrixAnalysisToStr("P2P_Send_Size", analysis);
 
   return analysis_str;
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "logging.h"
-#include "print_utils.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -9,6 +8,15 @@
 #include <mpi.h>
 
 namespace amr {
+class MetricCollectionUtils;
+struct MetricStats {
+  std::string name;
+  uint64_t invoke_count;
+  double min;
+  double max;
+  double avg;
+  double std;
+};
 /* Metric: Maintains and aggregates summary statistics for a single metric
  *
  * Stats tracked: min/max/avg/std
@@ -21,8 +29,10 @@ namespace amr {
  */
 class Metric {
  public:
-  Metric()
-      : invoke_count_(0),
+  Metric(const char* name, int rank)
+      : name_(name),
+        rank_(rank),
+        invoke_count_(0),
         sum_val_(0.0),
         max_val_(DBL_MIN),
         min_val_(DBL_MAX),
@@ -36,7 +46,7 @@ class Metric {
     sum_sq_val_ += val * val;
   }
 
-  std::string Collect(const char* metric_name, int my_rank) {
+  MetricStats Collect() {
     uint64_t global_invoke_count = 0;
     double global_sum_val = 0;
     double global_max_val = 0;
@@ -46,45 +56,45 @@ class Metric {
     int rv = PMPI_Reduce(&invoke_count_, &global_invoke_count, 1, MPI_INT,
                          MPI_SUM, 0, MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", metric_name);
-      return "";
+      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
+      return {};
     }
 
     rv = PMPI_Reduce(&sum_val_, &global_sum_val, 1, MPI_DOUBLE, MPI_SUM, 0,
                      MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", metric_name);
-      return "";
+      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
+      return {};
     }
 
     rv = PMPI_Reduce(&max_val_, &global_max_val, 1, MPI_DOUBLE, MPI_MAX, 0,
                      MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", metric_name);
-      return "";
+      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
+      return {};
     }
 
     rv = PMPI_Reduce(&min_val_, &global_min_val, 1, MPI_DOUBLE, MPI_MIN, 0,
                      MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", metric_name);
-      return "";
+      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
+      return {};
     }
 
     rv = PMPI_Reduce(&sum_sq_val_, &global_sum_sq_val, 1, MPI_DOUBLE, MPI_SUM,
                      0, MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", metric_name);
-      return "";
+      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
+      return {};
     }
 
-    if (my_rank != 0) {
-      return "";
+    if (rank_ != 0) {
+      return {};
     }
 
     if (invoke_count_ == 0) {
-      Error(__LOG_ARGS__, "Metric %s: no invocations", metric_name);
-      return "";
+      Error(__LOG_ARGS__, "Metric %s: no invocations", name_.c_str());
+      return {};
     }
 
     double global_avg = global_sum_val / global_invoke_count;
@@ -92,17 +102,22 @@ class Metric {
         (global_sum_sq_val / global_invoke_count) - (global_avg * global_avg);
     double global_std = sqrt(global_var);
 
-    return MetricPrintUtils::GetMetricLine(metric_name, global_invoke_count,
-                                           global_avg, global_std,
-                                           global_min_val, global_max_val);
+    MetricStats stats{name_,          global_invoke_count, global_min_val,
+                      global_max_val, global_avg,          global_std};
+    return stats;
   }
 
  private:
+  const std::string name_;
+  const int rank_;
+
   uint64_t invoke_count_;
 
   double sum_val_;
   double max_val_;
   double min_val_;
   double sum_sq_val_;
+
+  friend class MetricCollectionUtils;
 };
 }  // namespace amr

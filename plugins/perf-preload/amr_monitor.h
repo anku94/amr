@@ -3,27 +3,32 @@
 #include "common.h"
 #include "logging.h"
 #include "metric.h"
+#include "metric_util.h"
 #include "p2p.h"
+#include "print_utils.h"
+#include "types.h"
 
+#include <glog/logging.h>
 #include <pdlfs-common/env.h>
-#include <stack>
-#include <unordered_map>
 
 namespace amr {
-typedef std::unordered_map<std::string, Metric> MetricMap;
-typedef std::pair<std::string, uint64_t> StackOpenPair;
-typedef std::stack<StackOpenPair> ProfStack;
-typedef std::unordered_map<std::string, ProfStack> StackMap;
+
+#define TOP_K_COUNT 20
 
 class AMRMonitor {
  public:
   AMRMonitor(pdlfs::Env* env, int rank, int nranks)
       : env_(env), rank_(rank), nranks_(nranks) {
-    Verbose(__LOG_ARGS__, 1, "AMRMonitor initialized on rank %d", rank);
+    google::InitGoogleLogging("amrmon");
+
+    if (rank == 0) {
+      Info(__LOG_ARGS__, "AMRMonitor initializing.");
+      AMROptUtils::LogOpts(amr_opts);
+    }
   }
 
   ~AMRMonitor() {
-    LogAllMetrics();
+    LogMetrics(TOP_K_COUNT);
     Verbose(__LOG_ARGS__, 1, "AMRMonitor destroyed on rank %d", rank_);
   }
 
@@ -32,7 +37,7 @@ class AMRMonitor {
     return now;
   }
   void LogMPICollective(const char* type, uint64_t time_us) {
-    LogKey(collective_times_us_, type, time_us);
+    LogKey(times_us_, type, time_us);
   }
 
   void LogStackBegin(const char* type, const char* key) {
@@ -61,7 +66,7 @@ class AMRMonitor {
     auto elapsed_time = end_time - begin_time;
 
     auto key = s.top().first;
-    LogKey(kokkos_reg_times_us_, key.c_str(), elapsed_time);
+    LogKey(times_us_, key.c_str(), elapsed_time);
 
     s.pop();
   }
@@ -81,59 +86,81 @@ class AMRMonitor {
   }
 
   void LogMPISend(int dest_rank, MPI_Datatype datatype, int count) {
-    std::string key = "MPI_Send_" + std::to_string(dest_rank);
     auto size = count * GetMPITypeSizeCached(datatype);
-
-    LogKey(mpi_comm_msgsz_, key.c_str(), size);
     p2p_comm_.LogSend(dest_rank, size);
   }
 
   void LogMPIRecv(int src_rank, MPI_Datatype datatype, int count) {
-    std::string key = "MPI_Recv_" + std::to_string(src_rank);
     auto size = count * GetMPITypeSizeCached(datatype);
-
-    LogKey(mpi_comm_msgsz_, key.c_str(), size);
     p2p_comm_.LogRecv(src_rank, size);
   }
 
-  static void LogKey(MetricMap& map, const char* key, uint64_t val) {
-    if (map.find(key) == map.end()) {
-      map[key] = Metric();
+  void LogKey(MetricMap& map, const char* key, uint64_t val) {
+    // must use iterators because Metric class has const variables,
+    // and therefore can not be assigned to and all
+    auto it = map.find(key);
+    if (it == map.end()) {
+      map.insert({key, Metric(key, rank_)});
+      it = map.find(key);
     }
 
-    map[key].LogInstance(val);
+    it->second.LogInstance(val);
   }
 
-  std::string CollectAllMetrics() {
+  std::string CollectMetrics(int top_k) {
     std::string metrics;
+    std::vector<MetricStats> all_metric_stats;
 
-    for (auto& kv : collective_times_us_) {
-      metrics += kv.second.Collect(kv.first.c_str(), rank_);
+    // First, need to get metrics that are logged on all ranks
+    // as collectives will block on ranks that are missing a given metric
+    StringVec common_metrics = GetCommonMetrics();
+
+    for (auto& m: common_metrics) {
+      if (rank_ == 0) {
+        Verbose(__LOG_ARGS__, 0, "Collecting common metric %s.", m.c_str());
+      }
+
+      auto it = times_us_.find(m);
+      if (it != times_us_.end()) {
+        auto stat = it->second.Collect();
+        all_metric_stats.push_back(stat);
+      }
     }
 
-    for (auto& kv : kokkos_reg_times_us_) {
-      metrics += kv.second.Collect(kv.first.c_str(), rank_);
-    }
+
+    metrics += MetricPrintUtils::SortAndSerialize(all_metric_stats, top_k);
+    metrics += "\n\n";
+
+    all_metric_stats = MetricCollectionUtils::CollectMetrics(
+        common_metrics, times_us_);
+    metrics += MetricPrintUtils::SortAndSerialize(all_metric_stats, top_k);
+    metrics += "\n\n";
 
     metrics += p2p_comm_.CollectAndAnalyze(rank_, nranks_);
 
     return metrics;
   }
 
-  void LogAllMetrics() {
-    auto metrics = CollectAllMetrics();
+  void LogMetrics(int top_k) {
+    auto metrics = CollectMetrics(amr_opts.print_topk);
 
     if (rank_ == 0) {
-      auto header = MetricPrintUtils::GetHeader();
       fprintf(stderr, "%s", metrics.c_str());
-      fprintf(stderr, "%s", header.c_str());
     }
   }
 
+  StringVec GetCommonMetrics() {
+    StringVec local_metrics;
+    for (auto& kv : times_us_) {
+      local_metrics.push_back(kv.first);
+    }
+
+    auto intersection_computer = CommonComputer(local_metrics, rank_, nranks_);
+    return intersection_computer.Compute();
+  }
+
  private:
-  MetricMap collective_times_us_;
-  MetricMap mpi_comm_msgsz_;
-  MetricMap kokkos_reg_times_us_;
+  MetricMap times_us_;
   StackMap stack_map_;
 
   P2PCommCollector p2p_comm_;
