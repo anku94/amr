@@ -109,30 +109,13 @@ class AMRMonitor {
 
   std::string CollectMetrics(int top_k) {
     std::string metrics;
-    std::vector<MetricStats> all_metric_stats;
 
     // First, need to get metrics that are logged on all ranks
     // as collectives will block on ranks that are missing a given metric
     StringVec common_metrics = GetCommonMetrics();
-
-    for (auto& m: common_metrics) {
-      if (rank_ == 0) {
-        Verbose(__LOG_ARGS__, 0, "Collecting common metric %s.", m.c_str());
-      }
-
-      auto it = times_us_.find(m);
-      if (it != times_us_.end()) {
-        auto stat = it->second.Collect();
-        all_metric_stats.push_back(stat);
-      }
-    }
-
-
-    metrics += MetricPrintUtils::SortAndSerialize(all_metric_stats, top_k);
-    metrics += "\n\n";
-
-    all_metric_stats = MetricCollectionUtils::CollectMetrics(
+    auto all_metric_stats = Metric::CollectMetrics(
         common_metrics, times_us_);
+
     metrics += MetricPrintUtils::SortAndSerialize(all_metric_stats, top_k);
     metrics += "\n\n";
 

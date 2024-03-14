@@ -1,11 +1,21 @@
 #pragma once
 
 #include "logging.h"
+#include "types.h"
 
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <mpi.h>
+
+#define SAFE_MPI_REDUCE(...)                     \
+  {                                              \
+    int rv = PMPI_Reduce(__VA_ARGS__);           \
+    if (rv != MPI_SUCCESS) {                     \
+      Error(__LOG_ARGS__, "PMPI_Reduce failed"); \
+    }                                            \
+  }
+
 
 namespace amr {
 class MetricCollectionUtils;
@@ -46,64 +56,57 @@ class Metric {
     sum_sq_val_ += val * val;
   }
 
-  MetricStats Collect() {
-    uint64_t global_invoke_count = 0;
-    double global_sum_val = 0;
-    double global_max_val = 0;
-    double global_min_val = 0;
-    double global_sum_sq_val = 0;
+  static std::vector<MetricStats> CollectMetrics(StringVec& metrics,
+                                                 MetricMap& times) {
+    size_t nmetrics = metrics.size();
 
-    int rv = PMPI_Reduce(&invoke_count_, &global_invoke_count, 1, MPI_INT,
-                         MPI_SUM, 0, MPI_COMM_WORLD);
-    if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
-      return {};
+    auto get_invoke_cnt = [](Metric& m) { return m.invoke_count_; };
+    auto invoke_vec = GetVecByKey<uint64_t>(metrics, times, get_invoke_cnt);
+    std::vector<uint64_t> global_invoke_cnt(nmetrics, 0);
+
+    SAFE_MPI_REDUCE(invoke_vec.data(), global_invoke_cnt.data(), nmetrics,
+                    MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    auto get_sum = [](Metric& m) { return m.sum_val_; };
+    auto sum_vec = GetVecByKey<double>(metrics, times, get_sum);
+    std::vector<double> global_sum(nmetrics, 0);
+    SAFE_MPI_REDUCE(sum_vec.data(), global_sum.data(), nmetrics, MPI_DOUBLE,
+                    MPI_SUM, 0, MPI_COMM_WORLD);
+
+    auto get_max = [](Metric& m) { return m.max_val_; };
+    auto max_vec = GetVecByKey<double>(metrics, times, get_max);
+    std::vector<double> global_max(nmetrics, 0);
+    SAFE_MPI_REDUCE(max_vec.data(), global_max.data(), nmetrics, MPI_DOUBLE,
+                    MPI_MAX, 0, MPI_COMM_WORLD);
+
+    auto get_min = [](Metric& m) { return m.min_val_; };
+    auto min_vec = GetVecByKey<double>(metrics, times, get_min);
+    std::vector<double> global_min(nmetrics, 0);
+    SAFE_MPI_REDUCE(min_vec.data(), global_min.data(), nmetrics, MPI_DOUBLE,
+                    MPI_MIN, 0, MPI_COMM_WORLD);
+
+    auto get_sum_sq = [](Metric& m) { return m.sum_sq_val_; };
+    auto sum_sq_vec = GetVecByKey<double>(metrics, times, get_sum_sq);
+    std::vector<double> global_sum_sq(nmetrics, 0);
+    SAFE_MPI_REDUCE(sum_sq_vec.data(), global_sum_sq.data(), nmetrics,
+                    MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    std::vector<MetricStats> stats;
+
+    for (size_t i = 0; i < nmetrics; ++i) {
+      MetricStats s;
+      s.name = metrics[i];
+
+      s.invoke_count = global_invoke_cnt[i];
+      s.avg = global_sum[i] / global_invoke_cnt[i];
+      s.max = global_max[i];
+      s.min = global_min[i];
+
+      auto var = (global_sum_sq[i] / global_invoke_cnt[i]) - (s.avg * s.avg);
+      s.std = sqrt(var);
+      stats.push_back(s);
     }
 
-    rv = PMPI_Reduce(&sum_val_, &global_sum_val, 1, MPI_DOUBLE, MPI_SUM, 0,
-                     MPI_COMM_WORLD);
-    if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
-      return {};
-    }
-
-    rv = PMPI_Reduce(&max_val_, &global_max_val, 1, MPI_DOUBLE, MPI_MAX, 0,
-                     MPI_COMM_WORLD);
-    if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
-      return {};
-    }
-
-    rv = PMPI_Reduce(&min_val_, &global_min_val, 1, MPI_DOUBLE, MPI_MIN, 0,
-                     MPI_COMM_WORLD);
-    if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
-      return {};
-    }
-
-    rv = PMPI_Reduce(&sum_sq_val_, &global_sum_sq_val, 1, MPI_DOUBLE, MPI_SUM,
-                     0, MPI_COMM_WORLD);
-    if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "Metric %s: PMPI_Reduce failed", name_.c_str());
-      return {};
-    }
-
-    if (rank_ != 0) {
-      return {};
-    }
-
-    if (invoke_count_ == 0) {
-      Error(__LOG_ARGS__, "Metric %s: no invocations", name_.c_str());
-      return {};
-    }
-
-    double global_avg = global_sum_val / global_invoke_count;
-    double global_var =
-        (global_sum_sq_val / global_invoke_count) - (global_avg * global_avg);
-    double global_std = sqrt(global_var);
-
-    MetricStats stats{name_,          global_invoke_count, global_min_val,
-                      global_max_val, global_avg,          global_std};
     return stats;
   }
 
@@ -118,6 +121,17 @@ class Metric {
   double min_val_;
   double sum_sq_val_;
 
-  friend class MetricCollectionUtils;
+  template <typename T>
+  static std::vector<T> GetVecByKey(StringVec& metrics, MetricMap& times,
+                                    std::function<T(Metric&)> f) {
+    std::vector<T> vec;
+    for (auto& m : metrics) {
+      auto it = times.find(m);
+      if (it != times.end()) {
+        vec.push_back(f(it->second));
+      }
+    }
+    return vec;
+  }
 };
 }  // namespace amr
