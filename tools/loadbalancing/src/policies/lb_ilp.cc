@@ -7,8 +7,10 @@
 #include "policy.h"
 #include "tools.h"
 
-#include <gurobi_c++.h>
 #include <vector>
+
+#if GUROBI_ENABLED
+#include <gurobi_c++.h>
 
 namespace {
 class ILPSolver {
@@ -268,11 +270,13 @@ class ILPSolver {
   std::vector<std::vector<GRBVar>> assign_vars_;
 };
 }  // namespace
+#endif
 
 namespace amr {
 int LoadBalancePolicies::AssignBlocksILP(const std::vector<double>& costlist,
                                          std::vector<int>& ranklist, int nranks,
                                          void* opts) {
+#if GUROBI_ENABLED
   PolicyOptsILP opts_obj;
   if (opts) {
     opts_obj = *(PolicyOptsILP*)opts;
@@ -282,5 +286,9 @@ int LoadBalancePolicies::AssignBlocksILP(const std::vector<double>& costlist,
 
   ILPSolver solver(opts_obj, costlist, ranklist, nranks);
   return solver.AssignBlocks();
+#else
+  ABORT("[ILPSolver] Gurobi not enabled. Cannot run ILP solver.");
+  return -1;
+#endif
 }
 }  // namespace amr

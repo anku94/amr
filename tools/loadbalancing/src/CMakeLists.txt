@@ -1,5 +1,5 @@
 find_package(pdlfs-common CONFIG REQUIRED)
-find_package(GUROBI REQUIRED)
+find_package(GUROBI)
 
 # From Gurobi's example CMakeLists... not sure if thing thing works with 14
 # We're essentially overriding the top-level directive... do something else?
@@ -18,6 +18,12 @@ set(lb_srcs
         lb_policies.cc
         scaling/scale_sim.cc)
 
+# if GUROBI is found, set macro GUROBI_ENABLED
+if (GUROBI_FOUND)
+    add_definitions(-DGUROBI_ENABLED)
+    target_add_definitions(lb PRIVATE GUROBI_ENABLED)
+endif()
+
 add_library(lb ${lb_srcs} ${common_srcs})
 
 # GUROBI requires C++11; *sigh*
@@ -32,17 +38,18 @@ target_include_directories(lb PUBLIC
 
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
 target_link_libraries(lb PRIVATE pdlfs-common fort)
-target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
 
-# FindGUROBI does not unify both these into a single target :(
-target_include_directories(lb PRIVATE ${GUROBI_INCLUDE_DIRS})
+if (GUROBI_FOUND)
+    target_compile_definitions(lb PRIVATE GUROBI_ENABLED)
+    target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
+    # FindGUROBI does not unify both these into a single target :(
+    target_include_directories(lb PRIVATE ${GUROBI_INCLUDE_DIRS})
+endif()
 
 add_executable(block-sim block_sim_main.cc)
-#target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
 target_link_libraries(block-sim PRIVATE lb pdlfs-common fort)
 
 add_executable(scale-sim scaling/scale_sim_main.cc)
-#target_link_libraries(lb-sim lb ${GUROBI_LIBRARY} ${GUROBI_CXX_LIBRARY})
 target_link_libraries(scale-sim PRIVATE lb pdlfs-common fort)
 
 add_executable(cluster-sim cluster_main.cc)
