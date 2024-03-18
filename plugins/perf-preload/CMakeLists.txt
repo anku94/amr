@@ -16,5 +16,8 @@ target_link_libraries(prof_preload PRIVATE MPI::MPI_CXX Kokkos::kokkos ${CMAKE_D
 set_target_properties(prof_preload PROPERTIES 
     LINK_FLAGS "-Wl,--no-as-needed")
 
-add_executable(example_prog example_prog.cc)
-target_link_libraries(example_prog PRIVATE MPI::MPI_CXX Kokkos::kokkos)
+add_executable(prof_example example_prog.cc)
+target_link_libraries(prof_example PRIVATE MPI::MPI_CXX Kokkos::kokkos)
+
+INSTALL(TARGETS prof_preload DESTINATION lib)
+INSTALL(TARGETS prof_example DESTINATION bin)
