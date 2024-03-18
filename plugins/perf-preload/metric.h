@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <functional>
 #include <mpi.h>
 
 #define SAFE_MPI_REDUCE(...)                     \
