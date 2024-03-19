@@ -29,5 +29,7 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     endif ()
 endif ()
 
+add_subdirectory(decks)
 add_subdirectory(plugins)
+add_subdirectory(scripts)
 add_subdirectory(tools)
