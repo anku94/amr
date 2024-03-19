@@ -2,29 +2,6 @@
 
 set -eu
 
-message() {
-	echo "$@"
-}
-
-die() {
-	message "!!! ERROR !!! $@"
-	exit -1
-}
-
-loadargs() {
-	for loadargs_arg; do
-		loadargs_key=$(echo $loadargs_arg | sed -n 's/=.*//p')
-		# make sure key is alphanumeric or _
-		loadargs_check=$(echo $loadargs_key | sed -e 's/[A-Za-z0-9_]//g')
-		loadargs_val=$(echo $loadargs_arg | sed -n 's/^[A-Za-z0-9_]*=//p')
-		if [ "$loadargs_check" != "" -o "$loadargs_key" = "" ]; then
-			echo "loadargs: bad keyval arg: $loadargs_arg"
-			exit 1
-		fi
-		eval "arg_${loadargs_key}=\"${loadargs_val}\""
-	done
-}
-
 #
 # amr_prepare_expdir: prepare variables for a single experiment
 # and create the expdir. must be done before amr_prepare_deck
@@ -82,30 +59,26 @@ amr_prepare_deck() {
 # Arguments:
 
 amr_do_run() {
-  prelib="${1}"
-  amr_bin="${2}"
-  amr_deck="${3}"
+	prelib="${1}"
+	amr_bin="${2}"
+	amr_deck="${3}"
 
 	local amr_bin_fullpath="$amru_prefix/bin/$amr_bin"
 	local amr_deck_fullpath="$exp_jobdir/$amr_deck"
 	local amr_exec="$amr_bin_fullpath -i $amr_deck_fullpath"
 
-  # TODO: tmp, remove
-  amr_bin_fullpath="/users/ankushj/repos/parthenon-vibe/amr-umbrella/build/parthenon-prefix/src/parthenon-build/example/advection/advection-example"
+	[ -f "$amr_bin_fullpath" ] || die "AMR binary not found: $amr_bin_fullpath"
+	[ -f "$amr_deck_fullpath" ] || die "AMR deck not found: $amr_deck_fullpath"
 
-  [ -f "$amr_bin_fullpath" ] || die "AMR binary not found: $amr_bin_fullpath"
-  [ -f "$amr_deck_fullpath" ] || die "AMR deck not found: $amr_deck_fullpath"
-
-  message "-INFO- Running AMR experiment: $amr_exec"
+	message "-INFO- Running AMR experiment: $amr_exec"
 
 	prelib_env=()
 	if [ x"$prelib" != x ]; then
-    # If prelib is a relative path, check for its existence in lib/
-    if [ "${prelib:0:1}" != "/" ]; then
-      prelib="$amru_prefix/lib/$prelib"
-      # TODO: tmp, remove
-      # [ -f "$prelib" ] || die "Preload lib not found: $prelib"
-    fi
+		# If prelib is a relative path, check for its existence in lib/
+		if [ "${prelib:0:1}" != "/" ]; then
+			prelib="$amru_prefix/lib/$prelib"
+			[ -f "$prelib" ] || die "Preload lib not found: $prelib"
+		fi
 
 		prelib_env=(
 			"LD_PRELOAD" "$prelib"

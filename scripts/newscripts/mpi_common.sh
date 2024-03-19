@@ -2,186 +2,101 @@
 
 # A stripped down version of pdlfs-scripts/common.sh
 
+# global variables we set/use:
+#  $amru_prefix - deltafs umbrella prefix directory (abspath)
+#  $common_noinit - set to non-null disable call to common_init (for dbg)
+#  $host_suffix - append "-suffix" to hostnames if set - emulab only (string)
+#  $ip_subnet - the ip subnet we want to use (x.y.z.t)
+#  $jobdir - per-job shared output directory (abspath)
+#  $jobenv - job environment (moab, slurm, etc.) (string)
+#  $jobruncli - interface to job run command (string)
+#  $jobruncmd - job run command (string)
+#  $openmpi_newbind - 1 if openmpi mpirun supports "--bind-to"
+#  $logfile - log shared by all exp runs (abspath)
+#  $exp_logfile - log used by one specific exp run (abspath)
+#  $nodes - number of nodes for vpic (int)
+#  $bbos_buddies - number of nodes for bbos (int)
+#  $cores - total cores across all nodes (int)
+#  $all_nodes - list of all nodes (string - sep: comma)
+#  $num_all_nodes - number of nodes in all_nodes (int)
+#  $vpic_nodes - list of nodes for vpic (string - sep: comma)
+#  $num_vpic_nodes - number of nodes in vpic_nodes (int)
+#  $bbos_nodes - list of nodes for bbos (string - sep: comma)
+#  $num_bbos_nodes - number of nodes in bbos_nodes (int)
+#  $bb_log_size - BBOS max per-core log size in bytes
 #
-# message: echo message to stdout, cc it to a default job-wise log file, and
-# then cc it again to a specific exp-wise log file.
-# note that if either $logfile or $exp_logfile is empty, tee will
-# just print the message without writing to files
-# uses: $logfile, $exp_logfile
-#
-message() { echo "$@" | tee -a $exp_logfile | tee -a $logfile; }
 
+# environment variables we set/use:
+#  $JOBDIRHOME - where to put job dirs (default: $HOME/jobs)
+#                example: /lustre/ttscratch1/users/$USER
+#  $EXTRA_MPIOPTS - additional options that need to be passed to mpirun
+#  $DW_SESSION_OVERRIDE - (cray) override the datawarp sessionid (for dbg)
 #
-# die: emit a mesage and exit 1
-#
-die() {
-  message "!!! ERROR !!! $@"
-  exit 1
-}
-
-#
-# jobdir  ## Lustre
-#
-# get_jobdir: setup $jobdir var and makes sure $jobdir is present
-# uses: $jobenv, $MOAB_JOBNAME, $PBS_JOBID, $SLURM_JOB_NAME, $SLURM_JOBID,
-#       $COBALT_XJOBNAME, $COBALT_JOBID, $JOBDIRHOME
-# sets: $jobdir  (XXX: also $logfile)
-#
-get_jobdir() {
-    if [ x${JOBDIRHOME-} != x ]; then
-        jobdirhome=${JOBDIRHOME}
-    else
-        jobdirhome=${HOME}/jobs
-    fi
-
-    if [ $jobenv = moab ]; then
-        jobdir=${jobdirhome}/${MOAB_JOBNAME}.${PBS_JOBID}
-    elif [ $jobenv = slurm ]; then
-        jobdir=${jobdirhome}/${SLURM_JOB_NAME}.${SLURM_JOBID}
-    elif [ $jobenv = cobalt ]; then
-        jobdir=${jobdirhome}/${COBALT_XJOBNAME}.${COBALT_JOBID}
-    elif [ x${MPIJOBNAME-} != x ]; then
-        jobdir=${jobdirhome}/${MPIJOBNAME}.${MPIJOBID-$$}
-    else
-        ## TODO: UNCOMMENT THIS
-        # jobdir=${jobdirhome}/`basename $0`.$$  # use top-level script name $0
-        jobdir=${jobdirhome}/`basename $0`.1234
-    fi
-
-    message "-INFO- creating jobdir..."
-    mkdir -p ${jobdir} || die "cannot make jobdir ${jobdir}"
-    message "-INFO- jobdir = ${jobdir}"
-
-    # XXX: override default and auto set logfile
-    logfile=${jobdir}/$(basename $jobdir).log
-}
 
 #
-# all_nodes
+# environment variables we use as input:
+#  $HOME - your home directory
+#  $DW_JOB_STRIPED - data warp mount (cray)
+#  $JOBENV - operating env (one of moab, slurm, cobalt, openmpi, or mpich)
+#    if $JOBENV is set, we use:
+#       $JOBRUNCLI - command line interface to job run command
+#       $JOBRUNCMD - command to run jobs
+#  $JOBHOSTS - nodes to run jobs (default: localhost)
+#              (only used if not running on a Cray or an Emulab platform)
+#  $MPIRUN - mpirun command to use (if not running under a scheduler)
 #
-# gen_hostfile: generate a list of hosts we have in $jobdir/hosts.txt
-# one host per line.
-# uses: $jobenv, $PBS_NODEFILE
-#       $SLURMJOB_NODELIST/slurm_nodefile,
-#       $COBALT_PARTNAME/cobalt_nodefile,
-#       $jobdir
-# sets: $all_nodes, $num_all_nodes
-# creates: $jobdir/hosts.txt
+#  Env running moab:
+#    $MOAB_JOBNAME - jobname
+#    $PBS_JOBID - job id
+#    $PBS_NODEFILE - file with list of all nodes
 #
-gen_hostfile() {
-  message "-INFO- generating hostfile ${jobdir}/hosts.txt..."
-
-  if [ $jobenv = moab ]; then
-
-    # Generate hostfile on CRAY and store on disk
-    cat $PBS_NODEFILE | uniq | sort > $jobdir/hosts.txt ||
-      die "failed to create hosts.txt file"
-
-  elif [ $jobenv = slurm ]; then
-
-    # generate hostfile under slurm with helper script
-    $dfsu_prefix/scripts/slurm_nodefile $jobdir/hosts.txt ||
-      die "failed to create hosts.txt file"
-
-  elif [ $jobenv = cobalt ]; then
-
-    # generates hostfile from PARTNAME or NODEFILE
-    $dfsu_prefix/scripts/cobalt_nodefile $jobdir/hosts.txt ||
-      die "failed to create hosts.txt file"
-
-  elif [ -f "/share/testbed/bin/emulab-listall" ]; then
-
-    # Generate hostfile on Emulab and store on disk
-    if [ x${host_suffix-} != x ]; then
-      exp_hosts="$(/share/testbed/bin/emulab-listall --append $host_suffix | tr ',' '\n')"
-    else
-      exp_hosts="$(/share/testbed/bin/emulab-listall | tr ',' '\n')"
-    fi
-
-    echo "$exp_hosts" > $jobdir/hosts.txt ||
-      die "failed to create hosts.txt file"
-  else
-
-    message "!!! WARNING !!! CRAY or Emulab not available, reading @ENV[JOBHOSTS]"
-
-    echo "${JOBHOSTS:-localhost}" | tr ',' '\n' > $jobdir/hosts.txt ||
-      die "failed to create hosts.txt file"
-  fi
-
-  if [ ${exp_hosts_blacklist:-"none"} != "none" ] && [ -f "$exp_hosts_blacklist" ]; then
-    message "-INFO- removing hosts in $exp_hosts_blacklist from hosts.txt"
-    egrep -v -f $exp_hosts_blacklist $jobdir/hosts.txt > tmp
-    mv tmp $jobdir/hosts.txt
-  fi
-
-  # Populate a variable with hosts
-  all_nodes=$(cat ${jobdir}/hosts.txt)
-  num_all_nodes=$(cat ${jobdir}/hosts.txt | tr ',' '\n' | sort | wc -l)
-  message "-INFO- num hosts = ${num_all_nodes}"
-}
+#  Env running slurm:
+#    $SLURM_JOB_NAME - jobname
+#    $SLURM_JOBID - job id
+#    $SLURM_JOB_NODELIST - list of all nodes (in compat form)
+#       XXX: we use the slurm_nodefile script to expand the node list
+#
+#  Env running cobalt:
+#    $COBALT_JOBID - job id
+#    $COBALT_NODEFILE - list of all nodes in a file (not always provided)
+#    $COBALT_PARTNAME - list of all nodes (in compact form)
+#    $COBALT_XJOBNAME - job name (we provide it, optional)
+#
 
 #
-# generate host list files: $jobdir/amr.hosts, $jobdir/bbos.hosts
-# uses: $jobdir, $nodes, $bbos_buddies
-# sets: $amr_nodes, $bbos_nodes
-# creates: $jobdir/amr.hosts, $jobdir/bbos.hosts
+# files we create:
+#  $jobdir/hosts.txt - list of hosts
+#  $jobdir/bbos.hosts - host file only of bbos hosts
+#  $jobdir/vpic.hosts - host file only of vpic hosts
 #
-gen_hosts() {
-  message "-INFO- generating amr/bbos host lists..."
 
-  # XXX: sanity check: # of nodes in list from PBS_NODEFILE or
-  # XXX:               emulab-listall >= $nodes+$bbos_buddies
-
-  # first generate the generic hosts.txt
-  gen_hostfile
-
-  # XXX AJ: giving up hostifle generation because
-  # we added hostfile generation AND filtering
-  # outside this function
-
-  # divide hosts.txt into parts based on $nodes and $bbos_nodes
-  cat $jobdir/hosts.txt | head -n $nodes |
-    tr '\n' ',' | sed '$s/,$//' > $jobdir/amr.hosts ||
-    die "failed to create amr.hosts file"
-
-  amr_nodes=$(cat ${jobdir}/amr.hosts)
-  num_amr_nodes=$(cat ${jobdir}/amr.hosts | tr ',' '\n' | sort | wc -l)
-  message "-INFO- num amr nodes = ${num_amr_nodes}"
-
-  if [ "${bbos_buddies:-0}" = "0" ]; then
-    message "-INFO- supressing zero length bbos.hosts"
-    bbos_nodes=""
-    num_bbos_nodes=0
-  else
-    cat $jobdir/hosts.txt | tail -n $bbos_buddies |
-      tr '\n' ',' | sed '$s/,$//' > $jobdir/bbos.hosts ||
-      die "failed to create bbos.hosts file"
-    bbos_nodes=$(cat ${jobdir}/bbos.hosts)
-    num_bbos_nodes=$(cat ${jobdir}/bbos.hosts | tr ',' '\n' | sort | wc -l)
-    message "-INFO- num bbos nodes = ${num_bbos_nodes}"
-  fi
-}
+# TODO:
+# - Convert node lists to ranges on CRAY
 
 #
-# clear_caches: clear node caches on amr nodes
-# uses: $jobenv, $amr_nodes, $cores, $nodes
+# prefix directory comes from cmake's ${CMAKE_INSTALL_PREFIX} variable
 #
-clear_caches() {
-  message "-INFO- clearing node caches..."
+amru_prefix=@CMAKE_INSTALL_PREFIX@
 
-  if [ $jobenv = moab -o $jobenv = slurm -o $jobenv = cobalt ]; then
-    message "!!! NOTICE !!! skipping cache clear ... no hpc sudo access"
-  elif [ -f "/share/testbed/bin/emulab-mpirunall" -a "${DROP_CACHE-}x" != "x" ]; then
-    # this does more than just $amr_nodes (does them all)
-    # but that isn't really a problem...
-    /share/testbed/bin/emulab-mpirunall sudo sh -c \
-      'echo 3 > /proc/sys/vm/drop_caches'
-  else
-    message "!!! NOTICE !!! skipping cache clear ... not on Emulab"
-  fi
+### ensure definition of a set of global vars ###
 
-  message "-INFO- done"
-}
+#
+# job-wise log - shared among all exp runs
+# default: null (XXX: but we override this in get_jobdir)
+#
+logfile=${logfile-}
+
+#
+# exp-wise log - one per exp run
+# default: null
+#
+exp_logfile=${exp_logfile-}
+
+#
+# common_init: init the common.sh layer (mainly detecting env)
+# uses/sets: $JOBENV, $JOBRUNCMD, $JOBRUNCLI, $MPIRUN,
+# $jobenv, $jobruncmd, $jobruncli
+#
 
 common_init() {
 
@@ -304,6 +219,204 @@ common_init() {
       die "bad cobalt setup - check partname/nodefile"
     fi
   fi
+}
+
+#
+# message: echo message to stdout, cc it to a default job-wise log file, and
+# then cc it again to a specific exp-wise log file.
+# note that if either $logfile or $exp_logfile is empty, tee will
+# just print the message without writing to files
+# uses: $logfile, $exp_logfile
+#
+message() { echo "$@" | tee -a $exp_logfile | tee -a $logfile; }
+
+#
+# die: emit a mesage and exit 1
+#
+die() {
+  message "!!! ERROR !!! $@"
+  exit 1
+}
+
+#
+# loadargs(): parse a bunch of key value pairs into "arg_*" variables
+#
+loadargs() {
+	for loadargs_arg; do
+		loadargs_key=$(echo $loadargs_arg | sed -n 's/=.*//p')
+		# make sure key is alphanumeric or _
+		loadargs_check=$(echo $loadargs_key | sed -e 's/[A-Za-z0-9_]//g')
+		loadargs_val=$(echo $loadargs_arg | sed -n 's/^[A-Za-z0-9_]*=//p')
+		if [ "$loadargs_check" != "" -o "$loadargs_key" = "" ]; then
+			echo "loadargs: bad keyval arg: $loadargs_arg"
+			exit 1
+		fi
+		eval "arg_${loadargs_key}=\"${loadargs_val}\""
+	done
+}
+
+#
+# jobdir  ## Lustre
+#
+# get_jobdir: setup $jobdir var and makes sure $jobdir is present
+# uses: $jobenv, $MOAB_JOBNAME, $PBS_JOBID, $SLURM_JOB_NAME, $SLURM_JOBID,
+#       $COBALT_XJOBNAME, $COBALT_JOBID, $JOBDIRHOME
+# sets: $jobdir  (XXX: also $logfile)
+#
+get_jobdir() {
+    if [ x${JOBDIRHOME-} != x ]; then
+        jobdirhome=${JOBDIRHOME}
+    else
+        jobdirhome=${HOME}/jobs
+    fi
+
+    if [ $jobenv = moab ]; then
+        jobdir=${jobdirhome}/${MOAB_JOBNAME}.${PBS_JOBID}
+    elif [ $jobenv = slurm ]; then
+        jobdir=${jobdirhome}/${SLURM_JOB_NAME}.${SLURM_JOBID}
+    elif [ $jobenv = cobalt ]; then
+        jobdir=${jobdirhome}/${COBALT_XJOBNAME}.${COBALT_JOBID}
+    elif [ x${MPIJOBNAME-} != x ]; then
+        jobdir=${jobdirhome}/${MPIJOBNAME}.${MPIJOBID-$$}
+    else
+        ## TODO: UNCOMMENT THIS
+        # jobdir=${jobdirhome}/`basename $0`.$$  # use top-level script name $0
+        jobdir=${jobdirhome}/`basename $0`.1234
+    fi
+
+    message "-INFO- creating jobdir..."
+    mkdir -p ${jobdir} || die "cannot make jobdir ${jobdir}"
+    message "-INFO- jobdir = ${jobdir}"
+
+    # XXX: override default and auto set logfile
+    logfile=${jobdir}/$(basename $jobdir).log
+}
+
+#
+# all_nodes
+#
+# gen_hostfile: generate a list of hosts we have in $jobdir/hosts.txt
+# one host per line.
+# uses: $jobenv, $PBS_NODEFILE
+#       $SLURMJOB_NODELIST/slurm_nodefile,
+#       $COBALT_PARTNAME/cobalt_nodefile,
+#       $jobdir
+# sets: $all_nodes, $num_all_nodes
+# creates: $jobdir/hosts.txt
+#
+gen_hostfile() {
+  message "-INFO- generating hostfile ${jobdir}/hosts.txt..."
+
+  if [ $jobenv = moab ]; then
+
+    # Generate hostfile on CRAY and store on disk
+    cat $PBS_NODEFILE | uniq | sort > $jobdir/hosts.txt ||
+      die "failed to create hosts.txt file"
+
+  elif [ $jobenv = slurm ]; then
+
+    # generate hostfile under slurm with helper script
+    $amru_prefix/scripts/slurm_nodefile $jobdir/hosts.txt ||
+      die "failed to create hosts.txt file"
+
+  elif [ $jobenv = cobalt ]; then
+
+    # generates hostfile from PARTNAME or NODEFILE
+    $amru_prefix/scripts/cobalt_nodefile $jobdir/hosts.txt ||
+      die "failed to create hosts.txt file"
+
+  elif [ -f "/share/testbed/bin/emulab-listall" ]; then
+
+    # Generate hostfile on Emulab and store on disk
+    if [ x${host_suffix-} != x ]; then
+      exp_hosts="$(/share/testbed/bin/emulab-listall --append $host_suffix | tr ',' '\n')"
+    else
+      exp_hosts="$(/share/testbed/bin/emulab-listall | tr ',' '\n')"
+    fi
+
+    echo "$exp_hosts" > $jobdir/hosts.txt ||
+      die "failed to create hosts.txt file"
+  else
+
+    message "!!! WARNING !!! CRAY or Emulab not available, reading @ENV[JOBHOSTS]"
+
+    echo "${JOBHOSTS:-localhost}" | tr ',' '\n' > $jobdir/hosts.txt ||
+      die "failed to create hosts.txt file"
+  fi
+
+  if [ ${exp_hosts_blacklist:-"none"} != "none" ] && [ -f "$exp_hosts_blacklist" ]; then
+    message "-INFO- removing hosts in $exp_hosts_blacklist from hosts.txt"
+    egrep -v -f $exp_hosts_blacklist $jobdir/hosts.txt > tmp
+    mv tmp $jobdir/hosts.txt
+  fi
+
+  # Populate a variable with hosts
+  all_nodes=$(cat ${jobdir}/hosts.txt)
+  num_all_nodes=$(cat ${jobdir}/hosts.txt | tr ',' '\n' | sort | wc -l)
+  message "-INFO- num hosts = ${num_all_nodes}"
+}
+
+#
+# generate host list files: $jobdir/amr.hosts, $jobdir/bbos.hosts
+# uses: $jobdir, $nodes, $bbos_buddies
+# sets: $amr_nodes, $bbos_nodes
+# creates: $jobdir/amr.hosts, $jobdir/bbos.hosts
+#
+gen_hosts() {
+  message "-INFO- generating amr/bbos host lists..."
+
+  # XXX: sanity check: # of nodes in list from PBS_NODEFILE or
+  # XXX:               emulab-listall >= $nodes+$bbos_buddies
+
+  # first generate the generic hosts.txt
+  gen_hostfile
+
+  # XXX AJ: giving up hostifle generation because
+  # we added hostfile generation AND filtering
+  # outside this function
+
+  # divide hosts.txt into parts based on $nodes and $bbos_nodes
+  cat $jobdir/hosts.txt | head -n $nodes |
+    tr '\n' ',' | sed '$s/,$//' > $jobdir/amr.hosts ||
+    die "failed to create amr.hosts file"
+
+  amr_nodes=$(cat ${jobdir}/amr.hosts)
+  num_amr_nodes=$(cat ${jobdir}/amr.hosts | tr ',' '\n' | sort | wc -l)
+  message "-INFO- num amr nodes = ${num_amr_nodes}"
+
+  if [ "${bbos_buddies:-0}" = "0" ]; then
+    message "-INFO- supressing zero length bbos.hosts"
+    bbos_nodes=""
+    num_bbos_nodes=0
+  else
+    cat $jobdir/hosts.txt | tail -n $bbos_buddies |
+      tr '\n' ',' | sed '$s/,$//' > $jobdir/bbos.hosts ||
+      die "failed to create bbos.hosts file"
+    bbos_nodes=$(cat ${jobdir}/bbos.hosts)
+    num_bbos_nodes=$(cat ${jobdir}/bbos.hosts | tr ',' '\n' | sort | wc -l)
+    message "-INFO- num bbos nodes = ${num_bbos_nodes}"
+  fi
+}
+
+#
+# clear_caches: clear node caches on amr nodes
+# uses: $jobenv, $amr_nodes, $cores, $nodes
+#
+clear_caches() {
+  message "-INFO- clearing node caches..."
+
+  if [ $jobenv = moab -o $jobenv = slurm -o $jobenv = cobalt ]; then
+    message "!!! NOTICE !!! skipping cache clear ... no hpc sudo access"
+  elif [ -f "/share/testbed/bin/emulab-mpirunall" -a "${DROP_CACHE-}x" != "x" ]; then
+    # this does more than just $amr_nodes (does them all)
+    # but that isn't really a problem...
+    /share/testbed/bin/emulab-mpirunall sudo sh -c \
+      'echo 3 > /proc/sys/vm/drop_caches'
+  else
+    message "!!! NOTICE !!! skipping cache clear ... not on Emulab"
+  fi
+
+  message "-INFO- done"
 }
 
 #

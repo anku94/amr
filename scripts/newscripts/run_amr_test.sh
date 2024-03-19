@@ -2,12 +2,12 @@
 
 set -eu
 
-# ----------- TMP OVERLOADS ------------
-DRYRUN=0
-common_noinit=1
-amru_prefix=/l0/amr-umbrella/install
 JOBDIRHOME=/mnt/ltio/amr-runs
-MPIRUN=$amru_prefix/bin/mpirun
+
+# Need to set MPIRUN before invoking common_init
+# Need to load mpi_common.sh before accessing amru_prefix
+# Call common_init manually to resolve circular dependency
+common_noinit=1
 
 arg_test_type="baseline"
 arg_host_suffix="dib"
@@ -25,10 +25,15 @@ arg_lb_policy="${AMR_LB_POLICY-baseline}"
 # Core script #
 ###############
 
-source ./mpi_common.sh
-source ./amr_common.sh
+source @CMAKE_INSTALL_PREFIX@/scripts/mpi_common.sh
+source ${amru_prefix}/scripts/amr_common.sh
+
+if [ x@AMR_TOOLS_OWNMPI@ != x ]; then
+  MPIRUN=$amru_prefix/bin/mpirun
+fi
 
 common_init
+
 
 # load command line args into $arg_* vars (overwrites default values)
 loadargs "$@"
