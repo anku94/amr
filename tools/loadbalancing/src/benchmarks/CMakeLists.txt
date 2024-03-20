@@ -1,5 +1,3 @@
-include(GoogleTest)
-
 set(benchmark_srcs benchmark.cc alias_method.cc)
 add_executable(benchmark benchmark_main.cc ${benchmark_srcs})
 target_link_libraries(benchmark PRIVATE lb pdlfs-common)

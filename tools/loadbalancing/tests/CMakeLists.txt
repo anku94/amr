@@ -1,5 +1,3 @@
-include(GoogleTest)
-
 find_package(pdlfs-common CONFIG REQUIRED)
 
 set(lb_tests lb_tests.cc misc_tests.cc policy_tests.cc scale_tests.cc)
