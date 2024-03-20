@@ -3,7 +3,7 @@ project (amr-tau-plugin C CXX)
 set(CMAKE_CXX_STANDARD 14)
 
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 find_package(TAU MODULE)
 

@@ -199,5 +199,5 @@ if (TAU_FOUND)
   # Make executable symbols available to dlopen'ed libs
   target_link_options(TAU::TAU INTERFACE LINKER:--export-dynamic)
 else()
-  message(WARNING "TAU not found")
+  message(STATUS "FindTAU: TAU not found!!")
 endif ()
