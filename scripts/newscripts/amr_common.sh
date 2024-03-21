@@ -11,14 +11,14 @@ set -eu
 # creates: exp_jobdir
 #
 amr_prepare_expdir() {
-	local bin_name=$(basename $amr_bin)
-	exp_tag="${bin_name}_LB${lb_policy}_C${cores}_N${nodes}"
+  local bin_name=$(basename $amr_bin)
+  exp_tag="${bin_name}_LB${lb_policy}_C${cores}_N${nodes}"
 
-	message "-INFO- Will use exp dir: $exp_tag in jobdir"
-	exp_jobdir="$jobdir/$exp_tag"
-	exp_logfile="$exp_jobdir/$exp_tag.log"
+  message "-INFO- Will use exp dir: $exp_tag in jobdir"
+  exp_jobdir="$jobdir/$exp_tag"
+  exp_logfile="$exp_jobdir/$exp_tag.log"
 
-	mkdir -p $exp_jobdir
+  mkdir -p $exp_jobdir
 }
 
 #
@@ -28,23 +28,23 @@ amr_prepare_expdir() {
 # creates:
 
 amr_prepare_deck() {
-	deck_name=${1}
-	deck_lb_policy=${2}
-	deck_nlim=${3}
+  deck_name=${1}
+  deck_lb_policy=${2}
+  deck_nlim=${3}
 
-	local deck_in_fpath="$amru_prefix/decks/${deck_name}.in"
-	local deck_out_fpath="$exp_jobdir/${deck_name}"
+  local deck_in_fpath="$amru_prefix/decks/${deck_name}.in"
+  local deck_out_fpath="$exp_jobdir/${deck_name}"
 
-	[ -f "$deck_in_fpath" ] || die "!! ERROR !! Deck file not found: $deck_in_fpath"
+  [ -f "$deck_in_fpath" ] || die "!! ERROR !! Deck file not found: $deck_in_fpath"
 
-	message "-INFO- Preparing deck from template: $deck_in_fpath"
-	message "-INFO- Generated deck will be: $deck_out_fpath"
+  message "-INFO- Preparing deck from template: $deck_in_fpath"
+  message "-INFO- Generated deck will be: $deck_out_fpath"
 
-	cat $deck_in_fpath |
-		sed -s "s/{LB_POLICY}/$deck_lb_policy/g" |
-		sed -s "s/{NLIM}/$deck_nlim/g" >$deck_out_fpath
+  cat $deck_in_fpath |
+    sed -s "s/{LB_POLICY}/$deck_lb_policy/g" |
+    sed -s "s/{NLIM}/$deck_nlim/g" >$deck_out_fpath
 
-	message "-INFO- Deck prepared"
+  message "-INFO- Deck prepared"
 
 }
 
@@ -59,43 +59,43 @@ amr_prepare_deck() {
 # Arguments:
 
 amr_do_run() {
-	prelib="${1}"
-	amr_bin="${2}"
-	amr_deck="${3}"
+  prelib="${1}"
+  amr_bin="${2}"
+  amr_deck="${3}"
 
-	local amr_bin_fullpath="$amru_prefix/bin/$amr_bin"
-	local amr_deck_fullpath="$exp_jobdir/$amr_deck"
-	local amr_exec="$amr_bin_fullpath -i $amr_deck_fullpath"
+  local amr_bin_fullpath="$amru_prefix/bin/$amr_bin"
+  local amr_deck_fullpath="$exp_jobdir/$amr_deck"
+  local amr_exec="$amr_bin_fullpath -i $amr_deck_fullpath"
 
-	[ -f "$amr_bin_fullpath" ] || die "AMR binary not found: $amr_bin_fullpath"
-	[ -f "$amr_deck_fullpath" ] || die "AMR deck not found: $amr_deck_fullpath"
+  [ -f "$amr_bin_fullpath" ] || die "AMR binary not found: $amr_bin_fullpath"
+  [ -f "$amr_deck_fullpath" ] || die "AMR deck not found: $amr_deck_fullpath"
 
-	message "-INFO- Running AMR experiment: $amr_exec"
+  message "-INFO- Running AMR experiment: $amr_exec"
 
-	prelib_env=()
-	if [ x"$prelib" != x ]; then
-		# If prelib is a relative path, check for its existence in lib/
-		if [ "${prelib:0:1}" != "/" ]; then
-			prelib="$amru_prefix/lib/$prelib"
-			[ -f "$prelib" ] || die "Preload lib not found: $prelib"
-		fi
+  prelib_env=()
+  if [ x"$prelib" != x ]; then
+    # If prelib is a relative path, check for its existence in lib/
+    if [ "${prelib:0:1}" != "/" ]; then
+      prelib="$amru_prefix/lib/$prelib"
+      [ -f "$prelib" ] || die "Preload lib not found: $prelib"
+    fi
 
-		prelib_env=(
-			"LD_PRELOAD" "$prelib"
-			"KOKKOS_TOOLS_LIBS" "$prelib"
-		)
-	fi
+    prelib_env=(
+      "LD_PRELOAD" "$prelib"
+      "KOKKOS_TOOLS_LIBS" "$prelib"
+    )
+  fi
 
-	# create an array called env_vars, and insert prelib_env into that array
-	env_vars=(
-		"${prelib_env[@]}"
-		"AMRMON_PRINT_TOPK" "${AMRMON_PRINT_TOPK-10}"
-		"AMRMON_P2P_ENABLE_REDUCE" "${AMRMON_P2P_ENABLE_REDUCE-1}"
-		"AMRMON_P2P_ENABLE_PUT" "${AMRMON_P2P_ENABLE_PUT-0}"
-		"GLOG_minloglevel" ${GLOG_minloglevel-0}
-		"GLOG_v" ${GLOG_v-0}
-	)
+  # create an array called env_vars, and insert prelib_env into that array
+  env_vars=(
+    "${prelib_env[@]}"
+    "AMRMON_PRINT_TOPK" "${AMRMON_PRINT_TOPK-10}"
+    "AMRMON_P2P_ENABLE_REDUCE" "${AMRMON_P2P_ENABLE_REDUCE-1}"
+    "AMRMON_P2P_ENABLE_PUT" "${AMRMON_P2P_ENABLE_PUT-0}"
+    "GLOG_minloglevel" ${GLOG_minloglevel-0}
+    "GLOG_v" ${GLOG_v-0}
+  )
 
-	do_mpirun $cores $ppn "$amr_cpubind" env_vars[@] \
-		"$amr_nodes" "$amr_exec" "${EXTRA_MPIOPTS-}"
+  do_mpirun $cores $ppn "$amr_cpubind" env_vars[@] \
+    "$amr_nodes" "$amr_exec" "${EXTRA_MPIOPTS-}"
 }

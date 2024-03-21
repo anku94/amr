@@ -127,11 +127,11 @@ common_init() {
     jobenv=slurm jobruncli=srun jobruncmd=srun
   elif [ x${COBALT_JOBID-} != x ]; then
     jobenv=cobalt
-    if [ $(which aprun 2> /dev/null) ]; then
+    if [ $(which aprun 2>/dev/null) ]; then
       jobruncli=aprun jobruncmd=aprun
-    elif [ $(which runjob 2> /dev/null) ]; then
+    elif [ $(which runjob 2>/dev/null) ]; then
       jobruncli=runjob jobruncmd=runjob
-    elif [ $(which mpirun 2> /dev/null) ]; then
+    elif [ $(which mpirun 2>/dev/null) ]; then
       jobruncmd=mpirun
       if [ "$(mpirun --version 2>&1 | fgrep 'open-mpi.org')" ]; then
         jobruncli=openmpi
@@ -143,14 +143,14 @@ common_init() {
     fi
   elif [ x${OMPI_COMM_WORLD_SIZE-} != x ]; then # since ompi 1.3
     jobenv=openmpi jobruncli=openmpi
-    if [ $(which mpirun.openmpi 2> /dev/null) ]; then
+    if [ $(which mpirun.openmpi 2>/dev/null) ]; then
       jobruncmd=mpirun.openmpi
     else
       jobruncmd=mpirun
     fi
   elif [ x${HYDI_CONTROL_FD-} != x ]; then # XXX maybe
     jobenv=mpich jobruncli=mpich
-    if [ $(which mpirun.mpich 2> /dev/null) ]; then
+    if [ $(which mpirun.mpich 2>/dev/null) ]; then
       jobruncmd=mpirun.mpich
     else
       jobruncmd=mpirun
@@ -163,11 +163,11 @@ common_init() {
     else
       die "MPIRUN: cannot determine MPI type for cmd $MPIRUN - ABORTING"
     fi
-  elif [ $(which mpirun.mpich 2> /dev/null) ]; then
+  elif [ $(which mpirun.mpich 2>/dev/null) ]; then
     jobenv=mpich jobruncli=mpich jobruncmd=mpirun.mpich
-  elif [ $(which mpirun.openmpi 2> /dev/null) ]; then
+  elif [ $(which mpirun.openmpi 2>/dev/null) ]; then
     jobenv=openmpi jobruncli=openmpi jobruncmd=mpirun.openmpi
-  elif [ $(which mpirun 2> /dev/null) ]; then
+  elif [ $(which mpirun 2>/dev/null) ]; then
     if [ "$(mpirun --version 2>&1 | fgrep 'open-mpi.org')" ]; then
       jobenv=openmpi jobruncli=openmpi jobruncmd=mpirun
     else
@@ -183,7 +183,7 @@ common_init() {
   # check for newer cpu binding flag for openmpi
   #
   if [ $jobruncli = openmpi ]; then
-    if [ "$($jobruncmd --help 2>&1 | fgrep -e '--bind-to ')" ] || \
+    if [ "$($jobruncmd --help 2>&1 | fgrep -e '--bind-to ')" ] ||
       [ "$($jobruncmd --help -V 2>&1 | fgrep -e '--bind-to ')" ]; then
       message "-INFO- common_init: openmpi supports new --bind-to flag"
       openmpi_newbind=1
@@ -243,17 +243,17 @@ die() {
 # loadargs(): parse a bunch of key value pairs into "arg_*" variables
 #
 loadargs() {
-	for loadargs_arg; do
-		loadargs_key=$(echo $loadargs_arg | sed -n 's/=.*//p')
-		# make sure key is alphanumeric or _
-		loadargs_check=$(echo $loadargs_key | sed -e 's/[A-Za-z0-9_]//g')
-		loadargs_val=$(echo $loadargs_arg | sed -n 's/^[A-Za-z0-9_]*=//p')
-		if [ "$loadargs_check" != "" -o "$loadargs_key" = "" ]; then
-			echo "loadargs: bad keyval arg: $loadargs_arg"
-			exit 1
-		fi
-		eval "arg_${loadargs_key}=\"${loadargs_val}\""
-	done
+  for loadargs_arg; do
+    loadargs_key=$(echo $loadargs_arg | sed -n 's/=.*//p')
+    # make sure key is alphanumeric or _
+    loadargs_check=$(echo $loadargs_key | sed -e 's/[A-Za-z0-9_]//g')
+    loadargs_val=$(echo $loadargs_arg | sed -n 's/^[A-Za-z0-9_]*=//p')
+    if [ "$loadargs_check" != "" -o "$loadargs_key" = "" ]; then
+      echo "loadargs: bad keyval arg: $loadargs_arg"
+      exit 1
+    fi
+    eval "arg_${loadargs_key}=\"${loadargs_val}\""
+  done
 }
 
 #
@@ -265,32 +265,32 @@ loadargs() {
 # sets: $jobdir  (XXX: also $logfile)
 #
 get_jobdir() {
-    if [ x${JOBDIRHOME-} != x ]; then
-        jobdirhome=${JOBDIRHOME}
-    else
-        jobdirhome=${HOME}/jobs
-    fi
+  if [ x${JOBDIRHOME-} != x ]; then
+    jobdirhome=${JOBDIRHOME}
+  else
+    jobdirhome=${HOME}/jobs
+  fi
 
-    if [ $jobenv = moab ]; then
-        jobdir=${jobdirhome}/${MOAB_JOBNAME}.${PBS_JOBID}
-    elif [ $jobenv = slurm ]; then
-        jobdir=${jobdirhome}/${SLURM_JOB_NAME}.${SLURM_JOBID}
-    elif [ $jobenv = cobalt ]; then
-        jobdir=${jobdirhome}/${COBALT_XJOBNAME}.${COBALT_JOBID}
-    elif [ x${MPIJOBNAME-} != x ]; then
-        jobdir=${jobdirhome}/${MPIJOBNAME}.${MPIJOBID-$$}
-    else
-        ## TODO: UNCOMMENT THIS
-        # jobdir=${jobdirhome}/`basename $0`.$$  # use top-level script name $0
-        jobdir=${jobdirhome}/`basename $0`.1234
-    fi
+  if [ $jobenv = moab ]; then
+    jobdir=${jobdirhome}/${MOAB_JOBNAME}.${PBS_JOBID}
+  elif [ $jobenv = slurm ]; then
+    jobdir=${jobdirhome}/${SLURM_JOB_NAME}.${SLURM_JOBID}
+  elif [ $jobenv = cobalt ]; then
+    jobdir=${jobdirhome}/${COBALT_XJOBNAME}.${COBALT_JOBID}
+  elif [ x${MPIJOBNAME-} != x ]; then
+    jobdir=${jobdirhome}/${MPIJOBNAME}.${MPIJOBID-$$}
+  else
+    ## TODO: UNCOMMENT THIS
+    # jobdir=${jobdirhome}/`basename $0`.$$  # use top-level script name $0
+    jobdir=${jobdirhome}/$(basename $0).1234
+  fi
 
-    message "-INFO- creating jobdir..."
-    mkdir -p ${jobdir} || die "cannot make jobdir ${jobdir}"
-    message "-INFO- jobdir = ${jobdir}"
+  message "-INFO- creating jobdir..."
+  mkdir -p ${jobdir} || die "cannot make jobdir ${jobdir}"
+  message "-INFO- jobdir = ${jobdir}"
 
-    # XXX: override default and auto set logfile
-    logfile=${jobdir}/$(basename $jobdir).log
+  # XXX: override default and auto set logfile
+  logfile=${jobdir}/$(basename $jobdir).log
 }
 
 #
@@ -311,7 +311,7 @@ gen_hostfile() {
   if [ $jobenv = moab ]; then
 
     # Generate hostfile on CRAY and store on disk
-    cat $PBS_NODEFILE | uniq | sort > $jobdir/hosts.txt ||
+    cat $PBS_NODEFILE | uniq | sort >$jobdir/hosts.txt ||
       die "failed to create hosts.txt file"
 
   elif [ $jobenv = slurm ]; then
@@ -335,19 +335,19 @@ gen_hostfile() {
       exp_hosts="$(/share/testbed/bin/emulab-listall | tr ',' '\n')"
     fi
 
-    echo "$exp_hosts" > $jobdir/hosts.txt ||
+    echo "$exp_hosts" >$jobdir/hosts.txt ||
       die "failed to create hosts.txt file"
   else
 
     message "!!! WARNING !!! CRAY or Emulab not available, reading @ENV[JOBHOSTS]"
 
-    echo "${JOBHOSTS:-localhost}" | tr ',' '\n' > $jobdir/hosts.txt ||
+    echo "${JOBHOSTS:-localhost}" | tr ',' '\n' >$jobdir/hosts.txt ||
       die "failed to create hosts.txt file"
   fi
 
   if [ ${exp_hosts_blacklist:-"none"} != "none" ] && [ -f "$exp_hosts_blacklist" ]; then
     message "-INFO- removing hosts in $exp_hosts_blacklist from hosts.txt"
-    egrep -v -f $exp_hosts_blacklist $jobdir/hosts.txt > tmp
+    egrep -v -f $exp_hosts_blacklist $jobdir/hosts.txt >tmp
     mv tmp $jobdir/hosts.txt
   fi
 
@@ -378,7 +378,7 @@ gen_hosts() {
 
   # divide hosts.txt into parts based on $nodes and $bbos_nodes
   cat $jobdir/hosts.txt | head -n $nodes |
-    tr '\n' ',' | sed '$s/,$//' > $jobdir/amr.hosts ||
+    tr '\n' ',' | sed '$s/,$//' >$jobdir/amr.hosts ||
     die "failed to create amr.hosts file"
 
   amr_nodes=$(cat ${jobdir}/amr.hosts)
@@ -391,7 +391,7 @@ gen_hosts() {
     num_bbos_nodes=0
   else
     cat $jobdir/hosts.txt | tail -n $bbos_buddies |
-      tr '\n' ',' | sed '$s/,$//' > $jobdir/bbos.hosts ||
+      tr '\n' ',' | sed '$s/,$//' >$jobdir/bbos.hosts ||
       die "failed to create bbos.hosts file"
     bbos_nodes=$(cat ${jobdir}/bbos.hosts)
     num_bbos_nodes=$(cat ${jobdir}/bbos.hosts | tr ',' '\n' | sort | wc -l)
@@ -640,5 +640,5 @@ do_mpirun() {
 # call common_init unless its been disabled (e.g. for debugging)
 #
 if [ x${common_noinit-} = x ]; then
-    common_init
+  common_init
 fi
