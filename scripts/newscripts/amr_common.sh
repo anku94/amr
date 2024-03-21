@@ -2,6 +2,8 @@
 
 set -eu
 
+amru_prefix=$dfsu_prefix
+
 #
 # amr_prepare_expdir: prepare variables for a single experiment
 # and create the expdir. must be done before amr_prepare_deck

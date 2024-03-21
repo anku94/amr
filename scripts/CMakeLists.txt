@@ -1,10 +1,8 @@
 set (install-programs-in
-    newscripts/mpi_common.sh.in
     newscripts/run_amr_test.sh.in)
 
 set (install-programs
-  newscripts/amr_common.sh
-  newscripts/run_amr.sh)
+  newscripts/amr_common.sh)
 
 foreach (lcv ${install-programs-in})
   string (REGEX REPLACE "\\.in$" "" out "${lcv}")

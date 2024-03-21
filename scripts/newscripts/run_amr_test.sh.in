@@ -36,7 +36,7 @@ arg_lb_policy="${AMR_LB_POLICY-baseline}"
 # Core script #
 ###############
 
-source @CMAKE_INSTALL_PREFIX@/scripts/mpi_common.sh
+source @CMAKE_INSTALL_PREFIX@/scripts/common.sh
 source ${amru_prefix}/scripts/amr_common.sh
 
 if [ x@AMR_TOOLS_OWNMPI@ != x ]; then
