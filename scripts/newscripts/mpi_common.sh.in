@@ -183,7 +183,8 @@ common_init() {
   # check for newer cpu binding flag for openmpi
   #
   if [ $jobruncli = openmpi ]; then
-    if [ "$($jobruncmd --help 2>&1 | fgrep -e '--bind-to ')" ]; then
+    if [ "$($jobruncmd --help 2>&1 | fgrep -e '--bind-to ')" ] || \
+      [ "$($jobruncmd --help -V 2>&1 | fgrep -e '--bind-to ')" ]; then
       message "-INFO- common_init: openmpi supports new --bind-to flag"
       openmpi_newbind=1
     else

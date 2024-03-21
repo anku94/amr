@@ -89,6 +89,9 @@ amr_do_run() {
 	# create an array called env_vars, and insert prelib_env into that array
 	env_vars=(
 		"${prelib_env[@]}"
+		"AMRMON_PRINT_TOPK" "${AMRMON_PRINT_TOPK-10}"
+		"AMRMON_P2P_ENABLE_REDUCE" "${AMRMON_P2P_ENABLE_REDUCE-1}"
+		"AMRMON_P2P_ENABLE_PUT" "${AMRMON_P2P_ENABLE_PUT-0}"
 		"GLOG_minloglevel" ${GLOG_minloglevel-0}
 		"GLOG_v" ${GLOG_v-0}
 	)
