@@ -1,3 +1,7 @@
+#include <string>
+
+#include "benchmarks/alias_method.h"
+#include "common.h"
 //
 // Created by Ankush J on 11/9/23.
 //

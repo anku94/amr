@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(amr-tools)
 
+# To be able to use TAU_ROOT
+cmake_policy(SET CMP0074 NEW)
+
 include(CTest)
 
 set(CMAKE_CXX_STANDARD 14)

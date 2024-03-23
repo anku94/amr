@@ -18,13 +18,13 @@ set(lb_srcs
         lb_policies.cc
         scaling/scale_sim.cc)
 
+add_library(lb ${lb_srcs} ${common_srcs})
+
 # if GUROBI is found, set macro GUROBI_ENABLED
 if (GUROBI_FOUND)
     add_definitions(-DGUROBI_ENABLED)
-    target_add_definitions(lb PRIVATE GUROBI_ENABLED)
+    target_compile_definitions(lb PRIVATE GUROBI_ENABLED)
 endif()
-
-add_library(lb ${lb_srcs} ${common_srcs})
 
 # GUROBI requires C++11; *sigh*
 target_compile_features(lb PRIVATE cxx_std_11)

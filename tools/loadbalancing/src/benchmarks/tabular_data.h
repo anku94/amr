@@ -1,10 +1,10 @@
 #pragma once
 
-#include "common.h"
-
+#include <iostream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -32,7 +32,7 @@ class TabularData {
     col_w_.resize(data.size(), min_col_w_);
     for (size_t i = 0; i < data.size(); ++i) {
       auto& cell = data[i];
-      if (cell.size() > col_w_[i]) {
+      if (cell.size() + 2 > col_w_[i]) {
         col_w_[i] = cell.size() + 2;
       }
     }
@@ -67,6 +67,7 @@ class TabularData {
       out << std::endl;
       out << std::string(col_w_sum, '-') << std::endl;
     }
+
     for (const auto& row : rows) {
       auto data = row->GetData();
       for (size_t i = 0; i < data.size(); ++i) {

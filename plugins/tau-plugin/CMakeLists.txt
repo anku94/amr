@@ -12,7 +12,7 @@ if (NOT TAU_FOUND)
   return()
 endif()
 
-set(PLUGIN_SOURCES Tau_plugin_amr.cc amr_tracer.cc amr_util.cc ../tools/common/common.cc)
+set(PLUGIN_SOURCES Tau_plugin_amr.cc amr_tracer.cc amr_util.cc ../../tools/common/common.cc)
 add_library(TAU-amr SHARED ${PLUGIN_SOURCES})
 target_link_libraries(TAU-amr TAU::TAU)
 
