@@ -1,10 +1,6 @@
 find_package(pdlfs-common CONFIG REQUIRED)
 find_package(GUROBI)
 
-# From Gurobi's example CMakeLists... not sure if thing thing works with 14
-# We're essentially overriding the top-level directive... do something else?
-set(CMAKE_CXX_STANDARD 11)
-
 add_subdirectory(benchmarks)
 
 set(lb_srcs
@@ -22,8 +18,13 @@ add_library(lb ${lb_srcs} ${common_srcs})
 
 # if GUROBI is found, set macro GUROBI_ENABLED
 if (GUROBI_FOUND)
+  if (CMAKE_CXX_STANDARD GREATER_EQUAL 14)
+    message(STATUS "Gurobi found, but still not enabled, as it requries cpp11 last we checked, and gtest requires cpp14")
+  else()
     add_definitions(-DGUROBI_ENABLED)
+<<<<<<< HEAD
     target_compile_definitions(lb PRIVATE GUROBI_ENABLED)
+  endif()
 endif()
 
 # GUROBI requires C++11; *sigh*

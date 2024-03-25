@@ -1,4 +1,8 @@
-include(GoogleTest)
+if (NOT BUILD_TESTING)
+  return()
+endif()
+
+find_package(GTest CONFIG)
 
 set(amr-tests topogen_test.cc)
 
