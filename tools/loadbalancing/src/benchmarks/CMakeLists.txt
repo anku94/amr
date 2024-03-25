@@ -1,8 +1,8 @@
-if (NOT BUILD_TESTING)
+find_package(GTest CONFIG)
+
+if (NOT GTest_FOUND)
   return()
 endif()
-
-find_package(GTest CONFIG)
 
 set(benchmark_srcs benchmark.cc alias_method.cc)
 add_executable(benchmark benchmark_main.cc ${benchmark_srcs})

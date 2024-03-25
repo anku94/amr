@@ -22,7 +22,6 @@ if (GUROBI_FOUND)
     message(STATUS "Gurobi found, but still not enabled, as it requries cpp11 last we checked, and gtest requires cpp14")
   else()
     add_definitions(-DGUROBI_ENABLED)
-<<<<<<< HEAD
     target_compile_definitions(lb PRIVATE GUROBI_ENABLED)
   endif()
 endif()

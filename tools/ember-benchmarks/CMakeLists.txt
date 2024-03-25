@@ -11,7 +11,7 @@ add_executable(halo3d-26 halo3d-26.cc)
 add_executable(sweep3d sweep3d.cc)
 add_executable(incast incast.cc)
 
-if (BUILD_TESTING)
+if (GTest_FOUND)
   message (STATUS "YES building tests")
   add_executable(block_tests block_tests.cc)
   add_test(block_tests block_tests)

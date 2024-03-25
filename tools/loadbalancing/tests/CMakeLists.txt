@@ -1,8 +1,9 @@
-if (NOT BUILD_TESTING)
+find_package(GTest CONFIG)
+
+if (NOT GTest_FOUND)
   return()
 endif()
 
-find_package(GTest CONFIG)
 find_package(pdlfs-common CONFIG REQUIRED)
 
 set(lb_tests lb_tests.cc misc_tests.cc policy_tests.cc scale_tests.cc)
