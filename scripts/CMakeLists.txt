@@ -1,5 +1,5 @@
 set (install-programs-in
-    newscripts/run_amr_test.sh.in)
+    newscripts/amr-minimal.sh.in newscripts/run_amr_test.sh.in)
 
 set (install-programs
   newscripts/amr_common.sh)

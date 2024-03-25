@@ -1,75 +1,66 @@
 #!/usr/bin/env bash
 
-set -eu
+#
+# run_amr_test.sh  run one amr instance using params on command line
+#
 
-# -- BEGIN temporary hardcodes --
-JOBDIRHOME=/mnt/ltio/amr-runs
-# Prevent creation of new folders, remove when necessary
-HARDCODED_PID_TMP=1234
-# Prevents actual running of the MPI command, disable when validated
-DRYRUN=1
-# Temporary hardcode for narwhal - looks like OpenMPI is used
-MPIRUN=mpirun.openmpi
-# Also temporary
-AMRMON_P2P_ENABLE_REDUCE=0
-AMRMON_P2P_ENABLE_PUT=0
-# -- END temporary hardcodes --
+set -euo pipefail
 
-# Need to set MPIRUN before invoking common_init
-# Need to load mpi_common.sh before accessing amru_prefix
-# Call common_init manually to resolve circular dependency
-common_noinit=1
-
-arg_test_type="baseline"
-arg_host_suffix="dib"
-arg_ip_subnet="10.94"
-arg_nodes="1"
-arg_procs_per_node="16"
-arg_cpubind="none"
+#########################################
+# default values for tunable parameters #
+#########################################
 arg_amr_bin="advection-example"
 arg_amr_deck="advection.example.16"
-arg_pre="${AMR_PRE-libprof_preload.so}"
-arg_nlim="${AMR_NLIM-1}"
-arg_lb_policy="${AMR_LB_POLICY-baseline}"
+arg_amr_glog_minloglevel="0"
+arg_amr_glog_v="0"
+arg_amr_monp2p_reduce="0"
+arg_amr_monp2p_put="0"
+arg_amr_mon_topk="10"
+arg_cpubind="none"
+arg_host_suffix=""
+arg_lb_policy="baseline"
+arg_nlim="1"
+arg_nodes="1"
+arg_pre="libprof_preload.so"
+arg_procs_per_node="16"
 
 ###############
 # Core script #
 ###############
-
 source @CMAKE_INSTALL_PREFIX@/scripts/common.sh
-source ${amru_prefix}/scripts/amr_common.sh
-
-if [ x@AMR_TOOLS_OWNMPI@ != x ]; then
-  MPIRUN=$amru_prefix/bin/mpirun
-fi
-
-common_init
+source ${dfsu_prefix}/scripts/amr_common.sh
 
 # load command line args into $arg_* vars (overwrites default values)
 loadargs "$@"
 
-procs_per_node="$arg_procs_per_node"
+# init global variables used by and shared with common modules
 nodes="$arg_nodes"
-cores=$((procs_per_node * nodes))
-ppn="$procs_per_node"
-amr_cpubind="$arg_cpubind"
-
-amr_bin="$arg_amr_bin"
-amr_deck="$arg_amr_deck"
-lb_policy="$arg_lb_policy"
+ppn="$arg_procs_per_node"
+cores=$((ppn * nodes))
 host_suffix="$arg_host_suffix"
 
 message "Script begin..."
 # keep track of start time so we can see how long this takes
-timein=$(date)
+timein=`date`
 
+### lustre (or some other shared area for output) ###
 get_jobdir
 
+### machine list ###
 gen_hosts
 
-amr_prepare_expdir
-amr_prepare_deck "$amr_deck" "$lb_policy" "$arg_nlim"
-amr_do_run "$arg_pre" "$amr_bin" "$amr_deck"
+### now do AMR ###
+amr_prepare_expdir "${arg_amr_bin}" "${arg_lb_policy}"
+
+amr_prepare_deck "${arg_amr_deck}" "${arg_lb_policy}" "${arg_nlim}"
+
+#
+# XXX: $vpic_nodes (an old name) has the list of allocated nodes sep'd
+# by a comma in it.   would have liked to use all_nodes, but that currently
+# uses a \n instead of a comma (bug?)
+#
+amr_do_run "$arg_pre" "$arg_amr_bin" "$arg_amr_deck" \
+	"$vpic_nodes" "$arg_cpubind"
 
 # overall time
 timeout=$(date)
