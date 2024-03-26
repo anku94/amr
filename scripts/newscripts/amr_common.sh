@@ -8,13 +8,15 @@ amru_prefix=$dfsu_prefix
 # amr_prepare_expdir: prepare variables for a single experiment
 # and create the expdir. must be done before amr_prepare_deck
 #
-# uses: amr_bin, lb_policy, cores, nodes
+# args: arg_amr_bin, arg_lb_policy
+# uses: cores, nodes
 # sets: exp_tag, exp_jobdir, exp_logfile
 # creates: exp_jobdir
 #
 amr_prepare_expdir() {
-  local bin_name=$(basename $amr_bin)
-  exp_tag="${bin_name}_LB${lb_policy}_C${cores}_N${nodes}"
+  local bin_name=$(basename ${1})
+  local policy=${2}
+  exp_tag="${bin_name}_LB${policy}_C${cores}_N${nodes}"
 
   message "-INFO- Will use exp dir: $exp_tag in jobdir"
   exp_jobdir="$jobdir/$exp_tag"
@@ -26,13 +28,14 @@ amr_prepare_expdir() {
 #
 # amr_prepare_deck: prepare the AMR deck
 #
+# args: arg_amr_deck, arg_lb_policy, arg_nlim
 # uses:
 # creates:
 
 amr_prepare_deck() {
-  deck_name=${1}
-  deck_lb_policy=${2}
-  deck_nlim=${3}
+  local deck_name=${1}
+  local deck_lb_policy=${2}
+  local deck_nlim=${3}
 
   local deck_in_fpath="$amru_prefix/decks/${deck_name}.in"
   local deck_out_fpath="$exp_jobdir/${deck_name}"
@@ -47,13 +50,15 @@ amr_prepare_deck() {
     sed -s "s/{NLIM}/$deck_nlim/g" >$deck_out_fpath
 
   message "-INFO- Deck prepared"
-
 }
 
 #
 # amr_do_run: run an AMR experiment
-# uses: $amru_prefix, $jobdir, $cores, $nodes, $ppn, $logfile, $exp_logfile,
-# $amr_nodes, $amr_cpubind
+#
+# args: arg_pre, arg_amr_bin, arg_amr_deck, arg_nodes, arg_cpubind
+# uses: amru_prefix, cores, ppn, logfile, exp_logfile, arg_amr_monp2p_reduce,
+#       arg_amr_monp2p_put, arg_amr_mon_topk, arg_amr_glog_minloglevel,
+#       arg_amr_glog_v
 #
 # creates:
 # side effects: changes current directory to $exp_jobdir
@@ -61,9 +66,11 @@ amr_prepare_deck() {
 # Arguments:
 
 amr_do_run() {
-  prelib="${1}"
-  amr_bin="${2}"
-  amr_deck="${3}"
+  local prelib="${1}"
+  local amr_bin="${2}"
+  local amr_deck="${3}"
+  local amr_nodes="${4}"
+  local amr_cpubind="${5}"
 
   local amr_bin_fullpath="$amru_prefix/bin/$amr_bin"
   local amr_deck_fullpath="$exp_jobdir/$amr_deck"
@@ -91,11 +98,11 @@ amr_do_run() {
   # create an array called env_vars, and insert prelib_env into that array
   env_vars=(
     "${prelib_env[@]}"
-    "AMRMON_PRINT_TOPK" "${AMRMON_PRINT_TOPK-10}"
-    "AMRMON_P2P_ENABLE_REDUCE" "${AMRMON_P2P_ENABLE_REDUCE-1}"
-    "AMRMON_P2P_ENABLE_PUT" "${AMRMON_P2P_ENABLE_PUT-0}"
-    "GLOG_minloglevel" ${GLOG_minloglevel-0}
-    "GLOG_v" ${GLOG_v-0}
+    "AMRMON_PRINT_TOPK" "${arg_amr_mon_topk}"
+    "AMRMON_P2P_ENABLE_REDUCE" "${arg_amr_monp2p_reduce}"
+    "AMRMON_P2P_ENABLE_PUT" "${arg_amr_monp2p_put}"
+    "GLOG_minloglevel" "${arg_amr_glog_minloglevel}"
+    "GLOG_v" "${arg_amr_glog_v}"
   )
 
   do_mpirun $cores $ppn "$amr_cpubind" env_vars[@] \

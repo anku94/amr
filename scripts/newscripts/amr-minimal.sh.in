@@ -1,0 +1,81 @@
+#!/bin/bash
+#SBATCH --job-name amr-minimal.sh
+#SBATCH --time=0:10:00
+#SBATCH --nodes=1
+#SBATCH --output /users/%u/jobs/amr-minimal-%j.out
+#
+
+#
+# instructions: set prefix and params below as desired.
+#               if using SLURM, set --nodes above.
+#
+
+#
+# set this to amr-umbrella prefix directory
+#
+prefix=@CMAKE_INSTALL_PREFIX@
+
+#
+# flags to run_amr_test.sh
+#
+amr_bin="advection-example"
+amr_deck="advection.example.16"
+amr_glog_minloglevel="0"
+amr_glog_v="0"
+amr_monp2p_reduce="0"
+amr_monp2p_put="0"
+amr_mon_topk="10"
+cpubind="none"
+host_suffix=""
+lb_policy="baseline"
+nlim="10"
+nodes="1"			# should match SBATCH --nodes arg above
+pre="libprof_preload.so"
+procs_per_node="16"
+
+############################################################################
+# no need to change anything below this line
+############################################################################
+
+#
+# workaround a bash bug where "I-0" matches "[a-z]*" when LANG is set
+# (only impacts some versions of bash)
+#
+unset LANG
+
+#
+# load in common.sh so we can get the jobdir for handling iterations
+#
+. $prefix/scripts/common.sh
+
+# XXX: something like vpicexpt_gen.pl would normally do this:
+if [ x$jobenv = xopenmpi -o x$jobenv = xmpich ]; then
+    export MPIJOBNAME=`basename $0` MPIJOBID=$$
+fi
+
+get_jobdir      # this sets jobdir
+
+#
+# loop through iterations...
+#
+it=0
+while [ $it -lt 1 ]
+do
+    echo running iteration $it
+    $prefix/scripts/run_amr_test.sh \
+	amr_bin="${amr_bin}" amr_deck="${amr_deck}" \
+	amr_glog_minloglevel="${amr_glog_minloglevel}" \
+	amr_glog_v="${amr_glog_v}" amr_monp2p_reduce="${amr_monp2p_reduce}" \
+	amr_monp2p_put="${amr_monp2p_put}" amr_mon_topk="${amr_mon_topk}" \
+	cpubind="${cpubind}" host_suffix="${host_suffix}" \
+	lb_policy="${lb_policy}" nlim="${nlim}" nodes="${nodes}" \
+	pre="${pre}" procs_per_node="${procs_per_node}" 
+
+    echo saving iteration in $jobdir/I-$it
+    mkdir -p $jobdir/I-$it
+    mv $jobdir/[a-z]* $jobdir/I-$it
+
+    it=`expr $it + 1`
+done
+
+exit 0
