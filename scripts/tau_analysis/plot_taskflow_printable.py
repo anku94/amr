@@ -1,14 +1,43 @@
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 from matplotlib.ticker import MultipleLocator
 import numpy as np
 import pandas as pd
 import pickle
 import ipdb
 
-from common import plot_init, PlotSaver, label_map, get_label, profile_label_map
 from trace_reader import TraceReader, TraceOps
-from typing import Dict, List
+
+
+def plot_init():
+    SMALL_SIZE = 16
+    MEDIUM_SIZE = 18
+    BIGGER_SIZE = 20
+
+    plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
+    plt.rc("axes", titlesize=SMALL_SIZE)  # fontsize of the axes title
+    plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+    plt.rc("xtick", labelsize=SMALL_SIZE)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=SMALL_SIZE)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=SMALL_SIZE)  # legend fontsize
+    plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+
+def plot_neighbors(df, plot_dir):
+    fig, ax = plt.subplots(1, 1)
+    print(df.describe())
+    print(df.columns)
+
+    df = df.groupby("ts", as_index=False).agg({"evtval_count": ["mean"]})
+
+    data_x = df["ts"]
+    data_y = df["evtval_count"]["mean"]
+
+    ax.plot(data_x, data_y)
+    ax.set_title("Datapoints Salvaged (Out of 512) For Each AMR TS")
+    ax.set_xlabel("Timestep")
+    ax.set_ylabel("Number Of Datapoints (= Ranks) Parseable")
+    # fig.show()
+    fig.savefig("{}/taskflow_nbrcnt.pdf".format(plot_dir), dpi=300)
 
 
 def get_data(df, evt, col):
@@ -18,7 +47,7 @@ def get_data(df, evt, col):
     return data_x, data_y
 
 
-def plot_event(event_name, df, plot_tail=False):
+def plot_event(event_name, df, plot_dir, plot_tail=False, save=False):
     fig, ax = plt.subplots(1, 1)
     cm = plt.cm.get_cmap("tab20c")
 
@@ -54,16 +83,19 @@ def plot_event(event_name, df, plot_tail=False):
         plot_fname = "taskflow_{}_wo99.pdf".format(event_key)
 
     fig.tight_layout()
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    if save:
+        fig.savefig("{}/{}".format(plot_dir, plot_fname), dpi=300)
+    else:
+        fig.show()
 
 
-def plot_all_events(df):
+def plot_all_events(df, plot_dir):
     for event in ["AR1", "AR2", "AR3", "SR"]:
-        plot_event(event, df, plot_tail=False)
-        plot_event(event, df, plot_tail=True)
+        plot_event(event, df, plot_dir, plot_tail=False, save=True)
+        plot_event(event, df, plot_dir, plot_tail=True, save=True)
 
 
-def plot_amr_log(log_df):
+def plot_amr_log(log_df, plot_dir, save=False):
     print(log_df)
 
     fig, ax = plt.subplots(1, 1)
@@ -92,7 +124,11 @@ def plot_amr_log(log_df):
     # plot_fname = 'amr_steptimes_zoomed.pdf'
 
     fig.tight_layout()
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+
+    if save:
+        fig.savefig("{}/{}".format(plot_dir, plot_fname), dpi=300)
+    else:
+        fig.show()
 
 
 def calc_amr_log_stats(log_df):
@@ -115,7 +151,7 @@ def calc_amr_log_stats(log_df):
     calc_key_stats("wtime_step_amr")
 
 
-def plot_amr_log_distrib(log_df):
+def plot_amr_log_distrib(log_df, plot_dir, save=False):
     fig, ax = plt.subplots(1, 1)
 
     data_y = log_df["wtime_step_other"]
@@ -143,6 +179,7 @@ def plot_amr_log_distrib(log_df):
 
     noncum_profile = True
     zoomed_profile = False
+    save = True
 
     if noncum_profile:
         ax.set_xlim([0, 3])
@@ -172,12 +209,15 @@ def plot_amr_log_distrib(log_df):
 
     plt.grid(visible=True, which="major", color="#999")
     plt.grid(visible=True, which="minor", color="#ddd")
-
     fig.tight_layout()
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+
+    if save:
+        fig.savefig("{}/{}".format(plot_dir, plot_fname), dpi=300)
+    else:
+        fig.show()
 
 
-def plot_amr_comp(all_dfs):
+def plot_amr_comp(all_dfs, plot_dir, save=False):
     fig, ax = plt.subplots(1, 1)
 
     cm = plt.cm.get_cmap("Set1")
@@ -199,16 +239,23 @@ def plot_amr_comp(all_dfs):
     ax.legend()
     plt.grid(visible=True, which="major", color="#999")
     plt.grid(visible=True, which="minor", color="#ddd")
+    fig.tight_layout()
 
     plot_fname = "amr_steptimes_comp.pdf"
     plot_fname = "amr_steptimes_comp_zoomed.pdf"
     ax.set_xlim([0000, 10000])
 
-    fig.tight_layout()
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    # save = True
+
+    if save:
+        fig.savefig("{}/{}".format(plot_dir, plot_fname), dpi=300)
+    else:
+        fig.show()
+    pass
 
 
 def run_plot_amr_comp():
+    plot_dir = "figures_bigrun"
     log_dirs = [
         "/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log.times.csv",
         "/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log2.csv",
@@ -217,7 +264,39 @@ def run_plot_amr_comp():
     ]
 
     log_dfs = map(pd.read_csv, log_dirs)
-    plot_amr_comp(log_dfs)
+    plot_amr_comp(log_dfs, plot_dir, save=False)
+
+
+def plot_profile():
+    pass
+
+
+def run_profile():
+    df_path = "/Users/schwifty/Repos/amr-data/20220524-phase-analysis/profile.log.csv"
+    df = pd.read_csv(df_path)
+    df = df.astype({"rank": "int32", "event": str, "timepct": float})
+    events = df["event"].unique()
+
+    fig, ax = plt.subplots(1, 1)
+
+    for event in events:
+        dfe = df[df["event"] == event]
+        data_x = dfe["rank"]
+        data_y = dfe["timepct"]
+        print(data_x)
+        print(data_y)
+        ax.plot(dfe["rank"], dfe["timepct"], label=event)
+
+    ax.set_title("Function-Wise Times (Pct Of Process Time)")
+    ax.set_xlabel("Rank Index")
+    ax.set_ylabel("Time Taken (%)")
+    ax.legend()
+    # fig.tight_layout()
+    ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f}%".format(x))
+    fig.show()
+    plot_dir = "figures_bigrun"
+    plot_fname = "amr_profile_phases.pdf"
+    fig.savefig("{}/{}".format(plot_dir, plot_fname), dpi=300)
 
 
 def strtols(list_str):
@@ -278,13 +357,11 @@ def plot_timestep(df_ts, df_log, fpath):
     ax.set_ylabel("Time (s)")
     ax.set_title("Rankwise Time Breakdown For Step {}".format(timestep))
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.2f}".format(x))
-
     fig.tight_layout()
-    plot_fname = "plot_step/plot_step{}".format(timestep)
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/plot_step/plot_step{}.pdf".format(fpath, timestep), dpi=300)
 
 
-def plot_logstats(df_logstats) -> None:
+def plot_logstats(df_logstats, plot_dir: str) -> None:
     fig, ax = plt.subplots(1, 1)
 
     data_x = range(len(df_logstats))
@@ -305,22 +382,18 @@ def plot_logstats(df_logstats) -> None:
 
     ax.set_title("Time Taken For Two Phases As Per Internal Timers")
     ax.legend()
-
-    plot_fname = "timeline_a_zoomed"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/timeline_a_zoomed.pdf".format(plot_dir), dpi=300)
 
 
-# TODO: Deprecated in favor of multimat("aggr:tsw:event")
-# Change wherever applicable
-#  def get_all_and_aggr(df, key, aggr_f):
-#  df = df[df["evtname"] == key]
-#  mapobj = map(lambda x: aggr_f(strtols(x)), df["evtval"])
-#  mapobj = list(mapobj)
-#  print(len(mapobj))
-#  return np.array(mapobj)
+def get_all_and_aggr(df, key, aggr_f):
+    df = df[df["evtname"] == key]
+    mapobj = map(lambda x: aggr_f(strtols(x)), df["evtval"])
+    mapobj = list(mapobj)
+    print(len(mapobj))
+    return np.array(mapobj)
 
 
-def plot_umbt_stats(df_phases, df_log) -> None:
+def plot_umbt_stats(df_phases, df_log, plot_dir) -> None:
     fig, ax = plt.subplots(1, 1)
 
     get_data_y = lambda x: strtols(
@@ -363,8 +436,7 @@ def plot_umbt_stats(df_phases, df_log) -> None:
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.2f}s".format(x))
 
     fig.tight_layout()
-    plot_fname = "amr_stats"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/amr_stats.pdf".format(plot_dir), dpi=300)
 
     fig, ax = plt.subplots(1, 1)
     ax.plot(data_x, data_y1a / data_y1, label="TAU_UMBT/TAU_AR3")
@@ -377,8 +449,7 @@ def plot_umbt_stats(df_phases, df_log) -> None:
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.1f}%".format(x * 100))
 
     fig.tight_layout()
-    plot_fname = "amr_timerat"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/amr_timerat.pdf".format(plot_dir), dpi=300)
 
     fig, ax = plt.subplots(1, 1)
     ax.plot(data_x, data_y1a / data_y1, label="TAU_UMBT/TAU_AR3")
@@ -393,24 +464,26 @@ def plot_umbt_stats(df_phases, df_log) -> None:
     ax.set_ylim([0, 1.5])
 
     fig.tight_layout()
-    plot_fname = "amr_timerat_clipped"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/amr_timerat_clipped.pdf".format(plot_dir), dpi=300)
 
     fig, ax = plt.subplots(1, 1)
-    ax.plot(data_x, data_y1a, label="$AG_{NO}$:Max", alpha=0.7)
-    ax.plot(data_x, data_y1d, label="$AG_{NO}$:Median", alpha=0.7)
-    ax.plot(data_x, data_y1c, label="$AG_{NO}$:Min5", alpha=0.7)
-    ax.plot(data_x, data_y1b, label="$AG_{NO}$:Min", alpha=0.7)
+    #  ax.plot(data_x, data_y1a, label="$AG_{NO}$:Max", alpha=0.7)
+    #  ax.plot(data_x, data_y1d, label="$AG_{NO}$:Median", alpha=0.7)
+    #  ax.plot(data_x, data_y1c, label="$AG_{NO}$:Min5", alpha=0.7)
+    #  ax.plot(data_x, data_y1b, label="$AG_{NO}$:Min", alpha=0.7)
 
-    ax.legend()
-    ax.set_title("Min And Max Collective Times Across All Ranks")
+    ax.plot(data_x, data_y1a, label="$Time_{barrier}$, max", alpha=1)
+    ax.plot(data_x, data_y1b, label="$Time_{barrier}$, min", alpha=1)
+
+    ax.legend(fontsize=14)
+    ax.set_title("Barrier Wait Times Across All Ranks Per Timestep")
     ax.set_xlabel("Timestep")
     ax.set_ylabel("Time (s)")
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.2f}s".format(x))
+    ax.xaxis.set_major_formatter(lambda x, pos: "{:.0f}K".format(x/1000.0))
 
     fig.tight_layout()
-    plot_fname = "amr_umbt_min_max"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/amr_umbt_min_max.pdf".format(plot_dir), dpi=300)
 
     fig, ax = plt.subplots(1, 1)
     data_y1amb = data_y1a - data_y1b
@@ -428,8 +501,7 @@ def plot_umbt_stats(df_phases, df_log) -> None:
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.2f}s".format(x))
 
     fig.tight_layout()
-    plot_fname = "amr_umbt_minmax_delta"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/amr_umbt_minmax_delta.pdf".format(plot_dir), dpi=300)
 
     print("Sum UMBT_MAX: {:.0f}".format(sum(data_y1a)))
     print("Sum UMBT_MAX-MIN: {:.0f}".format(sum(data_y1amb)))
@@ -437,7 +509,7 @@ def plot_umbt_stats(df_phases, df_log) -> None:
     print("Sum UMBT_MAX-MED: {:.0f}".format(sum(data_y1amd)))
 
 
-def plot_umbt_rankgrid(df_phases, imevent, cached=False):
+def plot_umbt_rankgrid(df_phases, imevent, plot_dir, cached=False):
     def sort_xargs(ls):
         ls_widx = [(ls[i], i) for i in range(len(ls))]
         ls_widx = sorted(ls_widx)
@@ -472,37 +544,10 @@ def plot_umbt_rankgrid(df_phases, imevent, cached=False):
     cax = plt.axes([0.85, 0.1, 0.075, 0.8])
     fig.colorbar(im, cax=cax)
 
-    plot_fname = "umbt_rankgrid_{}".format(imevent.lower())
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    fig.savefig("{}/umbt_rankgrid_{}.pdf".format(plot_dir, imevent.lower()), dpi=600)
 
 
-def plot_phasetimegrid(tr: TraceOps, event: str):
-    data = tr.multimat(f"aggr:tsw:{event}")
-    print(data.shape)
-
-    # leave last one out just because it can be dirty
-    data = list(data[:-1])
-    data = np.vstack(data)
-
-    norm = colors.PowerNorm(0.5)
-
-    fig, ax = plt.subplots(1, 1)
-    im = ax.imshow(data, norm=norm, aspect="auto", cmap="plasma")
-
-    #  ax.set_title("Heatmap of idle times by rank and timestep")
-    ax.set_title(f"Heatmap of {event} times by rank/ts")
-    ax.set_xlabel("MPI Rank")
-    ax.set_ylabel("Simulation Timestep")
-
-    plt.subplots_adjust(left=0.15, right=0.8)
-    cax = plt.axes([0.85, 0.1, 0.075, 0.8])
-    fig.colorbar(im, cax=cax)
-
-    plot_fname = f"phasetimegrid_{event}"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
-
-
-def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, cached=False):
+def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, plot_dir, cached=False):
     def sort_xargs(ls):
         ls_widx = [(ls[i], i) for i in range(len(ls))]
         ls_widx = sorted(ls_widx)
@@ -581,11 +626,15 @@ def plot_umbt_rankgrid_wcompare(df_phases, df_log, imevent, cached=False):
     fig.colorbar(im, ax=axes[-1])
 
     save = True
-    plot_fname = "umbt_phasetimegrid_{}".format(imevent.lower())
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    if save:
+        fig.savefig(
+            "{}/umbt_phasetimegrid_{}.pdf".format(plot_dir, imevent.lower()), dpi=600
+        )
+    else:
+        fig.show()
 
 
-def plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, cached=False):
+def plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=False):
     def sort_xargs(ls):
         ls_widx = [(ls[i], i) for i in range(len(ls))]
         ls_widx = sorted(ls_widx)
@@ -621,62 +670,62 @@ def plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, cached=False):
 
     print(data_time_med.shape)
 
-    #  fig, axes = plt.subplots(1, 5, gridspec_kw={"width_ratios": [4, 1, 1, 1, 1]})
-    fig, ax = plt.subplots(1, 1)
+    fig, axes = plt.subplots(1, 5, gridspec_kw={"width_ratios": [4, 1, 1, 1, 1]})
 
     ax_im = axes[0]
-    ax_im = ax
     im = ax_im.imshow(data_times, aspect="auto", cmap="plasma")
 
     num_ts = data_times.shape[0]
     data_y = range(num_ts)
 
-    #  axes[1].plot(data_time_med, data_y)
-    #  axes[2].plot(data_time_max, data_y)
-    #  axes[3].plot(data_time_log_comp[:num_ts], data_y)
-    #  axes[4].plot(data_time_log_amr[:num_ts], data_y)
+    axes[1].plot(data_time_med, data_y)
+    axes[2].plot(data_time_max, data_y)
+    axes[3].plot(data_time_log_comp[:num_ts], data_y)
+    axes[4].plot(data_time_log_amr[:num_ts], data_y)
 
     # ax.set_title('Rank Order For Event {}'.format(imevent))
     # ax.set_ylabel('Timestep')
     # ax.xaxis.set_ticks([])
     # ax.set_xlabel('Ranks In Increasing Order Of Phase Time')
-    #  axes[0].xaxis.set_ticks([])
-    #  axes[0].set_title("Rankwise Phase Times")
+    axes[0].xaxis.set_ticks([])
+    axes[0].set_title("Rankwise Phase Times")
 
     #  axes[1].xaxis.set_ticks([])
-    #  axes[1].yaxis.set_ticks([])
-    #  axes[1].set_title("T_Med")
-    #  axes[1].set_ylim([num_ts, 0])
+    axes[1].yaxis.set_ticks([])
+    axes[1].set_title("T_Med")
+    axes[1].set_ylim([num_ts, 0])
 
     #  axes[2].xaxis.set_ticks([])
-    #  axes[2].yaxis.set_ticks([])
-    #  axes[2].set_title("T_Max")
-    #  axes[2].set_ylim([num_ts, 0])
+    axes[2].yaxis.set_ticks([])
+    axes[2].set_title("T_Max")
+    axes[2].set_ylim([num_ts, 0])
 
-    #  axes[3].yaxis.set_ticks([])
-    #  axes[3].set_title("I_Comp")
-    #  axes[3].set_ylim([num_ts, 0])
+    axes[3].yaxis.set_ticks([])
+    axes[3].set_title("I_Comp")
+    axes[3].set_ylim([num_ts, 0])
 
-    #  axes[4].yaxis.set_ticks([])
-    #  axes[4].set_title("I_Amr")
-    #  axes[4].set_ylim([num_ts, 0])
+    axes[4].yaxis.set_ticks([])
+    axes[4].set_title("I_Amr")
+    axes[4].set_ylim([num_ts, 0])
 
-    #  fig.suptitle("Time Distributions For AR3=AMR")
+    fig.suptitle("Time Distributions For AR3=AMR")
     # fig.supxlabel('Something')
-    #  fig.supylabel("Timesteps")
+    fig.supylabel("Timesteps")
 
-    plt.subplots_adjust(left=0.15, right=0.8)
-    #  plt.subplots_adjust(wspace=0.03, left=0.15)
-    cax = plt.axes([0.85, 0.1, 0.075, 0.8])
-    fig.colorbar(im, cax=cax)
-    #  fig.colorbar(im, ax=axes[-1])
+    # plt.subplots_adjust(left=0.15, right=0.8)
+    plt.subplots_adjust(wspace=0.03, left=0.15)
+    # cax = plt.axes([0.85, 0.1, 0.075, 0.8])
+    # fig.colorbar(im, cax=cax)
+    fig.colorbar(im, ax=axes[-1])
 
     save = True
-    plot_fname = "umbt_phasetimegrid_amr"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    if save:
+        fig.savefig("{}/umbt_phasetimegrid_amr.pdf".format(plot_dir), dpi=600)
+    else:
+        fig.show()
 
 
-def plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, cached=False):
+def plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=False):
     def sort_xargs(ls):
         ls_widx = [(ls[i], i) for i in range(len(ls))]
         ls_widx = sorted(ls_widx)
@@ -766,31 +815,40 @@ def plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, cached=False):
     fig.colorbar(im, ax=axes[-1])
 
     save = True
-    plot_fname = "umbt_phasetimegrid_nonamr"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    if save:
+        fig.savefig("{}/umbt_phasetimegrid_nonamr.pdf".format(plot_dir), dpi=600)
+    else:
+        fig.show()
 
 
-def run_plot_timestep(trace_dir):
-    # TODO: do not read df_phases directly, use aggr:tsw:event
-    #  ts_to_plot = 1
-    #  cached = False
-    #  df_phases = None
-    #  if not cached:
-    #  df_phases = pd.read_csv("{}/trace/phases.aggr.by_ts.csv".format(trace_dir))
-    #  df_log = pd.read_csv("{}/run/log.txt.csv".format(trace_dir)).astype({"cycle": int})
-    #  plot_umbt_rankgrid(df_phases, "AR1", cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR1", cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR2", cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "SR", cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3", cached=cached)
-    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3_UMBT", cached=cached)
-    #  plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, cached=cached)
-    #  plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, cached=cached)
-    #  plot_umbt_rankgrid(df_phases, "AR2", cached=cached)
-    #  plot_umbt_rankgrid(df_phases, "AR3", cached=cached)
-    #  plot_umbt_rankgrid(df_phases, "AR3_UMBT", cached=cached)
-    #  plot_umbt_stats(df_phases, df_log)
+def run_plot_timestep():
+    trace_dir = "/mnt/ltio/parthenon-topo/profile6.wtau"
+    trace_dir = "/mnt/ltio/parthenon-topo/profile8"
+    plot_dir = "/users/ankushj/repos/amr/scripts/tau_analysis/figures"
+    plot_dir = "figures/20221103"
+    ts_to_plot = 1
 
+    cached = False
+
+    df_phases = None
+
+    if not cached:
+        df_phases = pd.read_csv("{}/aggregate.csv".format(trace_dir))
+
+    df_log = pd.read_csv("{}/run/log.txt.csv".format(trace_dir)).astype({"cycle": int})
+
+    #  plot_umbt_rankgrid(df_phases, "AR1", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR1", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR2", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "SR", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare(df_phases, df_log, "AR3_UMBT", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare_nonamr(df_phases, df_log, plot_dir, cached=cached)
+    #  plot_umbt_rankgrid_wcompare_amr(df_phases, df_log, plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, "AR2", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, "AR3", plot_dir, cached=cached)
+    #  plot_umbt_rankgrid(df_phases, "AR3_UMBT", plot_dir, cached=cached)
+    plot_umbt_stats(df_phases, df_log, plot_dir)
     return
 
     ts_selected = df_log[df_log["wtime_step_other"] > 0.6]["cycle"]
@@ -799,7 +857,7 @@ def run_plot_timestep(trace_dir):
         ts_to_plot.append(ts - 1)
         ts_to_plot.append(ts)
         ts_to_plot.append(ts + 1)
-        print(ts_to_plot)
+    print(ts_to_plot)
 
     for ts in ts_to_plot:
         print(ts)
@@ -807,230 +865,120 @@ def run_plot_timestep(trace_dir):
         df_logts = df_log[df_log["cycle"] == ts]
         print(df_ts)
         print(df_logts)
-        plot_timestep(df_ts, df_logts)
+        plot_timestep(df_ts, df_logts, plot_dir)
 
-    #  plot_logstats(df_log)
+    #  plot_logstats(df_log, plot_dir)
     return
 
 
-""" Input: trace/phases.aggr.csv for two traces
-Output: phase_rh_profile10_profile14.png (example)
-"""
-
-
-def get_rankhours(trace_dir: str, phases: List[str]) -> Dict[str, int]:
-    tr = TraceOps(trace_dir)
-    query_strs = list(map(lambda x: "aggr:rw:" + x, phases))
-    rh = {}
-    for phase, query_str in zip(phases, query_strs):
-        phase_data = tr.multimat(query_str)
-        phase_total_rh = int(sum(phase_data) / (1e6 * 3600))
-        rh[phase] = phase_total_rh
-
-    return rh
-
-
-def plot_rankhour_comparison(traces: List[str]):
-    phases = ["AR1", "SR", "AR2", "AR3_UMBT", "AR3-AR3_UMBT"]
-
-    fig, ax = plt.subplots(1, 1)
-    data_x = np.arange(len(phases))
-    labels_x = [get_label(p) for p in phases]
-
-    all_data_x = []
-    all_prof_labels = []
-    all_labels = []
-
-    total_width = 0.7
-    nbins = len(traces)
-    bin_width = total_width / nbins
-
-    for bidx, trace in enumerate(traces):
-        times = get_rankhours(trace, phases)
-
-        label = trace.split("/")[-1]
-        all_labels.append(label)
-
-        prof_label = profile_label_map[label]
-        all_prof_labels.append(prof_label)
-
-        # assert all keys appear in same order
-        data_xt = times.keys()
-        all_data_x.append(data_xt)
-        for xi in list(zip(*all_data_x)):
-            assert len(set(xi)) == 1
-
-        data_y = [times[p] for p in phases]
-        data_x_bin = data_x + bidx * bin_width
-
-        p = ax.bar(data_x_bin, data_y, bin_width, label=prof_label, zorder=2)
-        ax.bar_label(
-            p, fmt=lambda x: int(x * 7.03), rotation="vertical", fontsize=10, padding=4
-        )
-
-    ax.set_xlabel("Phase Name")
-    ax.set_ylabel("Rank-Hours (512 ranks * hrs/rank)")
-
-    prof_title = " vs ".join(all_prof_labels)
-    ax.set_title(f"Phase-wise Time Comparison: {prof_title}")
-
-    ax.set_xticks(data_x, labels_x)
-
-    ax.yaxis.set_minor_locator(MultipleLocator(100))
-    ax.yaxis.grid(which="major", visible=True, color="#bbb", zorder=0)
-    ax.yaxis.grid(which="minor", visible=True, color="#ddd", zorder=0)
-    ax.set_ylim(bottom=0)
-    ax.set_ylim([0, 500])
-
-    ax.legend()
-
-    fig.tight_layout()
-
-    label_fname = "_".join(all_labels)
-    fname = f"phase_rh_{label_fname}"
-    PlotSaver.save(fig, "", None, fname)
-
-
-""" Input: TraceOps
+""" Input: trace/taskaggr.csv 
 Output: XX
 """
 
 
-def plot_times_by_rank(tr: TraceOps):
-    nranks = 512
-    data_x = list(range(nranks))
-    fig, ax = plt.subplots(1, 1)
-    tr_name = tr._trace.get_trace_name()
-    tr_label = profile_label_map[tr_name]
+def run_plot_aggr(trace_dir: str, plot_dir):
+    tr = TraceOps(trace_dir)
+    aggr_df_path = "{}/trace/taskaggr.csv".format(trace_dir)
+    aggr_df = pd.read_csv(aggr_df_path)
+    print(aggr_df)
 
-    print(f"[PlotTimesByRank] Trace: {tr_name}/{tr_label}")
+    def get_data(key):
+        row = aggr_df[aggr_df["evtname"] == key]["evtval"].iloc[0]
+        row = np.array([int(i) for i in row.split(",")], dtype=np.int64)
+        return row
 
-    phases = ["AR1", "SR", "AR2", "AR3_UMBT", "AR3-AR3_UMBT"]
-    for phase in phases:
-        phase_query = f"aggr:rw:{phase}"
-        phase_data = tr.multimat(phase_query)
-        ax.plot(data_x, phase_data, label=get_label(phase))
+    def plot_total_phasetimes():
+        data_ar1 = get_data("AR1")
+        data_ar2 = get_data("AR2")
+        data_sr = get_data("SR")
+        data_ar3 = get_data("AR3")
+        data_ar3u = get_data("AR3_UMBT")
 
-    ax.set_xlabel("Rank ID")
-    ax.set_ylabel("Total Time (s)")
-    ax.set_title(f"Total Time For Each Phase/Rank ({tr_label})")
+        nranks = 512
+        data_x = list(range(nranks))
+        fig, ax = plt.subplots(1, 1)
 
-    ax.set_ylim([0, 4000 * 1e6])
+        #  ipdb.set_trace()
 
-    ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f}s".format(x / 1e6))
-    ax.legend(bbox_to_anchor=(-0.18, 1.08), loc="lower left", ncol=5)
-    fig.tight_layout()
+        ax.plot(data_x, data_ar1, label="$FC_{CN}$")
+        ax.plot(data_x, data_sr, label="$BC_{NO}$")
+        ax.plot(data_x, data_ar2, label="$FD_{CO}$")
+        ax.plot(data_x, data_ar3u, label="$AG_{NO}$")
+        ax.plot(data_x, data_ar3 - data_ar3u, label="$LB_{NO}$")
 
-    plot_fname = "phases.aggr"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+        ax.set_xlabel("Rank ID")
+        ax.set_ylabel("Total Time (s)")
+        ax.set_title("Total Time For Each Phase/Rank")
 
+        ax.yaxis.set_major_formatter(lambda x, pos: '{:.0f}s'.format(x/1e6))
+        ax.legend(bbox_to_anchor=(-0.15, 1.08), loc="lower left", ncol=5)
+        fig.tight_layout()
 
-def plot_times_by_ts(tr: TraceOps):
-    data_x = None
-    fig, ax = plt.subplots(1, 1)
-    tr_name = tr._trace.get_trace_name()
-    tr_label = profile_label_map[tr_name]
+        plot_dest = "{}/phases.aggr.pdf".format(plot_dir)
+        print("Saving plot: {}".format(plot_dest))
+        fig.savefig(plot_dest, dpi=300)
 
-    print(f"[PlotTimesByTs] Trace: {tr_name}/{tr_label}")
+    def plot_lbvsmsgcnt():
+        msg_mat_lb = tr.multimat("msgcnt:LoadBalancing")
+        msg_mat_bc = tr.multimat("msgcnt:BoundaryComm")
+        lbmsg_rwtotals = np.sum(msg_mat_lb, axis=0)
+        bcmsg_rwtotals = np.sum(msg_mat_bc, axis=0)
 
-    phases = ["AR1", "SR", "AR2", "AR3_UMBT", "AR3-AR3_UMBT"]
-    #  phases = ["AR1"]
-    phases_med = []
-    phases_max = []
-    for phase in phases:
-        phase_query = f"tau:{phase}"
-        phase_data = tr.multimat(phase_query)
+        data_lb = get_data("AR3") - get_data("AR3_UMBT")
 
-        data_med = np.median(phase_data, axis=1)
-        data_med = TraceOps.smoothen_1d(data_med, window=200)
-        phases_med.append(data_med)
+        nranks = 512
+        data_x = list(range(nranks))
 
-        data_max = np.max(phase_data, axis=1)
-        data_max = TraceOps.smoothen_1d(data_max, window=20)
-        phases_max.append(data_max)
+        fig, ax = plt.subplots(1, 1)
+        ax2 = ax.twinx()
 
-    phases_med = TraceOps.trim_to_min_1d(phases_med)
-    phases_max = TraceOps.trim_to_min_1d(phases_max)
+        ax.plot(data_x, lbmsg_rwtotals, label='Message Count - LB')
+        ax.plot(data_x, bcmsg_rwtotals, label='Message Count - BC')
+        ax2.plot(data_x, data_lb, label='Time', color='orange')
 
-    data_x = range(len(phases_med[0]))
+        ax.set_xlabel("Rank ID")
+        ax.set_ylabel("Message Count")
+        ax2.set_ylabel("Time AR3_LB (s)")
 
-    for counter, zipobj in enumerate(zip(phases, phases_med, phases_max)):
-        phase, phase_med, phase_max = zipobj
-        ax.plot(data_x, phase_med, label=get_label(phase), color=f"C{counter}")
-        ax.plot(data_x, phase_max, linestyle="--", color=f"C{counter}", alpha=0.5)
+        ax.yaxis.set_major_formatter(lambda x, pos: '{:.0f}K'.format(x/1e3))
+        ax2.yaxis.set_major_formatter(lambda x, pos: '{:.0f} s'.format(x/1e6))
 
-    ax.set_xlabel("Timestep")
-    ax.set_ylabel("Total Time")
-    ax.set_title(f"Time For Each Phase/Timestep ({tr_label})")
+        ax.set_ylim([0, ax.get_ylim()[1]])
+        ax2.set_ylim([0, ax2.get_ylim()[1]])
 
-    ax.set_ylim(bottom=0)
-    ax.set_ylim([0, 250 * 1e3])
+        ax.legend()
 
-    ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f} ms".format(x / 1e3))
-    ax.legend(bbox_to_anchor=(-0.18, 1.08), loc="lower left", ncol=5)
-    fig.tight_layout()
+        plot_dest = "{}/ar3_vs_msgcnt.pdf".format(plot_dir)
+        fig.tight_layout()
+        fig.savefig(plot_dest, dpi=300)
 
-    plot_fname = "phases.aggr.byts"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    def plot_lb_someranks():
+        ranks_to_plot = [367, 368]
 
+        lb_mat = tr.multimat("tau:AR3-AR3_UMBT")
+        data_x = list(range(lb_mat.shape[0]))
 
-def plot_lbvsmsgcnt(tr: TraceOps):
-    msg_mat_lb = tr.multimat("msgcnt:LoadBalancing")
-    msg_mat_bc = tr.multimat("msgcnt:BoundaryComm")
-    lbmsg_rwtotals = np.sum(msg_mat_lb, axis=0)
-    bcmsg_rwtotals = np.sum(msg_mat_bc, axis=0)
+        fig, ax = plt.subplots(1, 1)
 
-    data_lb = get_data("AR3") - get_data("AR3_UMBT")
+        for r in ranks_to_plot:
+            data_ry = lb_mat[:, r]
+            ax.plot(data_x, data_ry, label='Rank {}'.format(r))
 
-    nranks = 512
-    data_x = list(range(nranks))
+        ax.legend()
+        ax.set_xlabel('Timestep')
+        ax.set_ylabel('Time ms')
 
-    fig, ax = plt.subplots(1, 1)
-    ax2 = ax.twinx()
+        ax.set_ylim([0, ax.get_ylim()[1]])
+        ax.xaxis.set_major_formatter(lambda x, pos: '{:0.0f} ms'.format(x/1e3))
 
-    ax.plot(data_x, lbmsg_rwtotals, label="Message Count - LB")
-    ax.plot(data_x, bcmsg_rwtotals, label="Message Count - BC")
-    ax2.plot(data_x, data_lb, label="Time", color="orange")
-
-    ax.set_xlabel("Rank ID")
-    ax.set_ylabel("Message Count")
-    ax2.set_ylabel("Time AR3_LB (s)")
-
-    ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f}K".format(x / 1e3))
-    ax2.yaxis.set_major_formatter(lambda x, pos: "{:.0f} s".format(x / 1e6))
-
-    ax.set_ylim([0, ax.get_ylim()[1]])
-    ax2.set_ylim([0, ax2.get_ylim()[1]])
-
-    ax.legend()
-
-    fig.tight_layout()
-    plot_fname = "ar3_vs_msgcnt"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+        plot_dest = "{}/lb_rankwise.pdf".format(plot_dir)
+        fig.tight_layout()
+        fig.savefig(plot_dest, dpi=300)
 
 
-def plot_lb_someranks(tr: TraceOps):
-    ranks_to_plot = [367, 368]
-
-    lb_mat = tr.multimat("tau:AR3-AR3_UMBT")
-    data_x = list(range(lb_mat.shape[0]))
-
-    fig, ax = plt.subplots(1, 1)
-
-    for r in ranks_to_plot:
-        data_ry = lb_mat[:, r]
-        ax.plot(data_x, data_ry, label="Rank {}".format(r))
-
-    ax.legend()
-    ax.set_xlabel("Timestep")
-    ax.set_ylabel("Time ms")
-
-    ax.set_ylim([0, ax.get_ylim()[1]])
-    ax.xaxis.set_major_formatter(lambda x, pos: "{:0.0f} ms".format(x / 1e3))
-
-    fig.tight_layout()
-    plot_fname = "lb_rankwise"
-    PlotSaver.save(fig, trace_dir, None, plot_fname)
+    plot_total_phasetimes()
+    #  plot_lbvsmsgcnt()
+    #  plot_lb_someranks()
 
 
 def run_analyze(trace_dir: str):
@@ -1045,74 +993,27 @@ def run_analyze(trace_dir: str):
 
 
 def run_plot():
-    """
-    Available analyses:
-    1. plot_neighbors: taskflow_nbrcnt
-    2. plot_all_events: taskflow_{event}_[w|wo]99
-    3. plot_amr_log: amr_steptimes
-    4. plot_amr_log_distrib: amr_steptimes_distrib
-    5. plot_amr_comp: amr_steptimes_comp
-    6. run_profile: amr_profile_phases
-    7. plot_timestep: plot_step
-    8. plot_logstats: timeline_a_zoomed
-    9. plot_umbt_stats:
-    10. plot_umbt_rankgrid
-    11. plot_phasetimegrid
-    12. plot_umbt_rankgrid_wcompare
-    13. plot_umbt_rankgrid_wcompare_amr
-    14. plot_umbt_rankgrid_wcompare_nonamr
-    15. run_plot_timestep: all grid plots
-    16. plot_rankhour_comparison
-    17. plot_times_by_rank
-    18. plot_times_by_ts
-    19. plot_lbvsmsgcnt
-    20. plot_lb_someranks
-
-
-    """
-
-    global trace_dir
-    trace_dir = "/mnt/ltio/parthenon-topo/profile30"
-    tr = TraceOps(trace_dir)
-    #  trace_dir = "/mnt/ltio/parthenon-topo/profile10"
+    trace_dir = "/mnt/ltio/parthenon-topo/profile9"
     # aggr_fpath = '/Users/schwifty/repos/amr-data/20220517-phase-analysis/aggregate.csv'
     # df = pd.read_csv(aggr_fpath)
     plot_init()
-    # # plot_neighbors(df)
-    # plot_all_events(df)
+    plot_dir = "figures/20220811-profile9"
+    # # plot_neighbors(df, plot_dir)
+    # plot_all_events(df, plot_dir)
 
-    #  phoebus_log = "{}/run/log.txt.csv".format(trace_dir)
+    # phoebus_log = '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log.times.csv'
+    # phoebus_log2 = '/Users/schwifty/Repos/amr-data/20220524-phase-analysis/phoebus.log2.csv'
+    phoebus_log = "{}/run/log.txt.csv".format(trace_dir)
     #  log_df = pd.read_csv(phoebus_log)
     # log_df2 = pd.read_csv(phoebus_log2)
-    #  plot_amr_log(log_df)
-    #  plot_amr_log_distrib(log_df)
+    #  plot_amr_log(log_df, plot_dir, save=True)
+    #  plot_amr_log_distrib(log_df, plot_dir, save=True)
     #  calc_amr_log_stats(log_df)
     #  run_plot_amr_comp()
     #  run_profile()
+    run_plot_timestep()
     #  run_analyze(trace_dir)
-
-    #  run_plot_timestep(trace_dir)
-    #  plot_times_by_rank(tr)
-    #  plot_times_by_ts(tr)
-    #  return
-
-    events = ["AR1", "AR2", "AR3", "SR", "AR3_UMBT"]
-    events = ["SR", "AR3_UMBT"]
-    #  for event in events:
-    #  plot_phasetimegrid(tr, event)
-    #  plot_lbvsmsgcnt(tr)
-    #  plot_lb_someranks(tr)
-
-    #  return
-
-    # This takes two traces and plots a comparison
-    traces = [
-        "/mnt/ltio/parthenon-topo/profile10",
-        "/mnt/ltio/parthenon-topo/profile22",
-        "/mnt/ltio/parthenon-topo/profile28",
-        "/mnt/ltio/parthenon-topo/profile30",
-    ]
-    plot_rankhour_comparison(traces)
+    #  run_plot_aggr(trace_dir, plot_dir)
 
 
 if __name__ == "__main__":

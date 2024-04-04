@@ -1,24 +1,55 @@
 import glob
+import os
+
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import multiprocessing
 import numpy as np
 import pandas as pd
 import pickle
+import re
 import subprocess
+import struct
 import sys
 import time
 
-from memory_profiler import profile
+#  from memory_profiler import profile
 
 import ray
 import traceback
-from typing import Tuple
+
+from matplotlib.ticker import FuncFormatter, MultipleLocator
+from pandas import DataFrame
+
+from sklearn import linear_model
+from typing import Dict, Tuple
 
 from trace_reader import TraceOps
 
 from task import Task
 
-ray.init(address="h0:6379")
+from analyze_pprof import (
+    setup_plot_stacked_generic,
+    read_all_pprof_simple,
+    filter_relevant_events,
+)
+
+
+#  ray.init(address="h0:6379")
+trace_dir_fmt = "/mnt/ltio/parthenon-topo/{}"
+
+
+def setup_interactive():
+    matplotlib.use("abc")
+    matplotlib.use("TkAgg")
+    matplotlib.use("WebAgg")
+    matplotlib.use("GTK3Agg")
+    plt.ion()
+    fig, ax = plt.subplots(1, 1)
+    dx = np.arange(5)
+    dy = np.arange(5, 0, -1)
+    ax.plot(dx, dy)
 
 
 class MsgAggrTask(Task):
@@ -72,7 +103,7 @@ def aggr_msgs(fn_args):
     rank = fn_args["rank"]
 
     rank_msgcsv = "{}/trace/msgs.rcv.{}.csv".format(trace_dir, rank)
-    print(rank_msgcsv)
+    print(f"Reading {rank_msgcsv}")
 
     df = pd.read_csv(rank_msgcsv, sep="|")
     #  print(df)
@@ -86,6 +117,223 @@ def aggr_msgs(fn_args):
 
     df.to_csv("{}/aggr/msgs.{}.csv".format(trace_dir, rank), index=None)
     df = None
+
+
+def read_msgs(fpath):
+    rank = int(re.search(r"msgs.(\d+).bin$", fpath).groups(0)[0])
+    msgbin_data = open(fpath, "rb").read()
+
+    print(f"Read messages: {rank}: {fpath}")
+
+    # ptr, blk_id, blk_rank, nbr_id, nbr_rank, tag, is_flx
+    chan_sz = 29
+    chan_fmt = "@Piiiiic"
+    chan_fmtc = struct.Struct(chan_fmt)
+    assert chan_sz == struct.calcsize(chan_fmt)
+
+    # tag, dest, sz, ts
+    # ptr, bufsz, recv_rank, tag, timestamp
+    send_sz = 28
+    # can't use P with =, can't use @ because padding issues
+    send_fmt = "=QiiiQ"
+    send_fmtc = struct.Struct(send_fmt)
+    assert send_sz == struct.calcsize(send_fmt)
+
+    all_ts_data = []
+
+    ptr = 0
+    while ptr < len(msgbin_data):
+        (ts,) = struct.unpack("@i", msgbin_data[ptr : ptr + 4])
+        ptr += 4
+
+        (chanbuf_sz,) = struct.unpack("@i", msgbin_data[ptr : ptr + 4])
+        ptr += 4
+
+        chan_recs = list(chan_fmtc.iter_unpack(msgbin_data[ptr : ptr + chanbuf_sz]))
+        ptr += chanbuf_sz
+
+        (sendbuf_sz,) = struct.unpack("@i", msgbin_data[ptr : ptr + 4])
+        ptr += 4
+
+        send_recs = list(send_fmtc.iter_unpack(msgbin_data[ptr : ptr + sendbuf_sz]))
+        ptr += sendbuf_sz
+
+        all_ts_data.append((ts, chan_recs, send_recs))
+
+    chan_cols = ["ptr", "blk_id", "blk_rank", "nbr_id", "nbr_rank", "tag", "isflx"]
+    send_cols = ["ptr", "msgsz", "Dest", "tag", "timestamp"]
+
+    all_chan_df = []
+    all_send_df = []
+
+    for tup in all_ts_data:
+        ts, chan_recs, send_recs = tup
+        chan_df = pd.DataFrame.from_records(chan_recs, columns=chan_cols)
+        chan_df["ts"] = ts
+
+        send_df = pd.DataFrame.from_records(send_recs, columns=send_cols)
+        send_df["ts"] = ts
+
+        all_chan_df.append(chan_df)
+        all_send_df.append(send_df)
+
+    chan_cdf = pd.concat(all_chan_df)
+    chan_cdf["isflx"] = chan_cdf["isflx"].apply(lambda x: int.from_bytes(x, "little"))
+
+    send_cdf = pd.concat(all_send_df)
+
+    chan_cdf["rank"] = rank
+    send_cdf["rank"] = rank
+
+    cols = chan_cdf.columns
+    cols = ["rank", "ts"] + list(cols[:-2])
+    chan_cdf = chan_cdf[cols]
+
+    cols = send_cdf.columns
+    cols = ["rank", "ts"] + list(cols[:-2])
+    send_cdf = send_cdf[cols]
+
+    return (chan_cdf, send_cdf)
+
+
+def aggr_msgs_some(
+    trace_name: str, rank_beg: int, rank_end: int
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    global trace_dir_fmt
+    trace_dir = trace_dir_fmt.format(trace_name)
+
+    path_fmt = "{0}/trace/msgs/msgs.{1}.bin"
+    all_bins = [path_fmt.format(trace_dir, r) for r in range(rank_beg, rank_end + 1)]
+    print(f"Reading {all_bins} msgs.bin")
+
+    for p in all_bins:
+        assert os.path.exists(p)
+
+    with multiprocessing.Pool(16) as p:
+        all_dfs = p.map(read_msgs, all_bins)
+
+    chan_df: DataFrame = pd.concat(map(lambda x: x[0], all_dfs))
+    send_df = pd.concat(map(lambda x: x[1], all_dfs))
+
+    chan_df.sort_values(["rank", "ts"], inplace=True)
+    send_df.sort_values(["rank", "ts"], inplace=True)
+
+    return chan_df, send_df
+
+
+def aggr_msgs_all(trace_name):
+    global trace_dir_fmt
+    trace_dir = trace_dir_fmt.format(trace_name)
+
+    print(f"Searching for msgs.*.bin in {trace_dir}")
+    glob_patt = trace_dir + "/trace/msgs/msgs.*.bin"
+    print(f"Glob path: {glob_patt}")
+    all_bins = glob.glob(glob_patt)
+    print(f"Bins found: {len(all_bins)}")
+
+    #  all_bins = all_bins[:16]
+
+    with multiprocessing.Pool(16) as p:
+        all_dfs = p.map(read_msgs, all_bins)
+
+    chan_df = pd.concat(map(lambda x: x[0], all_dfs))
+    send_df = pd.concat(map(lambda x: x[1], all_dfs))
+
+    chan_df = chan_df.iloc[:, [1, 0] + list(range(2, chan_df.shape[1]))]
+    send_df = send_df.iloc[:, [1, 0] + list(range(2, send_df.shape[1]))]
+
+    chan_df.sort_values(["ts", "rank"], inplace=True)
+    send_df.sort_values(["ts", "rank"], inplace=True)
+
+    chan_out = f"{trace_dir}/trace/msgs.aggr.chan.csv"
+    print(f"Writing to {chan_out}")
+    chan_df.to_csv(chan_out, index=None)
+
+    send_out = f"{trace_dir}/trace/msgs.aggr.send.csv"
+    print(f"Writing to {send_out}")
+    send_df.to_csv(send_out, index=None)
+
+    return chan_df, send_df
+
+
+def join_msgs(send_df, chan_df):
+    x = chan_df["ptr"].unique()
+    y = send_df["ptr"].unique()
+    # import pdb
+
+    # pdb.set_trace()
+    assert len(set(y).difference(set(x))) == 0
+
+    all_chan_ts = chan_df["ts"].unique()
+    all_chan_df = []
+
+    max_ts = send_df["ts"].max()
+
+    for ts in range(max_ts + 1):
+        if ts in all_chan_ts:
+            closest_ts = ts
+        else:
+            closest_ts = max([t for t in all_chan_ts if t < ts])
+
+        print(f"For ts: {ts}, using ts {closest_ts}")
+        df_ts = chan_df[chan_df["ts"] == closest_ts].copy()
+        df_ts["ts"] = ts
+        df_ts.drop_duplicates(subset=["rank", "ts", "ptr"], keep="last", inplace=True)
+        all_chan_df.append(df_ts)
+
+    chan_unroll_df = pd.concat(all_chan_df)
+    joined_df = send_df.merge(chan_unroll_df, how="left", on=["ts", "ptr"])
+
+    send_counts = send_df.groupby("ts", as_index=False).agg({"msgsz": "count"})
+    print("-> Send counts: \n", send_counts)
+
+    join_counts = joined_df.groupby("ts", as_index=False).agg({"msgsz": "count"})
+    print("-> Join counts: \n", join_counts)
+    return joined_df
+
+
+def plot_imshow(mat, stat):
+    fig = plt.figure()
+    ax = fig.subplots(1, 1)
+
+    vmin, vmax = np.percentile(mat, 1), np.percentile(mat, 99)
+    bounds = np.linspace(vmin, vmax, 16)
+    norm = colors.BoundaryNorm(boundaries=bounds, ncolors=256, extend="both")
+    im = ax.imshow(mat, norm=norm, aspect="auto", cmap="plasma")
+
+    fig.subplots_adjust(left=0.15, right=0.78)
+    cax = fig.add_axes([0.81, 0.12, 0.08, 0.8])
+    fig.colorbar(im, cax=cax)
+
+    ax.set_xlabel("Rank ID")
+    ax.set_ylabel("Timestep")
+
+    ax.set_title(f"Rank-Wise Heatmap (Stat: {stat})")
+    plot_fname = f"msgs.aggr.rw.{stat.lower()}"
+
+    trace_dir = ""
+    #  PlotSaver.save(fig, trace_dir, None, plot_fname)
+
+
+def plot_stat_slice(mat, stat, ts):
+    fig = plt.figure()
+    ax = fig.subplots(1, 1)
+
+    data_y = mat[ts]
+    data_x = range(len(data_y))
+
+    ax.plot(data_x, data_y, zorder=2)
+    ax.set_xlabel("Rank")
+    ax.set_ylabel(f"Stat {stat}")
+    ax.set_title(f"Stat {stat} vs Rank (TS: {ts})")
+
+    ax.set_ylim(bottom=0)
+
+    ax.yaxis.grid(which="major", visible=True, color="#bbb", zorder=0)
+    plot_fname = f"msgs.aggrslice.rw.{stat.lower()}"
+
+    trace_dir = ""
+    PlotSaver.save(fig, trace_dir, None, plot_fname)
 
 
 def gen_phase_map(trace_dir, cached=False):
@@ -162,7 +410,7 @@ def gen_prev_phase_df():
     return prev_phase_df
 
 
-@profile(precision=3)
+#  @profile(precision=3)
 def gen_phase_df(phase_map):
     prev_phase_df = gen_prev_phase_df()
 
@@ -213,7 +461,7 @@ def gen_phase_df(phase_map):
     return phase_df
 
 
-@profile(precision=3)
+#  @profile(precision=3)
 def aggr_msgs_map(rank, phase_df, trace_dir, max_ts):
     def log(msg):
         print("Rank {}: {}".format(rank, msg))
@@ -406,18 +654,16 @@ def plot_msgtl(ts, bins, hist_snd, hist_rcv, plot_dir):
         "Send/Receive Latency Distribution (BoundaryComm, ts:{})".format(ts_cs)
     )
 
-    ax.set_title(
-        "Message Latency Distribution (TS: 5K of 30K)"
-    )
+    ax.set_title("Message Latency Distribution (TS: 5K of 30K)")
 
     ax.yaxis.set_major_formatter(lambda x, pos: "{:.0f}K".format(x / 1e3))
 
     max_idx = np.max(np.nonzero(hist_rcv))
     max_bin = bins[max_idx]
 
-    ax.plot([max_bin, max_bin], [0, 100000], linestyle='--', color='red')
+    ax.plot([max_bin, max_bin], [0, 100000], linestyle="--", color="red")
 
-    xlim_max = int(max_bin/100) * 100 + 100
+    xlim_max = int(max_bin / 100) * 100 + 100
     xlim_max = 500
 
     ax.set_xlim([0, xlim_max])
@@ -461,6 +707,212 @@ def run_plot_msgtl():
     run_plot_msgtl_ts([25000])
 
 
+def plot_stats_senddf(send_df, chan_df):
+    msg_df = join_msgs(send_df, chan_df)
+    msg_df[msg_df["isflx"] == 0].groupby("ts").agg({"msgsz": "count"})
+    msg_df[msg_df["isflx"] == 1].groupby("ts").agg({"msgsz": "count"})
+    msg_df.columns
+    aggr_msgdf = msg_df.groupby(["ts", "blk_id"]).agg(
+        {"msgsz": ["mean", "std", "sum", "count"], "nbr_id": "nunique"}
+    )
+
+    aggr_msgdf = msg_df.groupby(["ts", "rank_x"]).agg(
+        {"msgsz": ["mean", "std", "sum", "count"], "nbr_id": "nunique"}
+    )
+
+    sum_mat = aggr_msgdf["msgsz"]["sum"].unstack().values
+    count_mat = aggr_msgdf["msgsz"]["count"].unstack().values
+    nuniq_mat = aggr_msgdf["nbr_id"]["nunique"].unstack().values
+
+    plot_imshow(sum_mat, "sum")
+    count_mat = count_mat[2:, :]
+    plot_imshow(count_mat, "count")
+    nuniq_mat = nuniq_mat[2:, :]
+    plot_imshow(nuniq_mat, "nuniq")
+
+    t1 = chan_df[chan_df["ts"] == 1]
+    ca = t1.groupby(["blk_id", "tag"]).agg({"nbr_id": ["min", "max", "count"]})
+
+    aggr_df = send_df.groupby(
+        [
+            "rank",
+            "ts",
+        ],
+        as_index=False,
+    ).agg({"msgsz": ["mean", "std", "sum", "count"]})
+
+    aggr_df.set_index(["rank", "ts"], inplace=True)
+
+    all_stats = list(zip(*aggr_df.columns))[1]
+    for stat in all_stats:
+        print(f"Stat: {stat}")
+        stat_mat = aggr_df["msgsz"][stat].unstack().values
+        print(stat_mat)
+        plot_imshow(stat_mat.T, stat)
+        plot_stat_slice(stat_mat.T, stat, 6)
+
+    pass
+
+
+def run_regr_actual(X, y):
+    regr = linear_model.LinearRegression()
+    regr.fit(X, y)
+
+    print(regr.score(X, y))
+    print(np.array(regr.coef_, dtype=int))
+    print(np.array(regr.coef_))
+    print(regr.intercept_)
+
+
+def get_relevant_pprof_data(trace_name: str) -> Dict:
+    kfls = "MultiStage_Step => Task_LoadAndSendFluxCorrections"
+    kflr = "MultiStage_Step => Task_ReceiveFluxCorrections"
+    kbcs = "MultiStage_Step => Task_LoadAndSendBoundBufs"
+    kbcr = "MultiStage_Step => Task_ReceiveBoundBufs"
+    mip = "MPI_Iprobe()"
+
+    setup_tuple = setup_plot_stacked_generic(trace_name)
+    stack_keys, stack_labels, ylim, ymaj, ymin = setup_tuple
+    stack_keys = [kfls, kflr, kbcs, kbcr, mip]
+
+    trace_dir = trace_dir_fmt.format(trace_name)
+    concat_df = read_all_pprof_simple(trace_dir)
+    pprof_data = filter_relevant_events(concat_df, stack_keys)
+
+    data = {
+        "kfls": pprof_data[kfls],
+        "kflr": pprof_data[kflr],
+        "kbcs": pprof_data[kbcs],
+        "kbcr": pprof_data[kbcr],
+        "mip": pprof_data[mip]
+    }
+
+    return data
+
+
+def run_regr_wpprof():
+    trace_name = "athenapk5"
+    setup_tuple = setup_plot_stacked_generic(trace_name)
+    stack_keys, stack_labels, ylim, ymaj, ymin = setup_tuple
+
+    trace_dir = trace_dir_fmt.format(trace_name)
+    concat_df = read_all_pprof_simple(trace_dir)
+    pprof_data = filter_relevant_events(concat_df, stack_keys)
+
+    for k in pprof_data.keys():
+        print(k)
+
+    chan_df, send_df = aggr_msgs_all("athenapk5")
+    send_df = send_df[send_df["ts"] < 100]
+    msg_df = join_msgs(send_df, chan_df)
+
+    msg_df.columns
+    msg_df[["Dest", "nbr_rank"]]
+    msg_df[["blk_rank", "rank_x"]]
+    msg_df = msg_df[msg_df["ts"] > 1]
+    # only ts 0 and 1, load balancing etc Ig
+    wtf_df = msg_df[msg_df["Dest"] != msg_df["nbr_rank"]]
+    wtf_df = msg_df[msg_df["blk_rank"] != msg_df["rank_x"]]
+    wtf_df
+
+    flx_df = msg_df[msg_df["isflx"] == 1]
+    flx_df
+    nflx_df = msg_df[msg_df["isflx"] == 0]
+    nflx_df
+
+    groupby_cols = ["ts", "rank_x"]
+    groupby_cols = ["ts", "nbr_rank"]
+    flx_msgcnt_df = flx_df.groupby(groupby_cols, as_index=False).agg({"msgsz": "count"})
+
+    bc_msgcnt_df = nflx_df.groupby(groupby_cols, as_index=False).agg({"msgsz": "count"})
+
+    flxcnt_mat = (
+        flx_msgcnt_df.pivot(index="ts", columns=groupby_cols[1], values="msgsz")
+        .fillna(0)
+        .to_numpy(dtype=int)
+    )
+
+    fdim = flxcnt_mat.shape
+    flxmat = np.zeros((fdim[0], 512), dtype=int)
+    flxmat[: fdim[0], : fdim[1]] = flxcnt_mat
+
+    bccnt_mat = (
+        bc_msgcnt_df.pivot(index="ts", columns=groupby_cols[1], values="msgsz")
+        .fillna(0)
+        .to_numpy(dtype=int)
+    )
+
+    fdim = bccnt_mat.shape
+    bcmat = np.zeros((fdim[0], 512), dtype=int)
+    bcmat[: fdim[0], : fdim[1]] = bccnt_mat
+
+    kfls = "MultiStage_Step => Task_LoadAndSendFluxCorrections"
+    kflr = "MultiStage_Step => Task_ReceiveFluxCorrections"
+    kbcs = "MultiStage_Step => Task_LoadAndSendBoundBufs"
+    kbcr = "MultiStage_Step => Task_ReceiveBoundBufs"
+
+    # offset by 2 already
+    x = flxmat[2]
+    y = pprof_data[kflr]
+
+    x = bcmat[2]
+    y = pprof_data[kbcs]
+
+    run_regr_actual(x.reshape(-1, 1), y)
+
+    fig, ax = plt.subplots(1, 1)
+    ax2 = ax.twinx()
+    ax.plot(np.arange(512), pprof_data[kbcr], label="BC_Recv_Sec", zorder=2)
+    ax2.plot(np.arange(512), bcmat[2], color="orange", label="BC_Recv_MsgCount")
+    ax.yaxis.set_major_formatter(
+        FuncFormatter(lambda x, pos: "{:.0f} s".format(x / 1e6))
+    )
+    ax.xaxis.set_major_locator(MultipleLocator(50))
+    ax.xaxis.set_minor_locator(MultipleLocator(10))
+    plt.grid(visible=True, which="major", color="#999", zorder=0)
+    plt.grid(visible=True, which="minor", color="#ddd", zorder=0)
+
+    ax.set_title("Boundary Comm - Recv Time vs Recv Msg Count")
+    ax.set_xlabel("Rank ID")
+    ax.set_ylabel("Total Time for Stage")
+    ax2.set_ylabel("Num Messages")
+    ax2.yaxis.set_label_position("right")
+    fig.tight_layout()
+    fig.legend(loc="upper left", bbox_to_anchor=(0.3, 0.06), ncol=2)
+    PlotSaver.save(fig, trace_dir, None, "bc_recv")
+
+    fig, ax = plt.subplots(1, 1, figsize=(9, 5))
+    ax2 = ax.twinx()
+    ax.plot(np.arange(512), pprof_data[kbcs], label="BC_Send_Sec", zorder=2)
+    ax2.plot(np.arange(512), bcmat[2], color="orange", label="BC_Send_MsgCount")
+    ax.yaxis.set_major_formatter(
+        FuncFormatter(lambda x, pos: "{:.0f} s".format(x / 1e6))
+    )
+    ax.xaxis.set_major_locator(MultipleLocator(50))
+    ax.xaxis.set_minor_locator(MultipleLocator(10))
+    plt.grid(visible=True, which="major", color="#999", zorder=0)
+    plt.grid(visible=True, which="minor", color="#ddd", zorder=0)
+
+    ax.set_title("Boundary Comm - Send Time vs Send Msg Count")
+    ax.set_xlabel("Rank ID")
+    ax.set_ylabel("Total Time for Stage")
+    ax2.set_ylabel("Num Messages")
+    ax2.yaxis.set_label_position("right")
+    fig.tight_layout()
+    fig.legend(loc="upper left", bbox_to_anchor=(0.3, 0.06), ncol=2)
+    PlotSaver.save(fig, trace_dir, None, "bc_send")
+
+    pass
+
+
+def run_aggr_msgs_new():
+    global trace_dir_fmt
+    trace_dir_fmt = "/mnt/ltio/parthenon-topo/{}"
+    chan_df, send_df = aggr_msgs_all("athenapk13")
+
+
 if __name__ == "__main__":
     #  run_aggr_msgs()
-    run_plot_msgtl()
+    #  run_plot_msgtl()
+    #  plot_init()
+    run_aggr_msgs_new()
