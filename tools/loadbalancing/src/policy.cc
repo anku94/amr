@@ -49,6 +49,8 @@ std::string PolicyUtils::PolicyToString(LoadBalancePolicy policy) {
       return "kContig++Iter";
     case LoadBalancePolicy::kPolicyILP:
       return "ILP";
+    case LoadBalancePolicy::kPolicyHybrid:
+      return "Hybrid";
     default:
       return "<undefined>";
   }

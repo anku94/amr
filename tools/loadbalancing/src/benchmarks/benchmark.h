@@ -1,5 +1,10 @@
+#pragma once
+
+#include "bench_util.h"
 #include "benchmark_stats.h"
 #include "common.h"
+#include "config_parser.h"
+#include "globals.h"
 #include "distributions.h"
 #include "lb_policies.h"
 #include "policy.h"
@@ -11,6 +16,7 @@
 namespace amr {
 struct BenchmarkOpts {
   pdlfs::Env* const env;
+  std::string config_file;
   std::string output_dir;
 };
 
@@ -29,6 +35,7 @@ struct RunType {
     std::string pname = !policy_name.empty()
                             ? policy_name
                             : PolicyUtils::PolicyToString(policy);
+    ss << std::string(60, '-') << "\n";
     ss << "[BenchmarkRun] n_ranks: " << nranks << ", n_blocks: " << nblocks
        << "\n\t \tdistrib: " << dname << ", policy: " << pname
        << ", opts: " << popts_str;
@@ -38,23 +45,58 @@ struct RunType {
 
 class Benchmark {
  public:
-  explicit Benchmark(BenchmarkOpts& opts) : opts_(opts) {}
+  explicit Benchmark(BenchmarkOpts& opts)
+      : opts_(opts), utils_(opts_.output_dir, pdlfs::Env::Default()) {
+        Globals.config = std::make_unique<ConfigParser>(opts_.config_file);
+  }
 
   void Run() {
-    //    RunSuiteMini();
-    RunSuite();
+    RunSuiteMini();
+    // RunSuite();
     std::string table_path = opts_.output_dir + "/benchmark.csv";
     Utils::EnsureDir(opts_.env, opts_.output_dir);
     EmitTable(table_path);
   }
 
-  //  void RunSuiteMini() { RunCppIterSuite(4096, 12000); }
+  void RunSuiteMini() {
+    int nranks = 64;
+    int nblocks = 200;
+    RunType base{nranks, nblocks, Distribution::kPowerLaw,
+                 LoadBalancePolicy::kPolicyContiguousUnitCost};
+
+    RunType hybrid = base;
+    hybrid.policy = LoadBalancePolicy::kPolicyHybrid;
+
+    // RunType lpt = base;
+    // lpt.policy = LoadBalancePolicy::kPolicyLPT;
+    //
+    // RunType cpp = base;
+    // cpp.policy = LoadBalancePolicy::kPolicyContigImproved;
+    //
+    // RunType cpp_iter = base;
+    // cpp_iter.policy = LoadBalancePolicy::kPolicyCppIter;
+    // int iter = 50;
+    // cpp_iter.policy_opts = &iter;
+    // cpp_iter.policy_name = "CppIter_50";
+
+    // std::vector<RunType> all_runs{base, hybrid, lpt, cpp, cpp_iter};
+    std::vector<RunType> all_runs{hybrid};
+
+    for (auto& r : all_runs) {
+      logf(LOG_INFO, "[RUN] %s", r.ToString().c_str());
+      if (r.policy_opts && r.policy == LoadBalancePolicy::kPolicyHybrid) {
+        auto* opts = reinterpret_cast<PolicyOptsHybrid*>(r.policy_opts);
+        logf(LOG_INFO, "%s", opts->ToString().c_str());
+      }
+    }
+
+    DoRuns(all_runs);
+  }
 
   void RunSuite() {
-    // std::vector<int> all_ranks = {512, 1024, 2048, 4096, 8192, 16384};
-    std::vector<int> all_ranks = {512};
-    // std::vector<int> all_blocks = {1000, 2000, 4000, 8000, 16000, 32000};
-    std::vector<int> all_blocks = {1100};
+    std::vector<int> all_ranks = {512, 1024, 2048, 4096, 8192, 16384};
+    // std::vector<int> all_ranks = {512};
+    std::vector<int> all_blocks = {1000, 2000, 4000, 8000, 16000, 32000};
 
     for (auto r : all_ranks) {
       for (auto b : all_blocks) {
@@ -62,10 +104,6 @@ class Benchmark {
         RunCppIterSuite(r, b);
       }
     }
-
-    std::string table_path = opts_.output_dir + "/benchmark.csv";
-    Utils::EnsureDir(opts_.env, opts_.output_dir);
-    EmitTable(table_path);
   }
 
   void RunCppIterSuite(int nranks, int nblocks) {
@@ -82,7 +120,11 @@ class Benchmark {
     RunType cpp = base;
     cpp.policy = LoadBalancePolicy::kPolicyContigImproved;
 
-    std::vector<RunType> all_runs{base, lpt, cpp};
+    RunType hybrid = base;
+    hybrid.policy = LoadBalancePolicy::kPolicyHybrid;
+
+    std::vector<RunType> all_runs{base, lpt, cpp, hybrid};
+    // std::vector<RunType> all_runs{lpt};
 
     for (int iter_idx = 0; iter_idx < all_iters.size(); iter_idx++) {
       RunType cpp_iter = base;
@@ -109,7 +151,7 @@ class Benchmark {
 
     std::vector<double> costs;
     auto& r0 = rvec[0];
-    DistributionUtils::GenDistribution(r0.d, costs, r0.nblocks);
+    DistributionUtils::GenDistributionWithDefaults(r0.d, costs, r0.nblocks);
     logf(LOG_INFO, "Times: %s", SerializeVector(costs, 10).c_str());
 
     for (auto& r : rvec) {
@@ -137,6 +179,11 @@ class Benchmark {
          "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
          r.policy_name.c_str(), time_avg, time_max);
 
+    utils_.LogVector("Costs", costs);
+    utils_.LogVector("Ranks", ranks);
+    utils_.LogVector("Rank times", rank_times);
+    utils_.LogAllocation(r.nblocks, r.nranks, costs, ranks);
+
     std::string distrib_name = DistributionUtils::DistributionToString(r.d);
     std::string policy_name = r.policy_name.empty()
                                   ? PolicyUtils::PolicyToString(r.policy)
@@ -145,23 +192,23 @@ class Benchmark {
     std::shared_ptr<TableRow> row = std::make_shared<BenchmarkRow>(
         r.nranks, r.nblocks, distrib_name, policy_name, time_avg, time_max);
     table_.addRow(row);
+
+    auto pex_fpath =
+        utils_.GetPexFileName(policy_name, distrib_name, r.nranks, r.nblocks);
+    utils_.WritePexToFile(pex_fpath, costs, ranks, r.nranks);
   }
 
   void EmitTable(const std::string& table_out) {
     std::stringstream table_stream;
-    table_.emitTable(table_stream);
+    table_.emitTable(table_stream, 6);
     logf(LOG_INFO, "Table: \n%s", table_stream.str().c_str());
 
-    auto env = pdlfs::Env::Default();
-    pdlfs::WritableFile* fh;
-    pdlfs::Status s = env->NewWritableFile(table_out.c_str(), &fh);
-    assert(s.ok());
-    fh->Append(table_.toCSV().c_str());
-    fh->Close();
+    utils_.WriteToFile(table_out, table_.toCSV());
   }
 
  private:
   const BenchmarkOpts opts_;
   TabularData table_;
+  BenchmarkUtils utils_;
 };
 }  // namespace amr

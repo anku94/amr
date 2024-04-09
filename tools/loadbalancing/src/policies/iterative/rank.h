@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "common.h"
+
 #include <algorithm>
 
 namespace amr {
@@ -78,9 +80,7 @@ class Rank {
     }
   }
 
-  bool HasBlocks() const {
-    return !block_vec_.empty();
-  }
+  bool HasBlocks() const { return !block_vec_.empty(); }
 
   const int rank_;
 

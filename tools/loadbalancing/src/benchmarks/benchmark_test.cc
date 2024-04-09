@@ -2,14 +2,14 @@
 // Created by Ankush J on 11/16/23.
 //
 
+#include "policies/iterative/iter.h"
 #include "common.h"
 #include "tabular_data.h"
 
 #include <gtest/gtest.h>
 
 namespace amr {
-class BenchmarkTest : public ::testing::Test {
- protected:
+class BenchmarkTest : public ::testing::Test { protected:
 };
 
 class CustomRow : public TableRow {
@@ -41,5 +41,32 @@ TEST_F(BenchmarkTest, TabularTest) {
   table.emitTable(std::cout);
   std::string csvData = table.toCSV();
   ASSERT_STRCASEEQ(csvData.c_str(), "A,B,C\n1,abcd,2.000000\n");
+}
+
+TEST_F(BenchmarkTest, IterTrackerTest) {
+  IterationTracker iter;
+  iter.LogCost(4);
+  ASSERT_FALSE(iter.ShouldStop(3));
+  ASSERT_FALSE(iter.ShouldStop(2));
+  ASSERT_FALSE(iter.ShouldStop(3));
+  ASSERT_TRUE(iter.ShouldStop(2));
+}
+
+TEST_F(BenchmarkTest, IterTrackerTest2) {
+  IterationTracker iter;
+  iter.LogCost(4);
+  ASSERT_FALSE(iter.ShouldStop(3));
+  ASSERT_FALSE(iter.ShouldStop(2));
+  ASSERT_FALSE(iter.ShouldStop(4));
+  ASSERT_TRUE(iter.ShouldStop(2));
+}
+
+TEST_F(BenchmarkTest, IterTrackerTest3) {
+  IterationTracker iter;
+  iter.LogCost(4);
+  ASSERT_FALSE(iter.ShouldStop(3));
+  ASSERT_FALSE(iter.ShouldStop(2));
+  ASSERT_FALSE(iter.ShouldStop(4));
+  ASSERT_TRUE(iter.ShouldStop(3));
 }
 }  // namespace amr

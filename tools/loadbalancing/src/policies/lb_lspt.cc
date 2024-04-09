@@ -2,7 +2,9 @@
 // Created by Ankush J on 4/10/23.
 //
 
+#include "common.h"
 #include "lb_policies.h"
+#include "lb_util.h"
 
 #include <algorithm>
 #include <numeric>
@@ -14,32 +16,25 @@
  */
 
 namespace {
-class Rank {
- public:
-  int id;
-  double load;
-
-  Rank(int id, double load) : id(id), load(load) {}
-};
-
-struct RankComparator {
-  bool operator()(const Rank& a, const Rank& b) { return a.load > b.load; }
-};
-
 template <typename Comparator>
 void AssignBlocks(std::vector<double> const& costlist,
                   std::vector<int>& ranklist, int nranks, Comparator comp) {
   // Initialize the ranklist with -1
+  ranklist.resize(costlist.size());
   std::fill(ranklist.begin(), ranklist.end(), -1);
 
   // Create a priority queue of ranks with the load as the priority
-  std::priority_queue<Rank, std::vector<Rank>, RankComparator> rank_queue;
+  std::priority_queue<Rank, std::vector<Rank>, LeastLoadedRankPQComparator> rank_queue;
+
+  const float delta = 0.0001;
   for (int i = 0; i < nranks; i++) {
-    rank_queue.emplace(i, 0.0);
+    // bootstrap with small load to prefer order
+    rank_queue.emplace(i, delta * i);
+    // rank_queue.push(Rank(i, 0.0));
   }
 
-  // Sort the indices of the costlist_prev in ascending order of their corresponding
-  // costs
+  // Sort the indices of the costlist_prev in ascending order of their
+  // corresponding costs
   std::vector<int> indices(costlist.size());
   std::iota(indices.begin(), indices.end(), 0);
   std::sort(indices.begin(), indices.end(), comp);
@@ -48,6 +43,9 @@ void AssignBlocks(std::vector<double> const& costlist,
   for (int idx : indices) {
     Rank minLoadRank = rank_queue.top();
     rank_queue.pop();
+
+    logf(LOG_DBG2, "[LPT] Block (%d, %.1f) assigned to rank (%d, %.1f)", idx,
+         costlist[idx], minLoadRank.id, minLoadRank.load);
 
     ranklist[idx] = minLoadRank.id;
     minLoadRank.load += costlist[idx];

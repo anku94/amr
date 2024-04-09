@@ -8,6 +8,7 @@ set(lb_srcs
         policies/lb_ilp.cc
         policies/lb_lspt.cc
         policies/lb_cpp_iter.cc
+        policies/lb_hybrid.cc
         block_alloc_sim.cc
         policy.cc
         policy_exec_ctx.cc

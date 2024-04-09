@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include "common.h"
 #include "rank.h"
+#include "iter.h"
 
 #include <algorithm>
 #include <cassert>
-#include <queue>
 
 namespace amr {
 class Solver {
@@ -21,11 +22,17 @@ class Solver {
     InitializeRanks(nranks, costlist, ranklist);
     GetRankStats(ranks_, avg_cost, max_cost);
     LogRankStats("INITIAL", avg_cost, max_cost);
+    iter_.LogCost(max_cost);
 
     for (int iter = 0; iter < niters; iter++) {
       Iterate();
       GetRankStats(ranks_, avg_cost, max_cost);
       LogRankStats(iter, avg_cost, max_cost);
+
+      if (iter_.ShouldStop(max_cost)) {
+        logf(LOG_DBUG, "[Solver] IterationTracker says we should stop!!");
+        break;
+      }
     }
 
     LogRankStats("FINAL", avg_cost, max_cost);
@@ -53,7 +60,8 @@ class Solver {
       niters++;
 
       if (niters == max_iters) {
-        // logf(LOG_WARN, "Solver hit kMaxIters (%d). Ending prem...", max_iters);
+        // logf(LOG_WARN, "Solver hit kMaxIters (%d). Ending prem...",
+        // max_iters);
         break;
       }
     }
@@ -73,6 +81,11 @@ class Solver {
   }
 
  private:
+  int nranks_;
+  std::vector<Rank> ranks_;
+  std::vector<std::pair<double, int>> rank_cost_vec_;
+  IterationTracker iter_;
+
   void InitializeRanks(int nranks, std::vector<double> const& costlist,
                        std::vector<int> const& ranklist) {
     ranks_.clear();
@@ -113,7 +126,8 @@ class Solver {
     sb_rank = rank_cost_vec_.front().second;
 
     if (ranks_[sb_rank].HasBlocks()) {
-      IterateUtilBothWays(sb_rank, lb_rank);
+      // IterateUtilBothWays(sb_rank, lb_rank);
+      IterateUtilHybrid(sb_rank, lb_rank);
     } else {
       logf(LOG_WARN, "[Solver][Iterate] Rank %d has no blocks!", sb_rank);
       IterateUtilOneWay(sb_rank, lb_rank);
@@ -126,8 +140,8 @@ class Solver {
 
     ranks_[lb_rank].GetLargestBlock(lb_bidx, lb_cost);
 
-    logf(LOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank,
-         0, lb_rank, ranks_[lb_rank].GetCost());
+    logf(LOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank, 0, lb_rank,
+         ranks_[lb_rank].GetCost());
     logf(LOG_DBG2,
          "Swapping blocks (c%.0lf, r%d) and (c%.0lf, r%d). (Reduction: %.0lf)",
          0, sb_rank, lb_cost, lb_rank, lb_cost);
@@ -150,7 +164,36 @@ class Solver {
 
     TransferBlock(lb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
     TransferBlock(sb_bidx, sb_rank, lb_rank, 0, nranks_ - 1);
+  }
 
+  void IterateUtilHybrid(int sb_rank, int lb_rank) {
+    int lbb_bidx, lbs_bidx, sbb_bidx, sbs_bidx;
+    double lbb_cost, lbs_cost, sbb_cost, sbs_cost;
+
+    ranks_[lb_rank].GetLargestBlock(lbb_bidx, lbb_cost);
+    ranks_[lb_rank].GetSmallestBlock(lbs_bidx, lbs_cost);
+    ranks_[sb_rank].GetLargestBlock(sbb_bidx, sbb_cost);
+    ranks_[sb_rank].GetSmallestBlock(sbs_bidx, sbs_cost);
+
+    double cur_diff = ranks_[lb_rank].GetCost() - ranks_[sb_rank].GetCost();
+    if (lbb_cost < cur_diff) {
+      logf(LOG_DBUG,
+           "[SWAP1] (c%.0lf - r%d) <-> (c%.0lf - r%d). Reduction: %.0lf",
+           lbb_cost, lb_rank, sbb_cost, sb_rank, lbb_cost);
+      TransferBlock(lbb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
+    } else if (lbs_cost < cur_diff) {
+      logf(LOG_DBUG,
+           "[SWAP2] (c%.0lf - r%d) <-> (c%.0lf - r%d). Reduction: %.0lf",
+           lbs_cost, lb_rank, sbb_cost, sb_rank, lbs_cost);
+      TransferBlock(lbs_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
+    } else {
+      double reduction = lbb_bidx - sbs_bidx;
+      logf(LOG_DBUG,
+           "[SWAP3] (c%.0lf - r%d) <-> (c%.0lf - r%d). Reduction: %.0lf",
+           lbb_cost, lb_rank, sbs_cost, sb_rank, reduction);
+      TransferBlock(lbb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
+      TransferBlock(sbs_bidx, sb_rank, lb_rank, 0, nranks_ - 1);
+    }
   }
 
   void TransferBlock(int bidx, int src_rank, int dest_rank, int src_ridx,
@@ -205,11 +248,7 @@ class Solver {
     }
   }
 
-  int nranks_;
-  std::vector<Rank> ranks_;
-  std::vector<std::pair<double, int>> rank_cost_vec_;
-
  public:
-  static constexpr int kMaxIters = 250;
+  static constexpr int kMaxIters = 500;
 };
 }  // namespace amr

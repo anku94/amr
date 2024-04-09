@@ -4,7 +4,7 @@ if (NOT GTest_FOUND)
   return()
 endif()
 
-set(benchmark_srcs benchmark.cc alias_method.cc)
+set(benchmark_srcs benchmark.cc alias_method.cc ../globals.cc ../config_parser.cc)
 add_executable(benchmark benchmark_main.cc ${benchmark_srcs})
 target_link_libraries(benchmark PRIVATE lb pdlfs-common)
 

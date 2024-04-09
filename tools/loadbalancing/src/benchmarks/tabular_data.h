@@ -56,8 +56,9 @@ class TabularData {
     return ss.str();
   }
 
-  void emitTable(std::ostream& out) const {
+  void emitTable(std::ostream& out, int sep_intvl = -1) const {
     size_t col_w_sum = std::accumulate(col_w_.begin(), col_w_.end(), 0);
+    auto hline = std::string(col_w_sum, '-');
     if (!rows.empty()) {
       out << std::left;
       auto header = rows.front()->GetHeader();
@@ -65,16 +66,27 @@ class TabularData {
         out << std::setw(col_w_[i]) << header[i];
       }
       out << std::endl;
-      out << std::string(col_w_sum, '-') << std::endl;
+      out << hline << std::endl;
     }
 
-    for (const auto& row : rows) {
-      auto data = row->GetData();
+    int idx = 0;
+    for (int row_idx = 0; row_idx < rows.size(); ++row_idx) {
+      auto data = rows[row_idx]->GetData();
       for (size_t i = 0; i < data.size(); ++i) {
         out << std::setw(col_w_[i]) << data[i];
       }
       out << std::endl;
+      if (sep_intvl > 0 && ++idx % sep_intvl == 0) {
+        out << hline << std::endl;
+      }
     }
+    // for (const auto& row : rows) {
+    //   auto data = row->GetData();
+    //   for (size_t i = 0; i < data.size(); ++i) {
+    //     out << std::setw(col_w_[i]) << data[i];
+    //   }
+    //   out << std::endl;
+    // }
   }
 };
 }  // namespace amr

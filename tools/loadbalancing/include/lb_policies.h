@@ -39,6 +39,21 @@ struct PolicyOptsILP {
   }
 };
 
+struct PolicyOptsHybrid {
+  float frac_lpt;
+  float lpt_target;
+
+  PolicyOptsHybrid() : frac_lpt(0.2), lpt_target(0) {}
+
+  std::string ToString() const {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    ss << "\n\tnum_lpt: \t" << std::to_string(frac_lpt);
+    ss << "\n\tlpt_target: \t" << std::to_string(lpt_target);
+    return ss.str();
+  }
+};
+
 enum class LoadBalancePolicy;
 class LoadBalancePolicies {
  public:
@@ -73,6 +88,9 @@ class LoadBalancePolicies {
   static int AssignBlocksCppIter(std::vector<double> const& costlist,
                                  std::vector<int>& ranklist, int nranks,
                                  void* opts = nullptr);
+
+  static int AssignBlocksHybrid(std::vector<double> const& costlist,
+                                std::vector<int>& ranklist, int nranks);
 
   friend class LoadBalancingPoliciesTest;
   friend class PolicyTest;
