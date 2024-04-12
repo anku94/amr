@@ -1,5 +1,5 @@
 set (install-programs-in
-    newscripts/run_amr_test.sh.in)
+    newscripts/amr-minimal.sh.in newscripts/run_amr_test.sh.in)
 
 set (install-programs
   newscripts/amr_common.sh)
@@ -10,5 +10,5 @@ foreach (lcv ${install-programs-in})
   list (APPEND install-programs-in-done ${CMAKE_CURRENT_BINARY_DIR}/${out})
 endforeach ()
 
-install (FILES ${install-programs} DESTINATION scripts)
-install (FILES ${install-programs-in-done} DESTINATION scripts)
+install (PROGRAMS ${install-programs} DESTINATION scripts)
+install (PROGRAMS ${install-programs-in-done} DESTINATION scripts)
