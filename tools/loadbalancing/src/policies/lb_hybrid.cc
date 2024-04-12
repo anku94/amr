@@ -73,7 +73,7 @@ int LoadBalancePolicies::AssignBlocksHybrid(const std::vector<double>& costlist,
                                             std::vector<int>& ranklist, int nranks) {
   int nblocks = costlist.size();
   double lpt_threshold = Globals.config->GetParamOrDefault<double>(
-      "hybrid_lpt_threshold", 0.2);
+      "hybrid_lpt_frac", 0.2);
   int num_lpt = std::min(lpt_threshold * nblocks, nranks * 0.9);
 
   logf(LOG_INFO, "LPT Threshold: %.2f, Num LPT: %d", lpt_threshold, num_lpt);
@@ -198,7 +198,7 @@ int HybridAssignment::AssignBlocks(const std::vector<double>& costlist,
        cost_total, cost_per_rank, blocks_per_rank);
 
   double lpt_max = GetLPTMax(costlist, nranks);
-  logf(LOG_INFO, "[HybridPolicy] LPT Max: %d\n", lpt_max);
+  logf(LOG_INFO, "[HybridPolicy] LPT Max: %.0lf\n", lpt_max);
 
   unassigned_first_ = 0;
   unassigned_last_ = block_costs_.size();

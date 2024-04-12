@@ -13,6 +13,11 @@ class ConfigParser {
     std::ifstream file(file_path);
     std::string line;
     while (std::getline(file, line)) {
+      // if line begins with #, continue
+      if (line.empty() || line[0] == '#') {
+        continue;
+      }
+
       auto delimiter_pos = line.find('=');
       if (delimiter_pos != std::string::npos) {
         std::string key = line.substr(0, delimiter_pos);

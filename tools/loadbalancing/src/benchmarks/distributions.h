@@ -29,12 +29,12 @@ struct ExpOpts {
 
 struct PowerLawOpts {
   double alpha;
-  int N_min;
-  int N_max;
 };
 
 struct DistributionOpts {
   Distribution d;
+  int N_min;
+  int N_max;
   union {
     GaussianOpts gaussian;
     ExpOpts exp;
@@ -44,25 +44,34 @@ struct DistributionOpts {
 
 class DistributionUtils {
  public:
-  static void GenDistributionWithDefaults(Distribution d,
-                                          std::vector<double>& costs,
+  static Distribution GetConfigDistribution() {
+    std::string distrib_str = Globals.config->GetParamOrDefault<std::string>(
+        "distribution", "powerlaw");
+    return StringToDistribution(distrib_str);
+  }
+
+  static void GenDistributionWithDefaults(std::vector<double>& costs,
                                           int nblocks) {
+    Distribution d = GetConfigDistribution();
+
+    double N_min = Globals.config->GetParamOrDefault<int>("N_min", 50);
+    double N_max = Globals.config->GetParamOrDefault<int>("N_max", 100);
+
     double gaussian_mean =
         Globals.config->GetParamOrDefault<double>("gaussian_mean", 10.0);
     double gaussian_std =
         Globals.config->GetParamOrDefault<double>("gaussian_std", 0.5);
 
     double exp_lambda =
-        Globals.config->GetParamOrDefault<double>("exp_lambda", 1.0);
+        Globals.config->GetParamOrDefault<double>("exp_lambda", 0.1);
 
     double powerlaw_alpha =
         Globals.config->GetParamOrDefault<double>("powerlaw_alpha", -3.0);
-    int powerlaw_N_min =
-        Globals.config->GetParamOrDefault<int>("powerlaw_N_min", 50);
-    int powerlaw_N_max =
-        Globals.config->GetParamOrDefault<int>("powerlaw_N_max", 100);
 
     DistributionOpts opts;
+    opts.N_min = N_min;
+    opts.N_max = N_max;
+
     if (d == Distribution::kGaussian) {
       opts.d = Distribution::kGaussian;
       opts.gaussian.mean = gaussian_mean;
@@ -73,8 +82,6 @@ class DistributionUtils {
     } else if (d == Distribution::kPowerLaw) {
       opts.d = Distribution::kPowerLaw;
       opts.powerlaw.alpha = powerlaw_alpha;
-      opts.powerlaw.N_min = powerlaw_N_min;
-      opts.powerlaw.N_max = powerlaw_N_max;
     } else {
       ABORT("Unknown distribution");
     }
@@ -95,43 +102,43 @@ class DistributionUtils {
     }
   }
 
- private:
-  static std::string DistributionOptsToString(DistributionOpts& opts) {
-    if (opts.d == Distribution::kGaussian) {
-      return "Gaussian: mean=" + std::to_string(opts.gaussian.mean) +
-             ", std=" + std::to_string(opts.gaussian.std);
-    } else if (opts.d == Distribution::kExponential) {
-      return "Exponential: lambda=" + std::to_string(opts.exp.lambda);
-    } else if (opts.d == Distribution::kPowerLaw) {
-      return "PowerLaw: alpha=" + std::to_string(opts.powerlaw.alpha) +
-             ", N_min=" + std::to_string(opts.powerlaw.N_min) +
-             ", N_max=" + std::to_string(opts.powerlaw.N_max);
+  // private:
+  static Distribution StringToDistribution(const std::string& s) {
+    std::string s_lower = s;
+    std::transform(s_lower.begin(), s_lower.end(), s_lower.begin(), ::tolower);
+
+    if (s_lower == "gaussian") {
+      return Distribution::kGaussian;
+    } else if (s_lower == "exponential") {
+      return Distribution::kExponential;
+    } else if (s_lower == "powerlaw") {
+      return Distribution::kPowerLaw;
     } else {
-      return "Unknown";
+      ABORT("Unknown distribution");
     }
+
+    return Distribution::kGaussian;
   }
 
-  static void GenDistribution(Distribution d, std::vector<double>& costs,
-                              int nblocks) {
-    logf(LOG_INFO, "[GenDistribution] Distribution: %s, nblocks: %d",
-         DistributionToString(d).c_str(), nblocks);
-
-    costs.resize(nblocks);
-
-    switch (d) {
-      case Distribution::kGaussian:
-        GenGaussian(costs, nblocks, 10.0, 0.5);
-        break;
-      case Distribution::kExponential:
-        GenExponential(costs, nblocks, 1);
-        break;
-      case Distribution::kPowerLaw:
-        GenPowerLaw(costs, nblocks, -3.0, 50, 100);
-        break;
-      default:
-        GenUniform(costs, nblocks);
-        break;
+  static std::string DistributionOptsToString(DistributionOpts& opts) {
+    std::string ret;
+    if (opts.d == Distribution::kGaussian) {
+      ret = "Gaussian: mean=" + std::to_string(opts.gaussian.mean) +
+            ", std=" + std::to_string(opts.gaussian.std);
+    } else if (opts.d == Distribution::kExponential) {
+      ret = "Exponential: lambda=" + std::to_string(opts.exp.lambda);
+    } else if (opts.d == Distribution::kPowerLaw) {
+      ret = "PowerLaw: alpha=" + std::to_string(opts.powerlaw.alpha);
+    } else {
+      ret = "unknown";
     }
+
+    if (ret != "unknown") {
+      ret += "[N_min: " + std::to_string(opts.N_min) +
+             ", N_max: " + std::to_string(opts.N_max) + "]";
+    }
+
+    return ret;
   }
 
   static void GenDistribution(DistributionOpts& d, std::vector<double>& costs,
@@ -143,14 +150,14 @@ class DistributionUtils {
 
     switch (d.d) {
       case Distribution::kGaussian:
-        GenGaussian(costs, nblocks, d.gaussian.mean, d.gaussian.std);
+        GenGaussian(costs, nblocks, d.gaussian.mean, d.gaussian.std, d.N_min,
+                    d.N_max);
         break;
       case Distribution::kExponential:
-        GenExponential(costs, nblocks, d.exp.lambda);
+        GenExponential(costs, nblocks, d.exp.lambda, d.N_min, d.N_max);
         break;
       case Distribution::kPowerLaw:
-        GenPowerLaw(costs, nblocks, d.powerlaw.alpha, d.powerlaw.N_min,
-                    d.powerlaw.N_max);
+        GenPowerLaw(costs, nblocks, d.powerlaw.alpha, d.N_min, d.N_max);
         break;
       default:
         GenUniform(costs, nblocks);
@@ -179,6 +186,31 @@ class DistributionUtils {
     }
   }
 
+  static void GenGaussian(std::vector<double>& costs, int nblocks, double mean,
+                          double std, int N_min, int N_max) {
+    costs.resize(nblocks);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> d(0, 1);
+
+    int N = N_max - N_min + 1;
+    std::vector<double> prob(N);
+    for (int i = 0; i < N; i++) {
+      double rel_std = (i + N_min - mean) / std;
+      prob[i] = exp(-pow(rel_std, 2) / 2);
+    }
+
+    amr::AliasMethod alias(prob);
+    for (int i = 0; i < nblocks; i++) {
+      double a = d(gen);
+      double b = d(gen);
+      int alias_sample = alias.Sample(a, b);
+      alias_sample += N_min;
+      costs[i] = alias_sample;
+    }
+  }
+
   static void GenExponential(std::vector<double>& costs, int nblocks,
                              double lambda) {
     costs.resize(nblocks);
@@ -189,6 +221,30 @@ class DistributionUtils {
 
     for (int i = 0; i < nblocks; i++) {
       costs[i] = d(gen);
+    }
+  }
+
+  static void GenExponential(std::vector<double>& costs, int nblocks,
+                             double lambda, int N_min, int N_max) {
+    costs.resize(nblocks);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> d(0, 1);
+
+    int N = N_max - N_min + 1;
+    std::vector<double> prob(N);
+    for (int i = 0; i < N; i++) {
+      prob[i] = lambda * exp(-lambda * (i + N_min));
+    }
+
+    amr::AliasMethod alias(prob);
+    for (int i = 0; i < nblocks; i++) {
+      double a = d(gen);
+      double b = d(gen);
+      int alias_sample = alias.Sample(a, b);
+      alias_sample += N_min;
+      costs[i] = alias_sample;
     }
   }
 
@@ -218,6 +274,29 @@ class DistributionUtils {
       alias_sample += N_min;
       costs[i] = alias_sample;
     }
+  }
+
+  static std::string PlotHistogram(std::vector<double> const& costs, int N_min,
+                                   int N_max, int max_height) {
+    std::vector<int> hist(N_max - N_min + 1, 0);
+    for (auto c : costs) {
+      int idx = c - N_min;
+      hist[idx]++;
+    }
+
+    int max_count = *std::max_element(hist.begin(), hist.end());
+    int scale = max_count / max_height;
+
+    std::stringstream ss;
+    for (int i = 0; i < hist.size(); i++) {
+      ss << "[" << i + N_min << "] ";
+      for (int j = 0; j < hist[i] / scale; j++) {
+        ss << "*";
+      }
+      ss << std::endl;
+    }
+
+    return ss.str();
   }
 };
 }  // namespace amr

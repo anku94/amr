@@ -4,10 +4,8 @@
 
 #pragma once
 
-#include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <numeric>
 #include <sstream>
 #include <vector>
 
@@ -91,6 +89,10 @@ class LoadBalancePolicies {
 
   static int AssignBlocksHybrid(std::vector<double> const& costlist,
                                 std::vector<int>& ranklist, int nranks);
+
+  static int AssignBlocksHybridCppFirst(std::vector<double> const& costlist,
+                                        std::vector<int>& ranklist, int nranks,
+                                        bool v2);
 
   friend class LoadBalancingPoliciesTest;
   friend class PolicyTest;

@@ -5,8 +5,8 @@
 #pragma once
 
 #include "common.h"
-#include "rank.h"
 #include "iter.h"
+#include "rank.h"
 
 #include <algorithm>
 #include <cassert>
@@ -175,22 +175,33 @@ class Solver {
     ranks_[sb_rank].GetLargestBlock(sbb_bidx, sbb_cost);
     ranks_[sb_rank].GetSmallestBlock(sbs_bidx, sbs_cost);
 
+    double lr_cost = ranks_[lb_rank].GetCost();
+    double sr_cost = ranks_[sb_rank].GetCost();
+
     double cur_diff = ranks_[lb_rank].GetCost() - ranks_[sb_rank].GetCost();
     if (lbb_cost < cur_diff) {
+      double new_max_cost = std::max(sr_cost + lbb_cost, lr_cost - lbb_cost);
+
       logf(LOG_DBUG,
-           "[SWAP1] (c%.0lf - r%d) <-> (c%.0lf - r%d). Reduction: %.0lf",
-           lbb_cost, lb_rank, sbb_cost, sb_rank, lbb_cost);
+           "[SWAP1] (c%.0lf from rc %.0lf, rid %d) -> (rc %.0lf, rid %d). "
+           "Reduction: %.0lf",
+           lbb_cost, lr_cost, lb_rank, sr_cost, sb_rank,
+           lr_cost - new_max_cost);
       TransferBlock(lbb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
     } else if (lbs_cost < cur_diff) {
+      double new_max_cost = std::max(sr_cost + lbs_cost, lr_cost - lbs_cost);
       logf(LOG_DBUG,
-           "[SWAP2] (c%.0lf - r%d) <-> (c%.0lf - r%d). Reduction: %.0lf",
-           lbs_cost, lb_rank, sbb_cost, sb_rank, lbs_cost);
+           "[SWAP2] (c%.0lf from rc %.0lf, rid %d) -> (rc %.0lf, rid %d). "
+           "Reduction: %.0lf",
+           lbs_cost, lr_cost, lb_rank, sr_cost, sb_rank,
+           lr_cost - new_max_cost);
       TransferBlock(lbs_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
     } else {
-      double reduction = lbb_bidx - sbs_bidx;
+      double diff = lbb_cost - sbs_cost;
+      double new_max_cost = std::max(sr_cost + diff, lr_cost - diff);
       logf(LOG_DBUG,
            "[SWAP3] (c%.0lf - r%d) <-> (c%.0lf - r%d). Reduction: %.0lf",
-           lbb_cost, lb_rank, sbs_cost, sb_rank, reduction);
+           lbb_cost, lb_rank, sbs_cost, sb_rank, lr_cost - new_max_cost);
       TransferBlock(lbb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
       TransferBlock(sbs_bidx, sb_rank, lb_rank, 0, nranks_ - 1);
     }

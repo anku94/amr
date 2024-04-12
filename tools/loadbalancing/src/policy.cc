@@ -51,6 +51,10 @@ std::string PolicyUtils::PolicyToString(LoadBalancePolicy policy) {
       return "ILP";
     case LoadBalancePolicy::kPolicyHybrid:
       return "Hybrid";
+    case LoadBalancePolicy::kPolicyHybridCppFirst:
+      return "HybridCppFirst";
+    case LoadBalancePolicy::kPolicyHybridCppFirstV2:
+      return "HybridCppFirstV2";
     default:
       return "<undefined>";
   }
@@ -128,6 +132,7 @@ void PolicyUtils::ComputePolicyCosts(int nranks,
                                      std::vector<double>& rank_times,
                                      double& rank_time_avg,
                                      double& rank_time_max) {
+  rank_times.clear();
   rank_times.resize(nranks, 0);
   int nblocks = cost_list.size();
 

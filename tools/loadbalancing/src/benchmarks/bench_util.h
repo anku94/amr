@@ -56,8 +56,21 @@ class BenchmarkUtils {
   }
 
   void WriteToFile(const std::string& fpath, const std::string& content) const {
+    pdlfs::Status s = pdlfs::Status::OK();
+
+    // ensure parent dir exists, create if it doesn't
+    auto parent_dir = fpath.substr(0, fpath.find_last_of("/"));
+    if (!env_->FileExists(parent_dir.c_str())) {
+      s = env_->CreateDir(parent_dir.c_str());
+      if (!s.ok()) {
+        logf(LOG_ERRO, "Error creating dir: %s", parent_dir.c_str());
+        return;
+      }
+    }
+
     pdlfs::WritableFile* fh;
-    pdlfs::Status s = env_->NewWritableFile(fpath.c_str(), &fh);
+
+    s = env_->NewWritableFile(fpath.c_str(), &fh);
     if (!s.ok()) {
       logf(LOG_ERRO, "Error opening file: %s", fpath.c_str());
       return;
@@ -87,7 +100,7 @@ class BenchmarkUtils {
       }
     }
 
-    logf(LOG_DBUG, "%s", ss.str().c_str());
+    logf(LOG_DBG2, "%s", ss.str().c_str());
   }
 
   static void LogAllocation(int nblocks, int nranks,
@@ -115,7 +128,7 @@ class BenchmarkUtils {
       ss << "\n";
     }
 
-    logf(LOG_DBUG, "%s", ss.str().c_str());
+    logf(LOG_DBG2, "%s", ss.str().c_str());
   }
 
  private:

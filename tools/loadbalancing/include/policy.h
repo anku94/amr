@@ -28,7 +28,9 @@ enum class LoadBalancePolicy {
   kPolicyILP,
   kPolicyContigImproved,
   kPolicyCppIter,
-  kPolicyHybrid
+  kPolicyHybrid,
+  kPolicyHybridCppFirst,
+  kPolicyHybridCppFirstV2
 };
 
 /** Policy kUnitCost is not really necessary

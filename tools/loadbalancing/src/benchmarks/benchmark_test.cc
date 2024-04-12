@@ -4,10 +4,10 @@
 
 #include "policies/iterative/iter.h"
 #include "common.h"
+#include "distributions.h"
 #include "tabular_data.h"
 
 #include <gtest/gtest.h>
-
 namespace amr {
 class BenchmarkTest : public ::testing::Test { protected:
 };
@@ -69,4 +69,27 @@ TEST_F(BenchmarkTest, IterTrackerTest3) {
   ASSERT_FALSE(iter.ShouldStop(4));
   ASSERT_TRUE(iter.ShouldStop(3));
 }
+
+TEST_F(BenchmarkTest, DistributionTest) {
+  int N_min = 50, N_max = 75;
+  int nblocks = 1024;
+  std::vector<double> costs;
+
+  DistributionUtils::GenPowerLaw(costs, nblocks, -3.0, N_min, N_max);
+  std::string hist = DistributionUtils::PlotHistogram(costs, N_min, N_max, 20);
+  std::cout << "Power Law distribution: " << std::endl;
+  std::cout << hist << std::endl;
+
+  DistributionUtils::GenGaussian(costs, nblocks, 60, 5, N_min, N_max);
+  hist = DistributionUtils::PlotHistogram(costs, N_min, N_max, 20);
+  std::cout << "Gaussian distribution: " << std::endl;
+  std::cout << hist << std::endl;
+
+  DistributionUtils::GenExponential(costs, nblocks, 0.1, N_min, N_max);
+  hist = DistributionUtils::PlotHistogram(costs, N_min, N_max, 20);
+  std::cout << "Exponential distribution: " << std::endl;
+  std::cout << hist << std::endl;
+
+}
+
 }  // namespace amr

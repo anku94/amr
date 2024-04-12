@@ -9,6 +9,18 @@
 #include "policy.h"
 
 namespace amr {
+
+struct PolicyOptsCppIter {
+  int niters;
+};
+
+struct PolicyOpts {
+  LoadBalancePolicy policy;
+  union {
+    PolicyOptsCppIter cpp_iter_opts;
+  };
+};
+
 int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
                                       std::vector<double> const& costlist,
                                       std::vector<int>& ranklist, int nranks,
@@ -43,6 +55,10 @@ int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
       return AssignBlocksCppIter(costlist, ranklist, nranks, opts);
     case LoadBalancePolicy::kPolicyHybrid:
       return AssignBlocksHybrid(costlist, ranklist, nranks);
+    case LoadBalancePolicy::kPolicyHybridCppFirst:
+      return AssignBlocksHybridCppFirst(costlist, ranklist, nranks, /* v2 */ false);
+    case LoadBalancePolicy::kPolicyHybridCppFirstV2:
+      return AssignBlocksHybridCppFirst(costlist, ranklist, nranks, /* v2 */ true);
     default:
       ABORT("LoadBalancePolicy not implemented!!");
   }
