@@ -11,6 +11,8 @@ set(lb_srcs
         policies/lb_hybrid.cc
         policies/lb_hybrid2.cc
         block_alloc_sim.cc
+        globals.cc
+        config_parser.cc
         policy.cc
         policy_exec_ctx.cc
         lb_policies.cc
