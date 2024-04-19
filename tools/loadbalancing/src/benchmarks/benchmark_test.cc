@@ -2,7 +2,7 @@
 // Created by Ankush J on 11/16/23.
 //
 
-#include "policies/iterative/iter.h"
+#include "lb/iterative/iter.h"
 #include "common.h"
 #include "distrib/distributions.h"
 #include "tabular_data.h"

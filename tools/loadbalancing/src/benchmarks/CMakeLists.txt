@@ -1,4 +1,5 @@
 find_package(GTest CONFIG)
+find_package(pdlfs-common CONFIG REQUIRED)
 
 if (NOT GTest_FOUND)
   return()

@@ -4,7 +4,7 @@
 
 #include "common.h"
 #include "lb_policies.h"
-#include "policies/iterative/solver.h"
+#include "lb/iterative/solver.h"
 
 #include <gtest/gtest.h>
 #include <vector>
