@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <cmath>
+#include <cstdint>
+#include <numeric>
 #include <vector>
 
 namespace amr {

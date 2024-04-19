@@ -14,7 +14,6 @@ class ScaleExecLog : public WritableCSVFile {
  public:
   ScaleExecLog(pdlfs::Env* const env, const std::string& fpath)
       : WritableCSVFile(env, fpath) {}
-
   void WriteRow(const char* policy_name, int nblocks, int nranks,
                 double iter_time, double rt_avg, double rt_max,
                 double loc_cost) {

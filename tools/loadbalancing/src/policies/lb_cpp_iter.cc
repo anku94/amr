@@ -1,22 +1,20 @@
 //
 // Created by Ankush J on 7/4/23.
 //
+#include "policy_wopts.h"
 
 #include "common.h"
-#include "globals.h"
 #include "iterative/solver.h"
 #include "lb_policies.h"
 
 namespace amr {
 int LoadBalancePolicies::AssignBlocksCppIter(
     std::vector<double> const& costlist, std::vector<int>& ranklist, int nranks,
-    void* opts) {
+    PolicyOptsCDPI const& opts) {
   int rv = 0;
 
-  double max_iter_frac =
-      Globals.config->GetParamOrDefault("cdpi_max_iter_frac", 0);
-  int config_max_iters =
-      Globals.config->GetParamOrDefault("cdpi_max_iters", 250);
+  double max_iter_frac = opts.niter_frac;
+  int config_max_iters = opts.niters;
 
   int nblocks = costlist.size();
   int max_iters = 0;

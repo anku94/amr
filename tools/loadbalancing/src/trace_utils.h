@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "common.h"
+#include "policy.h"
+
 #include <pdlfs-common/env.h>
 #include <regex>
 #include <string>
@@ -62,9 +65,9 @@ class Utils {
 
     // Disabled \d as we only need two specific evts
     // std::vector<std::string> regex_patterns = {
-        // R"(prof\.merged\.evt(\d+)\.csv)",
-        // R"(prof\.merged\.evt(\d+)\.mini\.csv)",
-        // R"(prof\.aggr\.evt(\d+)\.csv)",
+    // R"(prof\.merged\.evt(\d+)\.csv)",
+    // R"(prof\.merged\.evt(\d+)\.mini\.csv)",
+    // R"(prof\.aggr\.evt(\d+)\.csv)",
     // };
 
     std::vector<std::string> regex_patterns = {
@@ -134,6 +137,39 @@ class Utils {
     }
 
     return "<unknown>";
+  }
+
+  static void WriteToFile(pdlfs::Env* env, const std::string& fpath,
+                          const std::string& content) {
+    pdlfs::Status s = pdlfs::Status::OK();
+
+    // ensure parent dir exists, create if it doesn't
+    auto parent_dir = fpath.substr(0, fpath.find_last_of("/"));
+    if (!env->FileExists(parent_dir.c_str())) {
+      s = env->CreateDir(parent_dir.c_str());
+      if (!s.ok()) {
+        logf(LOG_ERRO, "Error creating dir: %s", parent_dir.c_str());
+        return;
+      }
+    }
+
+    pdlfs::WritableFile* fh;
+
+    s = env->NewWritableFile(fpath.c_str(), &fh);
+    if (!s.ok()) {
+      logf(LOG_ERRO, "Error opening file: %s", fpath.c_str());
+      return;
+    }
+
+    s = fh->Append(content);
+    if (!s.ok()) {
+      logf(LOG_ERRO, "Error opening file: %s", fpath.c_str());
+    }
+
+    s = fh->Close();
+    if (!s.ok()) {
+      logf(LOG_ERRO, "Error opening file: %s", fpath.c_str());
+    }
   }
 };
 }  // namespace amr

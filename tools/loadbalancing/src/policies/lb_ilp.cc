@@ -4,7 +4,7 @@
 
 #include "common.h"
 #include "lb_policies.h"
-#include "policy.h"
+#include "policy_wopts.h"
 #include "tools.h"
 
 #include <vector>
@@ -15,8 +15,9 @@
 namespace {
 class ILPSolver {
  public:
-  ILPSolver(amr::PolicyOptsILP& opts, const std::vector<double>& cost_list,
-            std::vector<int>& rank_list, int nranks)
+  ILPSolver(amr::PolicyOptsILP const& opts,
+            const std::vector<double>& cost_list, std::vector<int>& rank_list,
+            int nranks)
       : opts_(opts),
         cost_list_(cost_list),
         rank_list_(rank_list),
@@ -69,9 +70,7 @@ class ILPSolver {
     return 0;
   }
 
-  void InitEnv(GRBEnv& env) const {
-    env.start();
-  }
+  void InitEnv(GRBEnv& env) const { env.start(); }
 
   void InitModel(GRBModel& model) const {
     model.set(GRB_IntAttr_ModelSense, GRB_MINIMIZE);
@@ -96,9 +95,8 @@ class ILPSolver {
   // returns baseline disorder
   void InitDecisionVarsWithHeuristic(GRBModel& model,
                                      std::vector<int>& rank_list_heuristic) {
-    amr::LoadBalancePolicies::AssignBlocks(
-        amr::LoadBalancePolicy::kPolicyContigImproved, cost_list_,
-        rank_list_heuristic, nranks_);
+    amr::LoadBalancePolicies::AssignBlocks("cdp", cost_list_,
+                                           rank_list_heuristic, nranks_);
 
     double rt_avg, rt_max;
     amr::PolicyTools::ComputePolicyCosts(nranks_, cost_list_,
@@ -275,16 +273,9 @@ class ILPSolver {
 namespace amr {
 int LoadBalancePolicies::AssignBlocksILP(const std::vector<double>& costlist,
                                          std::vector<int>& ranklist, int nranks,
-                                         void* opts) {
+                                         PolicyOptsILP const& opts) {
 #if GUROBI_ENABLED
-  PolicyOptsILP opts_obj;
-  if (opts) {
-    opts_obj = *(PolicyOptsILP*)opts;
-  } else {
-    logf(LOG_WARN, "[ILPSolver] No opts configured. Using defaults.");
-  }
-
-  ILPSolver solver(opts_obj, costlist, ranklist, nranks);
+  ILPSolver solver(opts, costlist, ranklist, nranks);
   return solver.AssignBlocks();
 #else
   ABORT("[ILPSolver] Gurobi not enabled. Cannot run ILP solver.");

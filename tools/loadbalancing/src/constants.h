@@ -8,6 +8,6 @@ namespace amr {
 class Constants {
  public:
   static constexpr int kRanksPerNode = 16;
-  static constexpr int kScaleSimIters = 1;
+  static constexpr int kScaleSimIters = 20;
 };
 }

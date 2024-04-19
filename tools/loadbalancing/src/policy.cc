@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "constants.h"
+#include "policy_wopts.h"
 
 #include <algorithm>
 #include <cassert>
@@ -13,6 +14,13 @@
 #include <string>
 
 namespace amr {
+LBPolicyWithOpts const& PolicyUtils::GetPolicy(const char* policy_id) {
+  if (kPolicyMap.find(policy_id) == kPolicyMap.end()) {
+    throw std::runtime_error("Unknown policy: " + std::string(policy_id));
+  }
+
+  return kPolicyMap.at(policy_id);
+}
 LoadBalancePolicy PolicyUtils::StringToPolicy(std::string const& policy_str) {
   if (policy_str == "baseline") {
     return LoadBalancePolicy::kPolicyContiguousUnitCost;
@@ -22,6 +30,10 @@ LoadBalancePolicy PolicyUtils::StringToPolicy(std::string const& policy_str) {
     return LoadBalancePolicy::kPolicyContigImproved;
   } else if (policy_str == "cdpp") {
     return LoadBalancePolicy::kPolicyCppIter;
+  } else if (policy_str == "hybrid") {
+    return LoadBalancePolicy::kPolicyHybridCppFirstV2;
+  } else if (policy_str == "hybrid02") {
+    return LoadBalancePolicy::kPolicyHybridCppFirstV2;
   }
 
   throw std::runtime_error("Unknown policy string: " + policy_str);

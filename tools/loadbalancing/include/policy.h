@@ -13,7 +13,6 @@
 namespace pdlfs {
 class Env;
 }
-
 namespace amr {
 enum class ProfTimeCombinePolicy { kUseFirst, kUseLast, kAdd };
 
@@ -52,8 +51,12 @@ enum class TriggerPolicy {
   kOnMeshChange
 };
 
+struct LBPolicyWithOpts;
+
 class PolicyUtils {
  public:
+  static LBPolicyWithOpts const& GetPolicy(const char* policy_id);
+
   static LoadBalancePolicy StringToPolicy(std::string const& policy_str);
 
   static std::string PolicyToString(LoadBalancePolicy policy);
@@ -93,8 +96,8 @@ class PolicyUtils {
 
 struct PolicyExecOpts {
   const char* policy_name;
+  const char* policy_id;
 
-  LoadBalancePolicy lb_policy;
   CostEstimationPolicy cost_policy;
   TriggerPolicy trigger_policy;
 
@@ -107,13 +110,10 @@ struct PolicyExecOpts {
   int cache_ttl;
   int trigger_interval;
 
- private:
-  PolicyOptsILP lb_opts_ilp;
-
  public:
   PolicyExecOpts()
       : policy_name("<undefined>"),
-        lb_policy(LoadBalancePolicy::kPolicyContiguousActualCost),
+        policy_id("<undefined>"),
         cost_policy(CostEstimationPolicy::kUnitCost),
         trigger_policy(TriggerPolicy::kEveryTimestep),
         output_dir(nullptr),
@@ -123,24 +123,19 @@ struct PolicyExecOpts {
         cache_ttl(15),
         trigger_interval(100) {}
 
-  void SetPolicy(const char* name, LoadBalancePolicy lp,
-                 CostEstimationPolicy cep, TriggerPolicy tp) {
+  void SetPolicy(const char* name, const char* id, CostEstimationPolicy cep,
+                 TriggerPolicy tp) {
     policy_name = name;
-    lb_policy = lp;
+    policy_id = id;
     cost_policy = cep;
     trigger_policy = tp;
   }
 
-  void SetPolicy(const char* name, LoadBalancePolicy lp,
-                 CostEstimationPolicy cep) {
+  void SetPolicy(const char* name, const char* id, CostEstimationPolicy cep) {
     policy_name = name;
-    lb_policy = lp;
+    policy_id = id;
     cost_policy = cep;
     trigger_policy = TriggerPolicy::kUnspecified;
   }
-
-  void SetLBOpts(PolicyOptsILP& opts) { lb_opts_ilp = opts; }
-
-  void* GetLBOpts() const { return (void*)&lb_opts_ilp; }
 };
 }  // namespace amr

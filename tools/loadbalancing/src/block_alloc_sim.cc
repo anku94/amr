@@ -83,6 +83,8 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
                                          std::vector<int>& times) {
   logf(LOG_DBG2, "----------------------------------------");
 
+  if (sub_ts < options_.nts_toskip) return 0;
+
   if (nblocks_next_expected_ != -1 &&
       nblocks_next_expected_ != assignments.size()) {
     logf(LOG_ERRO, "nblocks_next_expected_ != assignments.size()");
@@ -102,10 +104,10 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
 }
 
 void BlockSimulator::LogSummary(fort::char_table& table) {
-  PolicyExecCtx::LogHeader(table);
+  PolicyStats::LogHeader(table);
 
-  for (auto& policy : policies_) {
-    policy.LogSummary(table);
+  for (auto& stat : stats_) {
+    stat.LogSummary(table);
   }
 
   logf(LOG_INFO, "\n%s", table.to_string().c_str());

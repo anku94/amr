@@ -6,15 +6,10 @@
 
 #include "common.h"
 #include "cost_cache.h"
-#include "fort.hpp"
-#include "lb_policies.h"
 #include "policy.h"
-#include "policy_stats.h"
-#include "trace_utils.h"
-#include "writable_file.h"
+#include "policy_wopts.h"
 
 #include <pdlfs-common/env.h>
-#include <regex>
 
 namespace amr {
 
@@ -33,7 +28,7 @@ class PolicyExecCtx {
 
   int ExecuteTimestep(std::vector<double> const& costlist_oracle,
                       std::vector<int> const& ranklist_actual,
-                      std::vector<int>& refs, std::vector<int>& derefs);
+                      std::vector<int>& refs, std::vector<int>& derefs, double& exec_time);
 
   static int GetNumBlocksNext(int nblocks, int nrefs, int nderefs) {
     // int nblocks_next = nblocks + (nrefs * 7) - (nderefs * 7 / 8);
@@ -41,18 +36,30 @@ class PolicyExecCtx {
     return nblocks_next;
   }
 
-  static void LogHeader(fort::char_table& table);
+  std::string Name() const {
+    return policy_.name;
+  }
 
-  void LogSummary(fort::char_table& table);
+  bool IsActualPolicy() const {
+    return policy_.policy == LoadBalancePolicy::kPolicyActual;
+  }
 
-  std::string Name() const { return opts_.policy_name; }
+  std::vector<int> GetRanklist() const {
+    if (policy_.policy == LoadBalancePolicy::kPolicyActual) {
+      // raise a static error
+      ABORT("Cannot get ranklist for actual policy");
+    }
+
+    return lb_state_.ranklist;
+  }
 
  private:
   void Bootstrap();
 
   bool ComputeLBTrigger(TriggerPolicy tp, LoadBalanceState& state) {
     bool ref_trig = !state.refs.empty() || !state.derefs.empty();
-    bool trig_intvl = (tp == TriggerPolicy::kEveryTimestep) ? 1 : opts_.trigger_interval;
+    bool trig_intvl =
+        (tp == TriggerPolicy::kEveryTimestep) ? 1 : opts_.trigger_interval;
     bool ts_trig = (ts_ % trig_intvl == 0);
 
     return ts_trig | ref_trig;
@@ -103,24 +110,19 @@ class PolicyExecCtx {
     }
   }
 
-  int TriggerLB(const std::vector<double>& costlist);
+  int TriggerLB(const std::vector<double>& costlist, double& exec_time);
 
   const PolicyExecOpts opts_;
+  const LBPolicyWithOpts& policy_;
   bool use_cost_cache_;
 
   LoadBalanceState lb_state_;
-  PolicyStats stats_;
   CostCache cost_cache_;
-
-  WritableFile fd_summ_;
-  WritableFile fd_det_;
-  WritableFile fd_ranksum_;
 
   int ts_;
   int ts_lb_invoked_;
   int ts_lb_succeeded_;
   int ts_since_last_lb_;
-  double exec_time_us_;
 
   friend class MiscTest;
   friend class PolicyStats;

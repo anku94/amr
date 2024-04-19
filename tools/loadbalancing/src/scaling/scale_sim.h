@@ -4,8 +4,11 @@
 
 #pragma once
 
-#include "inputs.h"
-#include "scale_exec_ctx.h"
+#include "constants.h"
+#include "distrib/distributions.h"
+#include "run_utils.h"
+#include "scale_stats.h"
+#include "tabular_data.h"
 #include "trace_utils.h"
 
 #include <utility>
@@ -25,107 +28,112 @@ struct RunProfile {
 
 class ScaleSim {
  public:
-  explicit ScaleSim(ScaleSimOpts opts)
-      : options_(std::move(opts)),
-        log_(options_.env, options_.output_dir + "/scalesim.log.csv") {}
+  explicit ScaleSim(ScaleSimOpts opts) : options_(std::move(opts)) {}
 
-  void SetupAllPolicies() {
-    PolicyExecOpts policy_opts;
-    policy_opts.output_dir = options_.output_dir.c_str();
-    policy_opts.env = options_.env;
-    policy_opts.nranks = -1;
-    policy_opts.nblocks_init = -1;
+  void RunSuite(std::vector<RunType>& suite, RunProfile const& rp,
+                std::vector<double>& costs) {
+    int nruns = suite.size();
 
-    //    policy_opts.SetPolicy("Contiguous/Unit-Cost",
-    //                          LoadBalancePolicy::kPolicyContiguousActualCost,
-    //                          CostEstimationPolicy::kUnitCost);
-    //    policies_.emplace_back(policy_opts);
-    //
-    policy_opts.SetPolicy("LPT/Actual-Cost", LoadBalancePolicy::kPolicyLPT,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
+    std::vector<int> ranks(rp.nranks, 0);
 
-    policy_opts.SetPolicy("CPP/Actual-Cost",
-                          LoadBalancePolicy::kPolicyContigImproved,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
-    //
-    //    policy_opts.SetPolicy("CPP-Iter/Actual-Cost",
-    //                          LoadBalancePolicy::kPolicyCppIter,
-    //                          CostEstimationPolicy::kUnitCost);
-    //    policies_.emplace_back(policy_opts);
+    for (auto& r : suite) {
+      logf(LOG_INFO, "[RUN] %s", r.ToString().c_str());
+    }
 
-    PolicyOptsILP ilp_opts;
-    ilp_opts.obj_lb_time_limit = 10;
-    ilp_opts.obj_loc_time_limit = 10;
+    logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
+    Utils::EnsureDir(options_.env, options_.output_dir);
 
-    ilp_opts.obj_lb_mip_gap = 0.05;
-    ilp_opts.obj_lb_rel_tol = 0.05;
-    ilp_opts.obj_loc_mip_gap = 0.2;
-    policy_opts.SetLBOpts(ilp_opts);
-    policy_opts.SetPolicy("ILP_5PCT/Actual-Cost", LoadBalancePolicy::kPolicyILP,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
+    for (auto& r : suite) {
+      uint64_t _ts_beg = options_.env->NowMicros();
+      for (int iter = 0; iter < Constants::kScaleSimIters; iter++) {
+        int rv = r.AssignBlocks(costs, ranks, r.nranks);
+        if (rv) {
+          ABORT("Failed to assign blocks");
+        }
+      }
+      uint64_t _ts_end = options_.env->NowMicros();
 
-    ilp_opts.obj_lb_mip_gap = 0.1;
-    ilp_opts.obj_lb_rel_tol = 0.1;
-    ilp_opts.obj_loc_mip_gap = 0.2;
-    policy_opts.SetLBOpts(ilp_opts);
-    policy_opts.SetPolicy("ILP_10PCT/Actual-Cost",
-                          LoadBalancePolicy::kPolicyILP,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
+      std::vector<double> rank_times;
+      double time_avg = 0, time_max = 0;
+      PolicyUtils::ComputePolicyCosts(r.nranks, costs, ranks, rank_times,
+                                      time_avg, time_max);
+      logf(LOG_INFO,
+           "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
+           r.policy_name.c_str(), time_avg, time_max);
 
-    ilp_opts.obj_lb_mip_gap = 0.2;
-    ilp_opts.obj_lb_rel_tol = 0.2;
-    ilp_opts.obj_loc_mip_gap = 0.2;
-    policy_opts.SetLBOpts(ilp_opts);
-    policy_opts.SetPolicy("ILP_20PCT/Actual-Cost",
-                          LoadBalancePolicy::kPolicyILP,
-                          CostEstimationPolicy::kUnitCost);
-    policies_.emplace_back(policy_opts);
+      double iter_time = (_ts_end - _ts_beg) * 1.0 / Constants::kScaleSimIters;
+      double loc_cost = PolicyUtils::ComputeLocCost(ranks) * 100;
+
+      std::shared_ptr<TableRow> row = std::make_shared<ScaleSimRow>(
+          r.policy_name, rp.nblocks, rp.nranks, iter_time, time_avg, time_max,
+          loc_cost);
+
+      table_.addRow(row);
+    }
   }
 
   void Run() {
     logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
-    SetupAllPolicies();
 
     std::vector<RunProfile> run_profiles;
     GenRunProfiles(run_profiles, options_.nblocks_beg, options_.nblocks_end);
     std::vector<double> costs;
 
-    for (auto& policy : policies_) {
-      for (auto& r : run_profiles) {
-        logf(LOG_DBUG, "[Running profile] nranks_: %d, nblocks: %d", r.nranks,
-             r.nblocks);
+    std::vector<RunType> suite = RunSuites::GetCppIterSuite(64, 150);
+    int nruns = suite.size();
 
-        if (costs.size() != r.nblocks) {
-          costs.resize(r.nblocks);
-          Inputs::GenerateCosts(costs);
-        }
+    for (auto& r : run_profiles) {
+      logf(LOG_INFO,
+           "[Running profile] nranks_: %d, nblocks: %d, iters: %d, nruns: %d",
+           r.nranks, r.nblocks, Constants::kScaleSimIters, nruns);
 
-        policy.AssignBlocks(r.nranks, costs, log_);
+      suite = RunSuites::GetCppIterSuite(r.nblocks, r.nranks);
+
+      if (costs.size() != r.nblocks) {
+        costs.resize(r.nblocks, 0);
+        DistributionUtils::GenDistributionWithDefaults(costs, r.nblocks);
       }
+
+      RunSuite(suite, r, costs);
     }
 
-    logf(LOG_INFO, "\n%s", log_.GetTabularStr().c_str());
+    EmitTable(nruns);
   }
 
  private:
+  void EmitTable(int n) {
+    std::string table_out = options_.output_dir + "/scalesim.log.csv";
+    std::stringstream table_stream;
+    table_.emitTable(table_stream, n);
+    logf(LOG_INFO, "Table: \n%s", table_stream.str().c_str());
+
+    Utils::WriteToFile(options_.env, table_out, table_.toCSV());
+  }
+
   static void GenRunProfiles(std::vector<RunProfile>& v, int nb_beg,
                              int nb_end) {
     v.clear();
 
     for (int nblocks = nb_beg; nblocks <= nb_end; nblocks *= 2) {
-      for (int nranks = nblocks / 5; nranks <= nblocks / 5; nranks *= 2) {
+      int nranks_init = GetSmallestPowerBiggerThanN(2, nblocks / 10);
+      for (int nranks = nranks_init; nranks <= nblocks; nranks *= 2) {
         v.emplace_back(RunProfile{nranks, nblocks});
       }
     }
   }
 
+  static int GetSmallestPowerBiggerThanN(int pow, int n) {
+    int rv = 1;
+    while (rv < n) {
+      rv *= pow;
+    }
+
+    return rv;
+  }
+
   ScaleSimOpts const options_;
-  std::vector<ScaleExecCtx> policies_;
-  ScaleExecLog log_;
+  // std::vector<ScaleExecCtx> policies_;
+  TabularData table_;
 };
 }  // namespace amr

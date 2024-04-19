@@ -5,8 +5,8 @@
 #include "lb_policies.h"
 
 #include "common.h"
-#include "policies/iterative/solver.h"
 #include "policy.h"
+#include "policy_wopts.h"
 
 namespace amr {
 
@@ -21,17 +21,20 @@ struct PolicyOpts {
   };
 };
 
-int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
+int LoadBalancePolicies::AssignBlocks(const char* policy_name,
                                       std::vector<double> const& costlist,
-                                      std::vector<int>& ranklist, int nranks,
-                                      void* opts) {
-  std::string policy_str = PolicyUtils::PolicyToString(policy);
-  logf(LOG_DBG2, "[LoadBalancePolicies] Assignment LoadBalancePolicy: %s",
-       policy_str.c_str());
+                                      std::vector<int>& ranklist, int nranks) {
+  if (kPolicyMap.find(policy_name) == kPolicyMap.end()) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in AssignBlocks" << std::endl
+        << "Policy " << policy_name << " not found in kPolicyMap" << std::endl;
+    ABORT(msg.str().c_str());
+  }
 
   ranklist.resize(costlist.size());
 
-  switch (policy) {
+  const LBPolicyWithOpts& policy = kPolicyMap.at(policy_name);
+  switch (policy.policy) {
     case LoadBalancePolicy::kPolicyActual:
       return 0;
     case LoadBalancePolicy::kPolicyContiguousUnitCost:
@@ -40,29 +43,29 @@ int LoadBalancePolicies::AssignBlocks(LoadBalancePolicy policy,
     case LoadBalancePolicy::kPolicyContiguousActualCost:
       return AssignBlocksContiguous(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicySkewed:
-      return AssignBlocksSkewed(costlist, ranklist, nranks);
+      throw std::runtime_error("Skewed policy is deprecated");
     case LoadBalancePolicy::kPolicyRoundRobin:
-      return AssignBlocksRoundRobin(costlist, ranklist, nranks);
+      throw std::runtime_error("RoundRobin policy is deprecated");
     case LoadBalancePolicy::kPolicySPT:
-      return AssignBlocksSPT(costlist, ranklist, nranks);
+      throw std::runtime_error("SPT policy is deprecated");
     case LoadBalancePolicy::kPolicyLPT:
       return AssignBlocksLPT(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyILP:
-      return AssignBlocksILP(costlist, ranklist, nranks, opts);
+      return AssignBlocksILP(costlist, ranklist, nranks, policy.ilp_opts);
     case LoadBalancePolicy::kPolicyContigImproved:
       return AssignBlocksContigImproved(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyCppIter:
-      return AssignBlocksCppIter(costlist, ranklist, nranks, opts);
+      return AssignBlocksCppIter(costlist, ranklist, nranks, policy.cdp_opts);
     case LoadBalancePolicy::kPolicyHybrid:
-      return AssignBlocksHybrid(costlist, ranklist, nranks);
+      throw std::runtime_error("Hybrid policy is deprecated");
     case LoadBalancePolicy::kPolicyHybridCppFirst:
-      return AssignBlocksHybridCppFirst(costlist, ranklist, nranks, /* v2 */ false);
+      throw std::runtime_error("HybridCppFirst policy is deprecated");
     case LoadBalancePolicy::kPolicyHybridCppFirstV2:
-      return AssignBlocksHybridCppFirst(costlist, ranklist, nranks, /* v2 */ true);
+      return AssignBlocksHybridCppFirst(costlist, ranklist, nranks,
+          policy.hcf_opts);
     default:
       ABORT("LoadBalancePolicy not implemented!!");
   }
-
   return -1;
 }
 

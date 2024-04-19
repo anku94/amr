@@ -20,5 +20,5 @@ install(TARGETS TAU-amr
   LIBRARY DESTINATION lib)
 
 # reusing this path, hacky
-install(FILES cmake/FindTAU.cmake
-  DESTINATION share/cmake/pdlfs-common)
+#install(FILES cmake/FindTAU.cmake
+#DESTINATION share/cmake/pdlfs-common)

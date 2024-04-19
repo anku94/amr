@@ -1,9 +1,9 @@
 #include "lb_hybrid2.h"
 
 #include "common.h"
-#include "globals.h"
 #include "lb_policies.h"
 #include "policy.h"
+#include "policy_wopts.h"
 
 #include <cassert>
 #include <numeric>
@@ -11,17 +11,18 @@
 namespace amr {
 int LoadBalancePolicies::AssignBlocksHybridCppFirst(
     std::vector<double> const& costlist, std::vector<int>& ranklist, int nranks,
-    bool v2) {
+    PolicyOptsHybridCDPFirst const& opts) {
   int rv = 0;
 
-  double lpt_frac = Globals.config->GetParamOrDefault("hybrid_lpt_frac", 0.1);
+  bool v2 = opts.v2;
+  double lpt_frac = opts.lpt_frac;
   int lpt_ranks = nranks * lpt_frac;
 
   logf(LOG_DBUG, "[HybridCppFirst] LPT ranks: %d, V2: %s", lpt_ranks,
        v2 ? "yes" : "no");
 
   auto hacf = HybridAssignmentCppFirst(lpt_ranks);
-  
+
   if (v2) {
     rv = hacf.AssignBlocksV2(costlist, ranklist, nranks);
   } else {
@@ -40,8 +41,7 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
   std::vector<double> rank_times;
   double rank_time_max, rank_time_avg;
 
-  int rv = LoadBalancePolicies::AssignBlocks(
-      LoadBalancePolicy::kPolicyCppIter, costlist, ranklist, nranks, nullptr);
+  int rv = LoadBalancePolicies::AssignBlocks("cdp", costlist, ranklist, nranks);
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
@@ -69,8 +69,8 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
     costlist_lpt.push_back(costlist[bid]);
   }
 
-  rv = LoadBalancePolicies::AssignBlocks(
-      LoadBalancePolicy::kPolicyLPT, costlist_lpt, ranklist_lpt, lpt_nranks);
+  rv = LoadBalancePolicies::AssignBlocks("lpt", costlist_lpt, ranklist_lpt,
+                                         lpt_nranks);
 
   if (rv) {
     ABORT("[HybridCppFirst] LPT failed");
@@ -101,8 +101,8 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
   std::vector<double> rank_times;
   double rank_time_max, rank_time_avg;
 
-  int rv = LoadBalancePolicies::AssignBlocks(
-      LoadBalancePolicy::kPolicyCppIter, costlist, ranklist, nranks, nullptr);
+  int rv =
+      LoadBalancePolicies::AssignBlocks("cdpi50", costlist, ranklist, nranks);
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
@@ -130,8 +130,8 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
     costlist_lpt.push_back(costlist[bid]);
   }
 
-  rv = LoadBalancePolicies::AssignBlocks(
-      LoadBalancePolicy::kPolicyLPT, costlist_lpt, ranklist_lpt, lpt_nranks);
+  rv = LoadBalancePolicies::AssignBlocks("lpt", costlist_lpt, ranklist_lpt,
+                                         lpt_nranks);
 
   if (rv) {
     ABORT("[HybridCppFirst] LPT failed");
@@ -259,12 +259,12 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV2(
 #define DOUBLE_EPSILON 1e-3
 
     logf(LOG_DBUG, "[HybridCppFirstV2] avg_new: %.2f, avg: %.2f", cost_avg_new,
-        cost_avg);
+         cost_avg);
 
-      cost_sum_lpt = cost_sum_new;
-      cost_avg_lpt = cost_avg_new;
-      incl_ranks_back++;
-      incl_ranks_front--;
+    cost_sum_lpt = cost_sum_new;
+    cost_avg_lpt = cost_avg_new;
+    incl_ranks_back++;
+    incl_ranks_front--;
 
     if (cost_avg_new > cost_avg + DOUBLE_EPSILON) {
       if (incl_ranks_front == 0) {

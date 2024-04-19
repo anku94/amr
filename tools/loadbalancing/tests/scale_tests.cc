@@ -3,6 +3,7 @@
 //
 #include "common.h"
 #include "scaling/scale_sim.h"
+#include "distrib/distributions.h"
 
 #include <gtest/gtest.h>
 
@@ -15,6 +16,6 @@ class ScaleTest : public ::testing::Test {
 TEST_F(ScaleTest, HelloWorld) {
   EXPECT_EQ(1, 1);
   std::vector<double> costs(512, 0.0);
-  Inputs::GenerateCosts(costs);
+  DistributionUtils::GenDistributionWithDefaults(costs, 512);
 }
 }  // namespace amr

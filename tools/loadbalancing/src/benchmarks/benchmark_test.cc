@@ -4,7 +4,7 @@
 
 #include "policies/iterative/iter.h"
 #include "common.h"
-#include "distributions.h"
+#include "distrib/distributions.h"
 #include "tabular_data.h"
 
 #include <gtest/gtest.h>

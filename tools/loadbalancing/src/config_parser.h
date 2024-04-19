@@ -10,6 +10,12 @@ namespace amr {
 class ConfigParser {
  public:
   explicit ConfigParser(const std::string& file_path) {
+    // if file does not exist, warn but do nothing
+    if (!std::ifstream(file_path)) {
+      logf(LOG_WARN, "Config file %s does not exist\n", file_path.c_str());
+      return;
+    }
+
     std::ifstream file(file_path);
     std::string line;
     while (std::getline(file, line)) {

@@ -1,10 +1,8 @@
 #include "common.h"
-#include "globals.h"
+#include "iterative/solver.h"
 #include "lb_policies.h"
 #include "lb_util.h"
-#include "policy.h"
-
-#include "iterative/solver.h"
+#include "policy_wopts.h"
 
 #include <algorithm>
 #include <cassert>
@@ -44,8 +42,8 @@ class HybridAssignment {
 
   double GetLPTMax(std::vector<double> const& costlist, int nranks) {
     std::vector<int> ranklist(nranks, -1);
-    int rv = amr::LoadBalancePolicies::AssignBlocks(
-        amr::LoadBalancePolicy::kPolicyLPT, costlist, ranklist, nranks);
+    int rv = amr::LoadBalancePolicies::AssignBlocks("lpt", costlist, ranklist,
+                                                    nranks);
     if (rv) {
       ABORT("AssignBlocks LPT failed");
     }
@@ -70,10 +68,11 @@ class HybridAssignment {
 
 namespace amr {
 int LoadBalancePolicies::AssignBlocksHybrid(const std::vector<double>& costlist,
-                                            std::vector<int>& ranklist, int nranks) {
+                                            std::vector<int>& ranklist,
+                                            int nranks,
+                                            PolicyOptsHybrid const& opts) {
   int nblocks = costlist.size();
-  double lpt_threshold = Globals.config->GetParamOrDefault<double>(
-      "hybrid_lpt_frac", 0.2);
+  double lpt_threshold = opts.frac_lpt;
   int num_lpt = std::min(lpt_threshold * nblocks, nranks * 0.9);
 
   logf(LOG_INFO, "LPT Threshold: %.2f, Num LPT: %d", lpt_threshold, num_lpt);
@@ -147,9 +146,8 @@ int HybridAssignment::AssignBlocksRest(int nranks_rest) {
   }
 
   std::vector<int> ranklist_rest(nblocks_rest, -1);
-  rv = amr::LoadBalancePolicies::AssignBlocks(
-      amr::LoadBalancePolicy::kPolicyContigImproved, costlist_rest,
-      ranklist_rest, nranks_rest);
+  rv = amr::LoadBalancePolicies::AssignBlocks("cdp", costlist_rest,
+                                              ranklist_rest, nranks_rest);
 
   // for each bidx, ridx in ranklist_rest
   // map it to bidx_orig, ridx' in ranklist_orig
@@ -208,7 +206,8 @@ int HybridAssignment::AssignBlocks(const std::vector<double>& costlist,
 
   assert(unassigned_first_ == num_lpt_);
 
-  rv = AssignBlocksRest(nranks - num_lpt_); if (rv) return rv;
+  rv = AssignBlocksRest(nranks - num_lpt_);
+  if (rv) return rv;
 
   AssertAllAssigned();
 

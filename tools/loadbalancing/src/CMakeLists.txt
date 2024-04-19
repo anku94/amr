@@ -4,6 +4,7 @@ find_package(GUROBI)
 add_subdirectory(benchmarks)
 
 set(lb_srcs
+        distrib/alias_method.cc
         policies/lb_contig_improv.cc
         policies/lb_ilp.cc
         policies/lb_lspt.cc
@@ -15,6 +16,7 @@ set(lb_srcs
         config_parser.cc
         policy.cc
         policy_exec_ctx.cc
+        policy_stats.cc
         lb_policies.cc
         scaling/scale_sim.cc)
 

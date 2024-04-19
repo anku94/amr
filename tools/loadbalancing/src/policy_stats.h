@@ -5,6 +5,7 @@
 #pragma once
 
 #include "fort.hpp"
+#include "policy.h"
 #include "writable_file.h"
 
 #include <pdlfs-common/env.h>
@@ -13,18 +14,24 @@ namespace amr {
 // fwd decl
 class PolicyExecCtx;
 
+#define LOG_PATH(x) PolicyUtils::GetLogPath(opts.output_dir, opts.policy_id, x)
+
 class PolicyStats {
  public:
-  PolicyStats()
-      : ts_(0),
+  PolicyStats(PolicyExecOpts& opts)
+      : opts_(opts),
+        ts_(0),
         excess_cost_(0),
         total_cost_avg_(0),
         total_cost_max_(0),
-        locality_score_sum_(0) {}
+        locality_score_sum_(0),
+        exec_time_us_(0),
+        fd_summ_(opts.env, LOG_PATH("summ")),
+        fd_det_(opts.env, LOG_PATH("det")),
+        fd_ranksum_(opts.env, LOG_PATH("ranksum")) {}
 
-  void LogTimestep(PolicyExecCtx* pctx, int nranks,
-                   std::vector<double> const& cost_actual,
-                   std::vector<int> const& rank_list);
+  void LogTimestep(std::vector<double> const& cost_actual,
+                   std::vector<int> const& rank_list, double exec_time_ts);
 
   static void LogHeader(fort::char_table& table);
 
@@ -48,8 +55,9 @@ class PolicyStats {
     fd.Append(std::string(buf, buf_len));
   }
 
-  static void WriteDetailed(WritableFile& fd, std::vector<double> const& cost_actual,
-                     std::vector<int> const& rank_list) {
+  static void WriteDetailed(WritableFile& fd,
+                            std::vector<double> const& cost_actual,
+                            std::vector<int> const& rank_list) {
     std::stringstream ss;
     for (auto c : cost_actual) {
       ss << (int)c << ",";
@@ -73,6 +81,8 @@ class PolicyStats {
               sizeof(double) * nranks);
   }
 
+  const PolicyExecOpts opts_;
+
   int ts_;
 
   // cost is assumed to be us
@@ -81,5 +91,11 @@ class PolicyStats {
   double total_cost_max_;
 
   double locality_score_sum_;
+
+  double exec_time_us_;
+
+  WritableFile fd_summ_;
+  WritableFile fd_det_;
+  WritableFile fd_ranksum_;
 };
 }  // namespace amr

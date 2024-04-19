@@ -34,8 +34,9 @@ void ParseOptions(int argc, char* argv[]) {
   options.nts = INT_MAX;
   options.nranks = -1;
   options.nblocks = -1;
+  options.nts_toskip = 0;
 
-  while ((c = getopt(argc, argv, "b:c:e:hn:p:r:")) != -1) {
+  while ((c = getopt(argc, argv, "b:c:e:hn:p:r:s:")) != -1) {
     switch (c) {
       case 'b':
         options.nblocks = atoi(optarg);
@@ -57,6 +58,9 @@ void ParseOptions(int argc, char* argv[]) {
         break;
       case 'r':
         options.nranks = atoi(optarg);
+        break;
+      case 's':
+        options.nts_toskip = atoi(optarg);
         break;
     }
   }

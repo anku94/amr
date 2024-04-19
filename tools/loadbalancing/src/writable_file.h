@@ -7,6 +7,8 @@
 #include <pdlfs-common/env.h>
 #include <pdlfs-common/status.h>
 
+#include "common.h"
+
 #define SAFE_IO(func, msg) \
   s = func;                \
   if (!s.ok()) {           \

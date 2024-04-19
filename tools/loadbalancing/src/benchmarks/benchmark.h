@@ -4,10 +4,11 @@
 #include "benchmark_stats.h"
 #include "common.h"
 #include "config_parser.h"
-#include "distributions.h"
+#include "distrib/distributions.h"
 #include "globals.h"
 #include "lb_policies.h"
 #include "policy.h"
+#include "run_utils.h"
 #include "tabular_data.h"
 #include "trace_utils.h"
 
@@ -18,26 +19,6 @@ struct BenchmarkOpts {
   pdlfs::Env* const env;
   std::string config_file;
   std::string output_dir;
-};
-
-struct RunType {
-  int nranks;
-  int nblocks;
-  LoadBalancePolicy policy;
-  void* policy_opts;
-  std::string policy_name;
-
-  std::string ToString() const {
-    std::stringstream ss;
-    std::string popts_str = (policy_opts != nullptr) ? "[set]" : "nullptr";
-    std::string pname = !policy_name.empty()
-                            ? policy_name
-                            : PolicyUtils::PolicyToString(policy);
-    ss << std::string(60, '-') << "\n";
-    ss << "[BenchmarkRun] n_ranks: " << nranks << ", n_blocks: " << nblocks
-       << "\n\tpolicy: " << pname << ", opts: " << popts_str;
-    return ss.str();
-  }
 };
 
 class Benchmark {
@@ -59,39 +40,39 @@ class Benchmark {
     int nranks = 64;
     int nblocks = 150;
 
-    RunType base{nranks, nblocks, LoadBalancePolicy::kPolicyContiguousUnitCost};
+    RunType base{nranks, nblocks, "baseline"};
 
-    RunType hybrid = base;
-    hybrid.policy = LoadBalancePolicy::kPolicyHybrid;
-
-    RunType hybrid2 = base;
-    hybrid2.policy = LoadBalancePolicy::kPolicyHybridCppFirst;
+    // RunType hybrid = base;
+    // hybrid.policy = LoadBalancePolicy::kPolicyHybrid;
+    //
+    // RunType hybrid2 = base;
+    // hybrid2.policy = LoadBalancePolicy::kPolicyHybridCppFirst;
 
     RunType hybrid3 = base;
-    hybrid3.policy = LoadBalancePolicy::kPolicyHybridCppFirstV2;
+    hybrid3.policy = "hybrid";
 
     RunType lpt = base;
-    lpt.policy = LoadBalancePolicy::kPolicyLPT;
+    lpt.policy = "lpt";
 
     RunType cpp = base;
-    cpp.policy = LoadBalancePolicy::kPolicyContigImproved;
+    cpp.policy = "cdp";
 
     RunType cpp_iter = base;
-    cpp_iter.policy = LoadBalancePolicy::kPolicyCppIter;
+    cpp_iter.policy = "cdpi50";
 
     int iter = 50;
     cpp_iter.policy_opts = &iter;
     cpp_iter.policy_name = "CppIter_50";
 
     // std::vector<RunType> all_runs{base, cpp, cpp_iter, lpt, hybrid, hybrid2};
-    std::vector<RunType> all_runs{hybrid2, hybrid3, lpt};
+    std::vector<RunType> all_runs{ hybrid3, lpt};
 
     for (auto& r : all_runs) {
       logf(LOG_INFO, "[RUN] %s", r.ToString().c_str());
-      if (r.policy_opts && r.policy == LoadBalancePolicy::kPolicyHybrid) {
-        auto* opts = reinterpret_cast<PolicyOptsHybrid*>(r.policy_opts);
-        logf(LOG_INFO, "%s", opts->ToString().c_str());
-      }
+    //   if (r.policy_opts && r.policy == LoadBalancePolicy::kPolicyHybrid) {
+    //     auto* opts = reinterpret_cast<PolicyOptsHybrid*>(r.policy_opts);
+    //     logf(LOG_INFO, "%s", opts->ToString().c_str());
+    //   }
     }
 
     DoRuns(all_runs);
@@ -123,37 +104,38 @@ class Benchmark {
     //                               500, 750, 1000, 1250, 1500};
     std::vector<int> all_iters = {50, 250};
 
-    RunType base{nranks, nblocks, LoadBalancePolicy::kPolicyContiguousUnitCost};
+    RunType base{nranks, nblocks, "baseline"};
 
     RunType cpp = base;
-    cpp.policy = LoadBalancePolicy::kPolicyContigImproved;
+    cpp.policy = "cdp";
 
     std::vector<RunType> all_runs{base, cpp};
     // std::vector<RunType> all_runs{lpt};
 
     for (int iter_idx = 0; iter_idx < all_iters.size(); iter_idx++) {
+      std::string policy_id =
+          std::string("cdpi") + std::to_string(all_iters[iter_idx]);
       RunType cpp_iter = base;
       cpp_iter.policy_opts = &all_iters[iter_idx];
-      cpp_iter.policy = LoadBalancePolicy::kPolicyCppIter;
-      cpp_iter.policy_name = PolicyUtils::PolicyToString(cpp_iter.policy) +
-                             "_" + std::to_string(all_iters[iter_idx]);
+      cpp_iter.policy = policy_id;
+      cpp_iter.policy_name = policy_id;
       all_runs.push_back(cpp_iter);
     }
 
     RunType lpt = base;
-    lpt.policy = LoadBalancePolicy::kPolicyLPT;
+    lpt.policy = "lpt";
     all_runs.push_back(lpt);
 
-    RunType hybrid = base;
-    hybrid.policy = LoadBalancePolicy::kPolicyHybrid;
-    all_runs.push_back(hybrid);
-
-    RunType hybrid2 = base;
-    hybrid2.policy = LoadBalancePolicy::kPolicyHybridCppFirst;
-    all_runs.push_back(hybrid2);
+    // RunType hybrid = base;
+    // hybrid.policy = "
+    // all_runs.push_back(hybrid);
+    //
+    // RunType hybrid2 = base;
+    // hybrid2.policy = LoadBalancePolicy::kPolicyHybridCppFirst;
+    // all_runs.push_back(hybrid2);
 
     RunType hybrid3 = base;
-    hybrid3.policy = LoadBalancePolicy::kPolicyHybridCppFirstV2;
+    hybrid3.policy = "hybrid";
     all_runs.push_back(hybrid3);
 
     for (auto& r : all_runs) {
@@ -193,8 +175,7 @@ class Benchmark {
     logf(LOG_INFO, "%s", r.ToString().c_str());
 
     std::vector<int> ranks(costs.size());
-    LoadBalancePolicies::AssignBlocks(r.policy, costs, ranks, r.nranks,
-                                      r.policy_opts);
+    LoadBalancePolicies::AssignBlocks(r.policy.c_str(), costs, ranks, r.nranks);
     std::vector<double> rank_times;
     PolicyUtils::ComputePolicyCosts(r.nranks, costs, ranks, rank_times,
                                     time_avg, time_max);
@@ -209,16 +190,13 @@ class Benchmark {
 
     Distribution d = DistributionUtils::GetConfigDistribution();
     std::string distrib_name = DistributionUtils::DistributionToString(d);
-    std::string policy_name = r.policy_name.empty()
-                                  ? PolicyUtils::PolicyToString(r.policy)
-                                  : r.policy_name;
 
     std::shared_ptr<TableRow> row = std::make_shared<BenchmarkRow>(
-        r.nranks, r.nblocks, distrib_name, policy_name, time_avg, time_max);
+        r.nranks, r.nblocks, distrib_name, r.policy_name, time_avg, time_max);
     table_.addRow(row);
 
     auto pex_fpath =
-        utils_.GetPexFileName(policy_name, distrib_name, r.nranks, r.nblocks);
+        utils_.GetPexFileName(r.policy_name, distrib_name, r.nranks, r.nblocks);
     utils_.WritePexToFile(pex_fpath, costs, ranks, r.nranks);
   }
 
