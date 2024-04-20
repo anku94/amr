@@ -4,17 +4,57 @@
 
 #pragma once
 
-#include "fort.hpp"
-#include "policy.h"
-#include "writable_file.h"
-
 #include <pdlfs-common/env.h>
+
+#include "policy.h"
+#include "tabular_data.h"
+#include "writable_file.h"
 
 namespace amr {
 // fwd decl
 class PolicyExecCtx;
 
 #define LOG_PATH(x) PolicyUtils::GetLogPath(opts.output_dir, opts.policy_id, x)
+
+class PolicyRow : public TableRow {
+  std::vector<std::string> header = {
+      "Name",      "LB Policy",     "Cost Policy", "Trigger Policy",
+      "Timesteps", "Excess Cost",   "Avg Cost",    "Max Cost",
+      "LocScore",  "Exec Time (us)"};
+
+  std::vector<std::string> data;
+
+  // clang-format off
+ public:
+  PolicyRow(
+      std::string name, std::string lb_policy,
+      CostEstimationPolicy cost_policy,
+      TriggerPolicy trigger_policy,
+      int ts_success, int ts_invoke,
+      double excess_cost,
+      double avg_cost,
+      double max_cost,
+      double loc_score,
+      double exec_time_us
+      ) : data({
+          name, lb_policy,
+          PolicyUtils::PolicyToString(cost_policy),
+          PolicyUtils::PolicyToString(trigger_policy),
+          std::to_string(ts_success) + "/" + std::to_string(ts_invoke),
+          FormatProp(excess_cost / 1e6, "s"),
+          FormatProp(avg_cost / 1e6, "s"),
+          FormatProp(max_cost / 1e6, "s"),
+          FormatProp(loc_score * 100, "%"),
+          FormatProp(exec_time_us / 1e6, "%")
+          }) {}
+  // clang-format on
+
+  static std::string FormatProp(double prop, const char* suffix) {
+    char buf[1024];
+    snprintf(buf, 1024, "%.1f %s", prop, suffix);
+    return {buf};
+  }
+};
 
 class PolicyStats {
  public:
@@ -33,9 +73,12 @@ class PolicyStats {
   void LogTimestep(std::vector<double> const& cost_actual,
                    std::vector<int> const& rank_list, double exec_time_ts);
 
-  static void LogHeader(fort::char_table& table);
-
-  void LogSummary(fort::char_table& table) const;
+  std::shared_ptr<TableRow> GetTableRow(int ts_succeeded, int ts_invoked) {
+    return std::make_shared<PolicyRow>(
+        opts_.policy_id, opts_.policy_name, opts_.cost_policy,
+        opts_.trigger_policy, ts_succeeded, ts_invoked, excess_cost_,
+        total_cost_avg_, total_cost_max_, locality_score_sum_, exec_time_us_);
+  }
 
   static std::string FormatProp(double prop, const char* suffix) {
     char buf[1024];

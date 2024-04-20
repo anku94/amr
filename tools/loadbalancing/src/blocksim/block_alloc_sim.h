@@ -46,102 +46,20 @@ class BlockSimulator {
         nblocks_next_expected_(-1),
         num_lb_(0) {}
 
-  void SetupAllPolicies() {
-    policies_.clear();
-
-    PolicyExecOpts policy_opts;
-    policy_opts.output_dir = options_.output_dir.c_str();
-    policy_opts.env = options_.env;
-    policy_opts.nranks = options_.nranks;
-    policy_opts.nblocks_init = options_.nblocks;
-    // XXX: hardcoded for now
-    policy_opts.trigger_interval = 1000;
-    logf(LOG_INFO, "Hardcoded trigger interval: %d\n",
-         policy_opts.trigger_interval);
-
-    policy_opts.SetPolicy("Actual/Actual-Cost", "actual",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("LPT/Extrapolated-Cost", "lpt",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("kContigImproved/Extrapolated-Cost", "cdp",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("CppIter/Extrapolated-Cost", "cdpi50",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid10",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid20",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid30",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid50",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid70",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-    policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid90",
-                          CostEstimationPolicy::kExtrapolatedCost,
-                          TriggerPolicy::kEveryNTimesteps);
-    SetupPolicy(policy_opts);
-
-  }
+  void SetupAllPolicies();
 
   void SetupPolicy(PolicyExecOpts& opts) {
     policies_.emplace_back(opts);
     stats_.emplace_back(opts);
   }
 
-  int InvokePolicies(std::vector<double> const& cost_oracle,
-                     std::vector<int>& ranklist_actual, std::vector<int>& refs,
-                     std::vector<int>& derefs) {
-    int rv = 0;
-
-    int npolicies = policies_.size();
-
-    for (int pidx = 0; pidx < npolicies; ++pidx) {
-      auto& policy = policies_[pidx];
-      double exec_time = 0;
-      rv = policy.ExecuteTimestep(cost_oracle, ranklist_actual, refs, derefs, exec_time);
-      if (rv != 0) break;
-
-      if (policy.IsActualPolicy()) {
-        stats_[pidx].LogTimestep(cost_oracle, ranklist_actual, exec_time);
-      } else {
-        stats_[pidx].LogTimestep(cost_oracle, policy.GetRanklist(), exec_time);
-      }
-    }
-
-    return rv;
-  }
-
   void Run();
 
   int RunTimestep(int& ts, int sub_ts);
+
+  int InvokePolicies(std::vector<double> const& cost_oracle,
+                     std::vector<int>& ranklist_actual, std::vector<int>& refs,
+                     std::vector<int>& derefs);
 
  private:
   int ReadTimestepInternal(int ts, int sub_ts, std::vector<int>& refs,
@@ -149,7 +67,7 @@ class BlockSimulator {
                            std::vector<int>& assignments,
                            std::vector<int>& times);
 
-  void LogSummary(fort::char_table& table);
+  void LogSummary();
 
   BlockSimulatorOpts const options_;
 

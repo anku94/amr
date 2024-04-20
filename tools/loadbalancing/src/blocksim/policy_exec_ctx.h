@@ -53,6 +53,11 @@ class PolicyExecCtx {
     return lb_state_.ranklist;
   }
 
+  void GetTimestepCount(int& ts_succeeded, int& ts_invoked) const {
+    ts_succeeded = ts_lb_succeeded_;
+    ts_invoked = ts_lb_invoked_;
+  }
+
  private:
   void Bootstrap();
 
