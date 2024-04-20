@@ -7,6 +7,6 @@ set(blocksim_srcs
     policy_stats.cc)
 
 add_executable(block-sim block_sim_main.cc ${blocksim_srcs})
-target_link_libraries(block-sim pdlfs-common lb fort)
+target_link_libraries(block-sim pdlfs-common lb)
 
 install(TARGETS block-sim DESTINATION bin)

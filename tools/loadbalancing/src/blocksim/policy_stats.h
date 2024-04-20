@@ -49,6 +49,10 @@ class PolicyRow : public TableRow {
           }) {}
   // clang-format on
 
+  std::vector<std::string> GetHeader() const override { return header; }
+
+  std::vector<std::string> GetData() const override { return data; }
+
   static std::string FormatProp(double prop, const char* suffix) {
     char buf[1024];
     snprintf(buf, 1024, "%.1f %s", prop, suffix);

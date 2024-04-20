@@ -4,12 +4,46 @@
 
 #pragma once
 
-#include "policy.h"
-#include "writable_file.h"
-
 #include <pdlfs-common/env.h>
 
+#include "policy.h"
+#include "tabular_data.h"
+#include "writable_file.h"
+
 namespace amr {
+class ScaleRow : public TableRow {
+ private:
+  std::vector<std::string> header = {"policy",    "nblocks", "nranks",
+                                     "iter_time", "rt_avg",  "rt_max",
+                                     "loc_cost"};
+  std::vector<std::string> data;
+
+ public:
+  // clang-format off
+  ScaleRow(const char* policy_name, int nblocks, int nranks, double iter_time,
+           double rt_avg, double rt_max, double loc_cost)
+      : data({
+          policy_name,
+          std::to_string(nblocks),
+          std::to_string(nranks),
+          FixedWidthString(iter_time, 2),
+          FixedWidthString(rt_avg, 2),
+          FixedWidthString(rt_max, 2),
+          FixedWidthString(loc_cost, 2)
+          }) {}
+  // clang-format on
+
+  std::vector<std::string> GetHeader() const override { return header; }
+
+  std::vector<std::string> GetData() const override { return data; }
+
+  static std::string FixedWidthString(double d, int n) {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(n) << d;
+    return ss.str();
+  }
+};
+
 class ScaleExecLog : public WritableCSVFile {
  public:
   ScaleExecLog(pdlfs::Env* const env, const std::string& fpath)
@@ -27,29 +61,21 @@ class ScaleExecLog : public WritableCSVFile {
     assert(len < 1024);
     AppendRow(str, len);
 
-    table_ << std::fixed << std::setprecision(0) << policy_name_cleaned
-           << nblocks << nranks << iter_time << rt_avg << rt_max
-           << std::setprecision(2) << loc_cost << fort::endr;
+    std::shared_ptr<TableRow> row = std::make_shared<ScaleRow>(
+        policy_name, nblocks, nranks, iter_time, rt_avg, rt_max, loc_cost);
+    table_.addRow(row);
   }
 
-  std::string GetTabularStr() const { return table_.to_string(); }
-
- private:
-  void WriteHeader() override {
-    const char* str =
-        "policy,nblocks,nranks_,iter_time,rt_avg,rt_max,loc_cost\n";
-    Append(str);
-
-    table_ << fort::header << "Policy"
-           << "Num Blocks"
-           << "Num Ranks"
-           << "Iter Time (us)"
-           << "Rank Time (avg)"
-           << "Rank Time (max)"
-           << "Loc Cost (%)" << fort::endr;
+  std::string GetTabularStr() const {
+    std::stringstream ss;
+    table_.emitTable(ss);
+    return ss.str();
   }
 
  private:
-  fort::char_table table_;
+  void WriteHeader() override { return; }
+
+ private:
+  TabularData table_;
 };
 }  // namespace amr
