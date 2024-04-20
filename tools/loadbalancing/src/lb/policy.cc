@@ -4,14 +4,14 @@
 
 #include "policy.h"
 
-#include "common.h"
-#include "constants.h"
-#include "policy_wopts.h"
-
 #include <algorithm>
 #include <cassert>
 #include <numeric>
 #include <string>
+
+#include "common.h"
+#include "constants.h"
+#include "policy_wopts.h"
 
 namespace amr {
 LBPolicyWithOpts const& PolicyUtils::GetPolicy(const char* policy_id) {
@@ -100,10 +100,60 @@ std::string PolicyUtils::PolicyToString(TriggerPolicy policy) {
   }
 }
 
-void PolicyUtils::ExtrapolateCosts(std::vector<double> const& costs_prev,
-                                   std::vector<int>& refs,
-                                   std::vector<int>& derefs,
-                                   std::vector<double>& costs_cur) {
+void PolicyUtils::ExtrapolateCosts2D(std::vector<double> const& costs_prev,
+                                     std::vector<int>& refs,
+                                     std::vector<int>& derefs,
+                                     std::vector<double>& costs_cur) {
+  static bool first_time = true;
+  if (first_time) {
+    logf(LOG_WARN, "ALERT: Using 2D extrapolation!");
+    first_time = false;
+  }
+
+  int nblocks_prev = costs_prev.size();
+  int nblocks_cur = nblocks_prev + (refs.size() * 3) - (derefs.size() * 3 / 4);
+
+  costs_cur.resize(0);
+  std::sort(refs.begin(), refs.end());
+  std::sort(derefs.begin(), derefs.end());
+
+  int ref_idx = 0;
+  int deref_idx = 0;
+  for (int bidx = 0; bidx < nblocks_prev;) {
+    if (ref_idx < refs.size() && refs[ref_idx] == bidx) {
+      for (int dim = 0; dim < 4; dim++) {
+        costs_cur.push_back(costs_prev[bidx]);
+      }
+      ref_idx++;
+      bidx++;
+    } else if (deref_idx < derefs.size() && derefs[deref_idx] == bidx) {
+      double cost_deref_avg = 0;
+      for (int dim = 0; dim < 4; dim++) {
+        cost_deref_avg += costs_prev[bidx + dim];
+      }
+      cost_deref_avg /= 4;
+      costs_cur.push_back(cost_deref_avg);
+      deref_idx += 4;
+      bidx += 4;
+    } else {
+      costs_cur.push_back(costs_prev[bidx]);
+      bidx++;
+    }
+  }
+
+  assert(costs_cur.size() == nblocks_cur);
+}
+
+void PolicyUtils::ExtrapolateCosts3D(std::vector<double> const& costs_prev,
+                                     std::vector<int>& refs,
+                                     std::vector<int>& derefs,
+                                     std::vector<double>& costs_cur) {
+  static bool first_time = true;
+  if (first_time) {
+    logf(LOG_WARN, "ALERT: Using 3D extrapolation!");
+    first_time = false;
+  }
+
   int nblocks_prev = costs_prev.size();
   int nblocks_cur = nblocks_prev + (refs.size() * 7) - (derefs.size() * 7 / 8);
 

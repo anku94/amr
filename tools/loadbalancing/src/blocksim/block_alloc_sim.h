@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "bin_readers.h"
 #include "common.h"
 #include "policy.h"
@@ -11,8 +13,6 @@
 #include "policy_stats.h"
 #include "prof_set_reader.h"
 #include "trace_utils.h"
-
-#include <vector>
 
 namespace amr {
 struct BlockSimulatorOpts {
@@ -57,7 +57,7 @@ class BlockSimulator {
 
   int RunTimestep(int& ts, int sub_ts);
 
-  int InvokePolicies(std::vector<double> const& cost_oracle,
+  int InvokePolicies(int sub_ts, std::vector<double> const& cost_oracle,
                      std::vector<int>& ranklist_actual, std::vector<int>& refs,
                      std::vector<int>& derefs);
 

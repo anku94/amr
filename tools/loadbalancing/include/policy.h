@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "lb_policies.h"
-
 #include <regex>
 #include <string>
 #include <vector>
+
+#include "lb_policies.h"
 
 namespace pdlfs {
 class Env;
@@ -65,9 +65,15 @@ class PolicyUtils {
 
   static std::string PolicyToString(TriggerPolicy policy);
 
-  static void ExtrapolateCosts(std::vector<double> const& costs_prev,
-                               std::vector<int>& refs, std::vector<int>& derefs,
-                               std::vector<double>& costs_cur);
+  static void ExtrapolateCosts2D(std::vector<double> const& costs_prev,
+                                 std::vector<int>& refs,
+                                 std::vector<int>& derefs,
+                                 std::vector<double>& costs_cur);
+
+  static void ExtrapolateCosts3D(std::vector<double> const& costs_prev,
+                                 std::vector<int>& refs,
+                                 std::vector<int>& derefs,
+                                 std::vector<double>& costs_cur);
 
   static void ComputePolicyCosts(int nranks,
                                  std::vector<double> const& cost_list,
@@ -112,16 +118,16 @@ struct PolicyExecOpts {
 
  public:
   PolicyExecOpts()
-      : policy_name("<undefined>"),
-        policy_id("<undefined>"),
-        cost_policy(CostEstimationPolicy::kUnitCost),
-        trigger_policy(TriggerPolicy::kEveryTimestep),
-        output_dir(nullptr),
-        env(nullptr),
-        nranks(0),
-        nblocks_init(0),
-        cache_ttl(15),
-        trigger_interval(100) {}
+      : policy_name("<undefined>")
+      , policy_id("<undefined>")
+      , cost_policy(CostEstimationPolicy::kUnitCost)
+      , trigger_policy(TriggerPolicy::kEveryTimestep)
+      , output_dir(nullptr)
+      , env(nullptr)
+      , nranks(0)
+      , nblocks_init(0)
+      , cache_ttl(15)
+      , trigger_interval(100) {}
 
   void SetPolicy(const char* name, const char* id, CostEstimationPolicy cep,
                  TriggerPolicy tp) {

@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include <pdlfs-common/env.h>
+
 #include "common.h"
 #include "cost_cache.h"
 #include "policy.h"
 #include "policy_wopts.h"
-
-#include <pdlfs-common/env.h>
 
 namespace amr {
 
@@ -28,7 +28,8 @@ class PolicyExecCtx {
 
   int ExecuteTimestep(std::vector<double> const& costlist_oracle,
                       std::vector<int> const& ranklist_actual,
-                      std::vector<int>& refs, std::vector<int>& derefs, double& exec_time);
+                      std::vector<int>& refs, std::vector<int>& derefs,
+                      double& exec_time);
 
   static int GetNumBlocksNext(int nblocks, int nrefs, int nderefs) {
     // int nblocks_next = nblocks + (nrefs * 7) - (nderefs * 7 / 8);
@@ -36,9 +37,7 @@ class PolicyExecCtx {
     return nblocks_next;
   }
 
-  std::string Name() const {
-    return policy_.name;
-  }
+  std::string Name() const { return policy_.name; }
 
   bool IsActualPolicy() const {
     return policy_.policy == LoadBalancePolicy::kPolicyActual;
@@ -107,8 +106,8 @@ class PolicyExecCtx {
       case CostEstimationPolicy::kExtrapolatedCost:
       case CostEstimationPolicy::kCachedExtrapolatedCost:
         // If both refs and derefs are empty, these should be the same
-        PolicyUtils::ExtrapolateCosts(state.costlist_prev, state.refs,
-                                      state.derefs, costlist_new);
+        PolicyUtils::ExtrapolateCosts2D(state.costlist_prev, state.refs,
+                                        state.derefs, costlist_new);
         break;
       default:
         ABORT("Not implemented!");

@@ -276,7 +276,7 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV2(
     }
   }
 
-  assert(incl_ranks_front + incl_ranks_back == lpt_ranks);
+  assert(incl_ranks_front + incl_ranks_back == lpt_rank_count_);
   assert(incl_ranks_front + incl_ranks_back <= nranks_);
 
   std::vector<int> lpt_ranks;  // ranks that would benefit from LPT

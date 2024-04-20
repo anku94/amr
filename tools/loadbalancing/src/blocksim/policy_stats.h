@@ -81,7 +81,7 @@ class PolicyStats {
     return std::make_shared<PolicyRow>(
         opts_.policy_id, opts_.policy_name, opts_.cost_policy,
         opts_.trigger_policy, ts_succeeded, ts_invoked, excess_cost_,
-        total_cost_avg_, total_cost_max_, locality_score_sum_, exec_time_us_);
+        total_cost_avg_, total_cost_max_, locality_score_sum_ / ts_, exec_time_us_);
   }
 
   static std::string FormatProp(double prop, const char* suffix) {
