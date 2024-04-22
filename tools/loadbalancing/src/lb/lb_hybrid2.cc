@@ -1,12 +1,12 @@
 #include "lb_hybrid2.h"
 
+#include <cassert>
+#include <numeric>
+
 #include "common.h"
 #include "lb_policies.h"
 #include "policy.h"
 #include "policy_wopts.h"
-
-#include <cassert>
-#include <numeric>
 
 namespace amr {
 int LoadBalancePolicies::AssignBlocksHybridCppFirst(
@@ -18,8 +18,8 @@ int LoadBalancePolicies::AssignBlocksHybridCppFirst(
   double lpt_frac = opts.lpt_frac;
   int lpt_ranks = nranks * lpt_frac;
 
-  logf(LOG_DBUG, "[HybridCppFirst] LPT ranks: %d, V2: %s", lpt_ranks,
-       v2 ? "yes" : "no");
+  logv(__LOG_ARGS__, LOG_DBUG, "[HybridCppFirst] LPT ranks: %d, V2: %s",
+       lpt_ranks, v2 ? "yes" : "no");
 
   auto hacf = HybridAssignmentCppFirst(lpt_ranks);
 
@@ -46,7 +46,7 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
 
-  logf(LOG_DBUG,
+  logv(__LOG_ARGS__, LOG_DBUG,
        "[HybridCppFirst] Costs after CPP_Iter, avg: %.0lf, max: %.0lf",
        rank_time_avg, rank_time_max);
 
@@ -86,7 +86,8 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
-  logf(LOG_DBUG, "[HybridCppFirst] Costs after LPT, avg: %.0lf, max: %.0lf",
+  logv(__LOG_ARGS__, LOG_DBUG,
+       "[HybridCppFirst] Costs after LPT, avg: %.0lf, max: %.0lf",
        rank_time_avg, rank_time_max);
 
   return rv;
@@ -107,7 +108,7 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
 
-  logf(LOG_DBUG,
+  logv(__LOG_ARGS__, LOG_DBUG,
        "[HybridCppFirst] Costs after CPP_Iter, avg: %.0lf, max: %.0lf",
        rank_time_avg, rank_time_max);
 
@@ -147,7 +148,8 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
-  logf(LOG_DBUG, "[HybridCppFirstV2] Costs after LPT, avg: %.0lf, max: %.0lf",
+  logv(__LOG_ARGS__, LOG_DBUG,
+       "[HybridCppFirstV2] Costs after LPT, avg: %.0lf, max: %.0lf",
        rank_time_avg, rank_time_max);
 
   return rv;
@@ -187,7 +189,8 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanks(
   cost_avg_lpt = cost_sum_lpt / ranks_for_lpt;
 
   for (int i = nranks_ - 1; i >= lpt_rank_count_; i--) {
-    logf(LOG_DBUG, "Cur rank: %d, cost: %.0lf", i, cost_ranks[i].first);
+    logv(__LOG_ARGS__, LOG_DBUG, "Cur rank: %d, cost: %.0lf", i,
+         cost_ranks[i].first);
 
     double cost_sum_with_rank = cost_sum_lpt + cost_ranks[i].first;
     double cost_avg_with_rank = cost_sum_with_rank / (ranks_for_lpt + 1);
@@ -206,9 +209,10 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanks(
 
   assert(lpt_ranks.size() <= nranks_);
 
-  logf(LOG_DBG2, "Selected for LPT: %d initial, %d rest", lpt_rank_count_,
-       ranks_for_lpt - lpt_rank_count_);
-  logf(LOG_DBG2, "Cost avg: %.2f, cost avg LPT: %.2f", cost_avg, cost_avg_lpt);
+  logv(__LOG_ARGS__, LOG_DBG2, "Selected for LPT: %d initial, %d rest",
+       lpt_rank_count_, ranks_for_lpt - lpt_rank_count_);
+  logv(__LOG_ARGS__, LOG_DBG2, "Cost avg: %.2f, cost avg LPT: %.2f", cost_avg,
+       cost_avg_lpt);
 
   return lpt_ranks;
 }
@@ -248,7 +252,8 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV2(
   int incl_ranks_back = 0;
 
   for (int i = nranks_ - 1; i >= lpt_rank_count_; i--) {
-    logf(LOG_DBUG, "Cur rank: %d, cost: %.0lf", i, cost_ranks[i].first);
+    logv(__LOG_ARGS__, LOG_DBUG, "Cur rank: %d, cost: %.0lf", i,
+         cost_ranks[i].first);
 
     double cost_toadd = cost_ranks[i].first;
     double cost_todel = cost_ranks[incl_ranks_front - 1].first;
@@ -258,8 +263,8 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV2(
 
 #define DOUBLE_EPSILON 1e-3
 
-    logf(LOG_DBUG, "[HybridCppFirstV2] avg_new: %.2f, avg: %.2f", cost_avg_new,
-         cost_avg);
+    logv(__LOG_ARGS__, LOG_DBUG, "[HybridCppFirstV2] avg_new: %.2f, avg: %.2f",
+         cost_avg_new, cost_avg);
 
     cost_sum_lpt = cost_sum_new;
     cost_avg_lpt = cost_avg_new;
@@ -268,7 +273,8 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV2(
 
     if (cost_avg_new > cost_avg + DOUBLE_EPSILON) {
       if (incl_ranks_front == 0) {
-        logf(LOG_WARN, "Can't LPT-rebalance with given constraints!");
+        logv(__LOG_ARGS__, LOG_WARN,
+             "Can't LPT-rebalance with given constraints!");
         return std::vector<int>();
       }
     } else {
@@ -290,13 +296,14 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV2(
 
   assert(lpt_ranks.size() <= nranks_);
 
-  logf(LOG_DBUG,
+  logv(__LOG_ARGS__, LOG_DBUG,
        "[HybridCppFirstV2] Selected for LPT: %d initial, %d rest"
        "(Total: %d)",
        incl_ranks_front, incl_ranks_back, lpt_ranks.size());
 
-  logf(LOG_DBUG, "[HybridCppFirstV2] Cost avg: %.2f, cost avg LPT: %.2f",
-       cost_avg, cost_avg_lpt);
+  logv(__LOG_ARGS__, LOG_DBUG,
+       "[HybridCppFirstV2] Cost avg: %.2f, cost avg LPT: %.2f", cost_avg,
+       cost_avg_lpt);
 
   return lpt_ranks;
 }
@@ -312,7 +319,7 @@ std::vector<int> HybridAssignmentCppFirst::GetBlocksForRanks(
 
   for (size_t i = 0; i < ranklist.size(); i++) {
     if (selected_ranks_map.find(ranklist[i]) != selected_ranks_map.end()) {
-      logf(LOG_DBUG, "Block %d, rank %d", i, ranklist[i]);
+      logv(__LOG_ARGS__, LOG_DBUG, "Block %d, rank %d", i, ranklist[i]);
       selected_bids.push_back(i);
     }
   }

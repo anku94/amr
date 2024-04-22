@@ -68,10 +68,10 @@ class Benchmark {
     std::vector<RunType> all_runs{ hybrid3, lpt};
 
     for (auto& r : all_runs) {
-      logf(LOG_INFO, "[RUN] %s", r.ToString().c_str());
+      logv(__LOG_ARGS__, LOG_INFO, "[RUN] %s", r.ToString().c_str());
     //   if (r.policy_opts && r.policy == LoadBalancePolicy::kPolicyHybrid) {
     //     auto* opts = reinterpret_cast<PolicyOptsHybrid*>(r.policy_opts);
-    //     logf(LOG_INFO, "%s", opts->ToString().c_str());
+    //     logv(__LOG_ARGS__, LOG_INFO, "%s", opts->ToString().c_str());
     //   }
     }
 
@@ -98,7 +98,7 @@ class Benchmark {
   }
 
   int RunCppIterSuite(int nranks, int nblocks) {
-    logf(LOG_INFO, "[CppIterSuite] nranks: %d, nblocks: %d", nranks, nblocks);
+    logv(__LOG_ARGS__, LOG_INFO, "[CppIterSuite] nranks: %d, nblocks: %d", nranks, nblocks);
 
     // std::vector<int> all_iters = {1,   10,  50,   100,  250,
     //                               500, 750, 1000, 1250, 1500};
@@ -139,7 +139,7 @@ class Benchmark {
     all_runs.push_back(hybrid3);
 
     for (auto& r : all_runs) {
-      logf(LOG_INFO, "[RUN]\n\t%s", r.ToString().c_str());
+      logv(__LOG_ARGS__, LOG_INFO, "[RUN]\n\t%s", r.ToString().c_str());
     }
 
     DoRuns(all_runs);
@@ -157,7 +157,7 @@ class Benchmark {
     std::vector<double> costs;
     auto& r0 = rvec[0];
     DistributionUtils::GenDistributionWithDefaults(costs, r0.nblocks);
-    logf(LOG_INFO, "Times: %s", SerializeVector(costs, 10).c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Times: %s", SerializeVector(costs, 10).c_str());
 
     for (auto& r : rvec) {
       DoRun(r, costs);
@@ -172,14 +172,14 @@ class Benchmark {
     // Policy_name may be overwritten
 
     double time_avg, time_max;
-    logf(LOG_INFO, "%s", r.ToString().c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "%s", r.ToString().c_str());
 
     std::vector<int> ranks(costs.size());
     LoadBalancePolicies::AssignBlocks(r.policy.c_str(), costs, ranks, r.nranks);
     std::vector<double> rank_times;
     PolicyUtils::ComputePolicyCosts(r.nranks, costs, ranks, rank_times,
                                     time_avg, time_max);
-    logf(LOG_INFO,
+    logv(__LOG_ARGS__, LOG_INFO,
          "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
          r.policy_name.c_str(), time_avg, time_max);
 
@@ -203,7 +203,7 @@ class Benchmark {
   void EmitTable(const std::string& table_out, int partition_intvl) {
     std::stringstream table_stream;
     table_.emitTable(table_stream, partition_intvl);
-    logf(LOG_INFO, "Table: \n%s", table_stream.str().c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Table: \n%s", table_stream.str().c_str());
 
     utils_.WriteToFile(table_out, table_.toCSV());
   }

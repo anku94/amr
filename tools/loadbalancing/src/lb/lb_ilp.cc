@@ -2,12 +2,12 @@
 // Created by Ankush J on 4/14/23.
 //
 
+#include <vector>
+
 #include "common.h"
 #include "lb_policies.h"
 #include "policy_wopts.h"
 #include "tools.h"
-
-#include <vector>
 
 #if GUROBI_ENABLED
 #include <gurobi_c++.h>
@@ -24,7 +24,8 @@ class ILPSolver {
         nblocks_(cost_list.size()),
         nranks_(nranks),
         assign_vars_(nblocks_, std::vector<GRBVar>(nranks_)) {
-    logf(LOG_INFO, "[ILPSolver] Opts: %s", opts_.ToString().c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "[ILPSolver] Opts: %s",
+         opts_.ToString().c_str());
   }
 
   int AssignBlocks() {
@@ -104,7 +105,7 @@ class ILPSolver {
 
     double disorder = amr::PolicyTools::GetDisorder(rank_list_heuristic);
 
-    logf(LOG_INFO,
+    logv(__LOG_ARGS__, LOG_INFO,
          "Heuristic solution stats.\n"
          "\tdisord:\t%.2lf\n"
          "\trt_avg: \t%.2lf\n"

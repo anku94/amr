@@ -5,15 +5,13 @@
 #include "prof_reader.h"
 #include "trace_utils.h"
 
-#include <filesystem>
-
 namespace amr {
 class ProfSetReader {
  public:
   explicit ProfSetReader(const std::vector<std::string>& fpaths,
                          ProfTimeCombinePolicy combine_policy)
       : nblocks_prev_(0) {
-    logf(LOG_INFO, "[ProfSetReader] Combine Policy: %s",
+    logv(__LOG_ARGS__, LOG_INFO, "[ProfSetReader] Combine Policy: %s",
          Utils::GetProfTimeCombinePolicyStr(combine_policy).c_str());
 
     for (auto& fpath : fpaths) {
@@ -42,7 +40,7 @@ class ProfSetReader {
       nblocks = std::max(nblocks, rnblocks);
     }
 
-    logf(LOG_DBUG, "Blocks read: %d", nblocks);
+    logv(__LOG_ARGS__, LOG_DBUG, "Blocks read: %d", nblocks);
 
     if (nblocks > 0) {
       nblocks_prev_ = nblocks;
@@ -66,7 +64,7 @@ class ProfSetReader {
       nblocks = std::max(nblocks, rnblocks);
     }
 
-    logf(LOG_DBUG, "Blocks read: %d", nblocks);
+    logv(__LOG_ARGS__, LOG_DBUG, "Blocks read: %d", nblocks);
 
     if (nblocks > 0) {
       nblocks_prev_ = nblocks;

@@ -106,7 +106,7 @@ void PolicyUtils::ExtrapolateCosts2D(std::vector<double> const& costs_prev,
                                      std::vector<double>& costs_cur) {
   static bool first_time = true;
   if (first_time) {
-    logf(LOG_WARN, "ALERT: Using 2D extrapolation!");
+    logv(__LOG_ARGS__, LOG_WARN, "ALERT: Using 2D extrapolation!");
     first_time = false;
   }
 
@@ -150,7 +150,7 @@ void PolicyUtils::ExtrapolateCosts3D(std::vector<double> const& costs_prev,
                                      std::vector<double>& costs_cur) {
   static bool first_time = true;
   if (first_time) {
-    logf(LOG_WARN, "ALERT: Using 3D extrapolation!");
+    logv(__LOG_ARGS__, LOG_WARN, "ALERT: Using 3D extrapolation!");
     first_time = false;
   }
 
@@ -249,8 +249,8 @@ std::string PolicyUtils::GetLogPath(const char* output_dir,
                                     const char* suffix) {
   std::string result = GetSafePolicyName(policy_name);
   result = std::string(output_dir) + "/" + result + "." + suffix;
-  logf(LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s", policy_name,
-       result.c_str());
+  logv(__LOG_ARGS__, LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s",
+       policy_name, result.c_str());
   return result;
 }
 }  // namespace amr

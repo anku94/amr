@@ -23,7 +23,7 @@ class WritableFile {
  public:
   WritableFile(pdlfs::Env* const env, const std::string& fpath) : env_(env) {
     if (env_->FileExists(fpath.c_str())) {
-      logf(LOG_WARN, "Overwriting file: %s", fpath.c_str());
+      logv(__LOG_ARGS__, LOG_WARN, "Overwriting file: %s", fpath.c_str());
       env_->DeleteFile(fpath.c_str());
     }
 

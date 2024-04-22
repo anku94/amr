@@ -63,7 +63,7 @@ class BenchmarkUtils {
     if (!env_->FileExists(parent_dir.c_str())) {
       s = env_->CreateDir(parent_dir.c_str());
       if (!s.ok()) {
-        logf(LOG_ERRO, "Error creating dir: %s", parent_dir.c_str());
+        logv(__LOG_ARGS__, LOG_ERRO, "Error creating dir: %s", parent_dir.c_str());
         return;
       }
     }
@@ -72,18 +72,18 @@ class BenchmarkUtils {
 
     s = env_->NewWritableFile(fpath.c_str(), &fh);
     if (!s.ok()) {
-      logf(LOG_ERRO, "Error opening file: %s", fpath.c_str());
+      logv(__LOG_ARGS__, LOG_ERRO, "Error opening file: %s", fpath.c_str());
       return;
     }
 
     s = fh->Append(content);
     if (!s.ok()) {
-      logf(LOG_ERRO, "Error opening file: %s", fpath.c_str());
+      logv(__LOG_ARGS__, LOG_ERRO, "Error opening file: %s", fpath.c_str());
     }
 
     s = fh->Close();
     if (!s.ok()) {
-      logf(LOG_ERRO, "Error opening file: %s", fpath.c_str());
+      logv(__LOG_ARGS__, LOG_ERRO, "Error opening file: %s", fpath.c_str());
     }
   }
 
@@ -100,7 +100,7 @@ class BenchmarkUtils {
       }
     }
 
-    logf(LOG_DBG2, "%s", ss.str().c_str());
+    logv(__LOG_ARGS__, LOG_DBG2, "%s", ss.str().c_str());
   }
 
   static void LogAllocation(int nblocks, int nranks,
@@ -128,7 +128,7 @@ class BenchmarkUtils {
       ss << "\n";
     }
 
-    logf(LOG_DBG2, "%s", ss.str().c_str());
+    logv(__LOG_ARGS__, LOG_DBG2, "%s", ss.str().c_str());
   }
 
  private:

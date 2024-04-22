@@ -2,14 +2,14 @@
 // Created by Ankush J on 4/10/23.
 //
 
-#include "common.h"
-#include "lb_policies.h"
-#include "lb_util.h"
-
 #include <algorithm>
 #include <numeric>
 #include <queue>
 #include <vector>
+
+#include "common.h"
+#include "lb_policies.h"
+#include "lb_util.h"
 
 /*
  * LongestProcessingTime or ShortestProcessingTime
@@ -24,7 +24,8 @@ void AssignBlocks(std::vector<double> const& costlist,
   std::fill(ranklist.begin(), ranklist.end(), -1);
 
   // Create a priority queue of ranks with the load as the priority
-  std::priority_queue<Rank, std::vector<Rank>, LeastLoadedRankPQComparator> rank_queue;
+  std::priority_queue<Rank, std::vector<Rank>, LeastLoadedRankPQComparator>
+      rank_queue;
 
   const float delta = 0.0001;
   for (int i = 0; i < nranks; i++) {
@@ -44,7 +45,8 @@ void AssignBlocks(std::vector<double> const& costlist,
     Rank minLoadRank = rank_queue.top();
     rank_queue.pop();
 
-    logf(LOG_DBG2, "[LPT] Block (%d, %.1f) assigned to rank (%d, %.1f)", idx,
+    logv(__LOG_ARGS__, LOG_DBG2,
+         "[LPT] Block (%d, %.1f) assigned to rank (%d, %.1f)", idx,
          costlist[idx], minLoadRank.id, minLoadRank.load);
 
     ranklist[idx] = minLoadRank.id;

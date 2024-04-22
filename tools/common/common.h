@@ -5,32 +5,36 @@
 #pragma once
 
 #include <iomanip>
+#include <pdlfs-common/env.h>
 #include <random>
 #include <sstream>
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 
-// TODO: log_levels should probably be ordered the other way
-#define LOG_LEVEL 3
-
-#define LOG_ERRO 5
-#define LOG_WARN 4
+#define LOG_ERRO 1
+#define LOG_WARN 2
 #define LOG_INFO 3
-#define LOG_DBUG 2
-#define LOG_DBG2 1
+#define LOG_DBUG 4
+#define LOG_DBG2 5
+#define LOG_DBG3 6
 
-int logf(int lvl, const char* fmt, ...);
-int loge(const char* op, const char* path);
+#define DEF_LOGGER ::pdlfs::Logger::Default()
+#define __LOG_ARGS__ DEF_LOGGER, __FILE__, __LINE__
+
+int logv(pdlfs::Logger *info_log, const char *file, int line, int level,
+         const char *fmt, ...);
+int loge(const char *op, const char *path);
 
 /*
  * logging facilities and helpers
  */
-#define ABORT_FILENAME \
+#define ABORT_FILENAME                                                         \
   (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define ABORT(msg) msg_abort(errno, msg, __func__, ABORT_FILENAME, __LINE__)
 
 /* abort with an error message */
-void msg_abort(int err, const char* msg, const char* func, const char* file,
+void msg_abort(int err, const char *msg, const char *func, const char *file,
                int line);
 
 enum class Status { OK, MPIError, Error, InvalidPtr };
@@ -41,31 +45,30 @@ std::string TopologyToStr(NeighborTopology t);
 
 struct DriverOpts {
   NeighborTopology topology;
-  int topology_nbrcnt;  // XXX: Is this used anywhere?
+  int topology_nbrcnt; // XXX: Is this used anywhere?
   size_t blocks_per_rank;
   size_t size_per_msg;
   int comm_rounds;
-  const char* trace_root;
+  const char *trace_root;
 
   DriverOpts()
-      : topology(NeighborTopology::Ring),
-        topology_nbrcnt(-1),
-        blocks_per_rank(SIZE_MAX),
-        size_per_msg(SIZE_MAX),
-        comm_rounds(-1),
+      : topology(NeighborTopology::Ring), topology_nbrcnt(-1),
+        blocks_per_rank(SIZE_MAX), size_per_msg(SIZE_MAX), comm_rounds(-1),
         trace_root("") {}
 
-#define NA_IF(x) \
-  if (x) return true;
-#define INVALID_IF(x) \
-  if (x) return false;
+#define NA_IF(x)                                                               \
+  if (x)                                                                       \
+    return true;
+#define INVALID_IF(x)                                                          \
+  if (x)                                                                       \
+    return false;
 #define IS_VALID() return true;
 
   /* all constituent Invalid checks return True if N/A.
    * Therefore all need to pass */
   bool IsValid() { return IsValidGeneric() && IsValidFromTrace(); }
 
- private:
+private:
   bool IsValidGeneric() {
     NA_IF(topology == NeighborTopology::FromTrace);
     INVALID_IF(blocks_per_rank == SIZE_MAX);
@@ -88,10 +91,10 @@ struct DriverOpts {
 namespace Globals {
 extern int my_rank, nranks;
 extern DriverOpts driver_opts;
-};  // namespace Globals
+}; // namespace Globals
 
 class NormalGenerator {
- public:
+public:
   NormalGenerator(double mean, double std)
       : mean_(mean), std_(std), gen_(rd_()), d_(mean_, std_) {}
 
@@ -101,7 +104,7 @@ class NormalGenerator {
 
   int GenInt() { return std::round(d_(gen_)); }
 
- private:
+private:
   const double mean_;
   const double std_;
   std::random_device rd_;
@@ -110,7 +113,7 @@ class NormalGenerator {
 };
 
 template <typename T>
-std::string SerializeVector(std::vector<T> const& v, int trunc_count = -1) {
+std::string SerializeVector(std::vector<T> const &v, int trunc_count = -1) {
   std::stringstream ss;
 
   ss << std::setprecision(3) << std::fixed;

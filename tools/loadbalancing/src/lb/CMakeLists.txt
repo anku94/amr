@@ -10,6 +10,7 @@ set (lb_srcs
         lb_hybrid2.cc
         lb_policies.cc
         policy.cc
+        ${CMAKE_SOURCE_DIR}/tools/common/common.cc
         )
 
 add_library(lb ${lb_srcs} ${common_srcs})

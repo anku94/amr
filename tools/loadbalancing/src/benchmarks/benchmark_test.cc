@@ -29,7 +29,7 @@ class CustomRow : public TableRow {
   }
 };
 
-TEST_F(BenchmarkTest, BasicTest) { logf(LOG_INFO, "HelloWorld!\n"); }
+TEST_F(BenchmarkTest, BasicTest) { logv(__LOG_ARGS__, LOG_INFO, "HelloWorld!\n"); }
 
 TEST_F(BenchmarkTest, TabularTest) {
   TabularData table;

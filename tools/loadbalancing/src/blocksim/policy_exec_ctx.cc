@@ -3,8 +3,9 @@
 //
 
 #include "policy_exec_ctx.h"
-#include "policy_wopts.h"
+
 #include "policy.h"
+#include "policy_wopts.h"
 
 namespace amr {
 
@@ -36,14 +37,16 @@ void PolicyExecCtx::Bootstrap() {
   lb_state_.costlist_prev = std::vector<double>(opts_.nblocks_init, 1.0);
 
   assert(lb_state_.ranklist.size() == opts_.nblocks_init);
-  logf(LOG_DBG2, "[PolicyExecCtx] Bootstrapping. Num Blocks: %d, Ranklist: %zu",
+  logv(__LOG_ARGS__, LOG_DBG2,
+       "[PolicyExecCtx] Bootstrapping. Num Blocks: %d, Ranklist: %zu",
        opts_.nblocks_init, lb_state_.ranklist.size());
 }
 
 int PolicyExecCtx::ExecuteTimestep(std::vector<double> const& costlist_oracle,
                                    std::vector<int> const& ranklist_actual,
                                    std::vector<int>& refs,
-                                   std::vector<int>& derefs, double& exec_time) {
+                                   std::vector<int>& derefs,
+                                   double& exec_time) {
   int rv = 0;
 
   assert(lb_state_.costlist_prev.size() == lb_state_.ranklist.size());
@@ -54,7 +57,7 @@ int PolicyExecCtx::ExecuteTimestep(std::vector<double> const& costlist_oracle,
     ComputeCosts(ts_, costlist_oracle, costlist_lb);
     rv = TriggerLB(costlist_lb, exec_time);
     if (rv) {
-      logf(LOG_WARN, "[PolicyExecCtx] TriggerLB failed!");
+      logv(__LOG_ARGS__, LOG_WARN, "[PolicyExecCtx] TriggerLB failed!");
       ts_++;
       return rv;
     }
@@ -63,11 +66,12 @@ int PolicyExecCtx::ExecuteTimestep(std::vector<double> const& costlist_oracle,
   // Timestep is always evaluated using the oracle cost
   if (policy_.policy == LoadBalancePolicy::kPolicyActual) {
     assert(ranklist_actual.size() == costlist_oracle.size());
-    logf(LOG_DBUG, "Logging with ranklist_actual (%zu)",
+    logv(__LOG_ARGS__, LOG_DBUG, "Logging with ranklist_actual (%zu)",
          ranklist_actual.size());
   } else {
     assert(lb_state_.ranklist.size() == costlist_oracle.size());
-    logf(LOG_DBUG, "Logging with lb.ranklist (%zu)", lb_state_.ranklist.size());
+    logv(__LOG_ARGS__, LOG_DBUG, "Logging with lb.ranklist (%zu)",
+         lb_state_.ranklist.size());
   }
 
   lb_state_.costlist_prev = costlist_oracle;
@@ -78,7 +82,8 @@ int PolicyExecCtx::ExecuteTimestep(std::vector<double> const& costlist_oracle,
   return rv;
 }
 
-int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist, double& exec_time) {
+int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist,
+                             double& exec_time) {
   int rv;
   std::vector<int> ranklist_lb;
 

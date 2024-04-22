@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "common.h"
-
 #include <utility>
+
+#include "common.h"
 
 namespace amr {
 class ReaderBase {
@@ -15,7 +15,7 @@ class ReaderBase {
       : fpath_(std::move(fpath)), fd_(nullptr) {
     fd_ = fopen(fpath_.c_str(), "rb");
     if (fd_ == nullptr) {
-      logf(LOG_ERRO, "Unable to open file: %s\n", fpath_.c_str());
+      logv(__LOG_ARGS__, LOG_ERRO, "Unable to open file: %s\n", fpath_.c_str());
       ABORT("Unable to open file");
     }
   }

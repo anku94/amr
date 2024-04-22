@@ -2,7 +2,6 @@
 
 #include <common.h>
 #include <cstdio>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -36,20 +35,20 @@ class CSVProfileReader : public ProfileReader {
       ts_++;
     }
 
-    logf(LOG_DBUG, "[ProfReader] Timestep: %d, lines read: %d", ts_,
+    logv(__LOG_ARGS__, LOG_DBUG, "[ProfReader] Timestep: %d, lines read: %d", ts_,
          nlines_read);
 
     return nblocks;
   }
 
   void Reset() {
-    logf(LOG_DBG2, "[ProfReader] Reset: %s", csv_path_.c_str());
+    logv(__LOG_ARGS__, LOG_DBG2, "[ProfReader] Reset: %s", csv_path_.c_str());
     SafeCloseFile();
 
     fd_ = fopen(csv_path_.c_str(), "r");
 
     if (fd_ == nullptr) {
-      logf(LOG_ERRO, "[ProfReader] Unable to open: %s", csv_path_.c_str());
+      logv(__LOG_ARGS__, LOG_ERRO, "[ProfReader] Unable to open: %s", csv_path_.c_str());
       ABORT("Unable to open specified CSV");
     }
 
@@ -66,7 +65,7 @@ class CSVProfileReader : public ProfileReader {
       ABORT("buffer too small for line");
     }
 
-    logf(LOG_DBG2, "Line read: %s", buf);
+    logv(__LOG_ARGS__, LOG_DBG2, "Line read: %s", buf);
   }
 
   void ReadHeader() {
@@ -106,7 +105,7 @@ class CSVProfileReader : public ProfileReader {
 
         max_bid = std::max(max_bid, prev_bid_);
       } else if (prev_sub_ts_ < ts_to_read) {
-        logf(LOG_WARN, "Somehow skipped ts %d data. Dropping...", prev_sub_ts_);
+        logv(__LOG_ARGS__, LOG_WARN, "Somehow skipped ts %d data. Dropping...", prev_sub_ts_);
       } else if (prev_sub_ts_ > ts_to_read) {
         // Wait for ts to catch up
         return max_bid;
@@ -135,10 +134,10 @@ class CSVProfileReader : public ProfileReader {
       nlines_read++;
     }
 
-    logf(LOG_DBG2, "[ProfReader] Times (cur): %s",
+    logv(__LOG_ARGS__, LOG_DBG2, "[ProfReader] Times (cur): %s",
          SerializeVector(times_cur, 10).c_str());
     AddVec2Vec(times, times_cur);
-    logf(LOG_DBG2, "[ProfReader] Times (tot): %s",
+    logv(__LOG_ARGS__, LOG_DBG2, "[ProfReader] Times (tot): %s",
          SerializeVector(times, 10).c_str());
 
     return max_bid + 1;

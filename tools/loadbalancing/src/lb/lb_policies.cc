@@ -62,7 +62,7 @@ int LoadBalancePolicies::AssignBlocks(const char* policy_name,
       throw std::runtime_error("HybridCppFirst policy is deprecated");
     case LoadBalancePolicy::kPolicyHybridCppFirstV2:
       return AssignBlocksHybridCppFirst(costlist, ranklist, nranks,
-          policy.hcf_opts);
+                                        policy.hcf_opts);
     default:
       ABORT("LoadBalancePolicy not implemented!!");
   }
@@ -130,9 +130,9 @@ int LoadBalancePolicies::AssignBlocksContiguous(
           << "There is at least one process which has no MeshBlock" << std::endl
           << "Decrease the number of processes or use smaller MeshBlocks."
           << std::endl;
-      logf(LOG_WARN, "%s", msg.str().c_str());
+      logv(__LOG_ARGS__, LOG_WARN, "%s", msg.str().c_str());
       //      ABORT(msg.str().c_str());
-      logf(LOG_WARN, "Thugs don't abort on fatal errors.");
+      logv(__LOG_ARGS__, LOG_WARN, "Thugs don't abort on fatal errors.");
       return -1;
     }
     my_cost += costlist[block_id];

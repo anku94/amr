@@ -12,7 +12,7 @@ class ConfigParser {
   explicit ConfigParser(const std::string& file_path) {
     // if file does not exist, warn but do nothing
     if (!std::ifstream(file_path)) {
-      logf(LOG_WARN, "Config file %s does not exist\n", file_path.c_str());
+      logv(__LOG_ARGS__, LOG_WARN, "Config file %s does not exist\n", file_path.c_str());
       return;
     }
 
@@ -51,7 +51,7 @@ class ConfigParser {
   T GetParamOrDefault(const std::string& key, const T& default_val) {
     auto it = params_.find(key);
     if (it == params_.end()) {
-      logf(LOG_DBG2, "Key %s not found in config file, using default value\n",
+      logv(__LOG_ARGS__, LOG_DBG2, "Key %s not found in config file, using default value\n",
            key.c_str());
       return default_val;
     }

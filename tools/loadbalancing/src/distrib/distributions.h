@@ -1,8 +1,8 @@
+#include <string>
+
 #include "alias_method.h"
 #include "common.h"
 #include "globals.h"
-
-#include <string>
 //
 // Created by Ankush J on 11/9/23.
 //
@@ -143,7 +143,8 @@ class DistributionUtils {
 
   static void GenDistribution(DistributionOpts& d, std::vector<double>& costs,
                               int nblocks) {
-    logf(LOG_INFO, "[GenDistribution] Distribution: %s, nblocks: %d",
+    logv(__LOG_ARGS__, LOG_INFO,
+         "[GenDistribution] Distribution: %s, nblocks: %d",
          DistributionOptsToString(d).c_str(), nblocks);
 
     costs.resize(nblocks);

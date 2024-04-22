@@ -83,11 +83,11 @@ class BinProfileReader : public ProfileReader {
                    ProfTimeCombinePolicy combine_policy)
       : ProfileReader(prof_csv_path, combine_policy), eof_(false), nts_(-1) {}
 
-#define ASSERT_NREAD(a, b)                                                     \
-  if (a != b) {                                                                \
-    logf(LOG_ERRO, "[BinProfileReader] Read error. Expected: %d, read: %d", b, \
-         a);                                                                   \
-    ABORT("Read Error");                                                       \
+#define ASSERT_NREAD(a, b)                                               \
+  if (a != b) {                                                          \
+    logv(__LOG_ARGS__, LOG_ERRO,                                         \
+         "[BinProfileReader] Read error. Expected: %d, read: %d", b, a); \
+    ABORT("Read Error");                                                 \
   }
   int ReadTimestep(int ts_to_read, std::vector<int>& times,
                    int& nlines_read) override {
@@ -100,7 +100,8 @@ class BinProfileReader : public ProfileReader {
     }
 
     if (ts_to_read < 0) {
-      logf(LOG_WARN, "[ProfReader] Invalid ts_to_read: %d", ts_to_read);
+      logv(__LOG_ARGS__, LOG_WARN, "[ProfReader] Invalid ts_to_read: %d",
+           ts_to_read);
       // ABORT("Invalid ts_to_read.");
       return 0;
     }
@@ -126,13 +127,14 @@ class BinProfileReader : public ProfileReader {
     ASSERT_NREAD(nitems, nblocks);
 
     if (ts_to_read != ts_read) {
-      logf(LOG_WARN, "Expected: %d, Read: %d", ts_to_read, ts_read);
+      logv(__LOG_ARGS__, LOG_WARN, "Expected: %d, Read: %d", ts_to_read,
+           ts_read);
     }
 
-    logf(LOG_DBG2, "[ProfReader] Times (cur): %s",
+    logv(__LOG_ARGS__, LOG_DBG2, "[ProfReader] Times (cur): %s",
          SerializeVector(times_cur, 10).c_str());
     AddVec2Vec(times, times_cur);
-    logf(LOG_DBG2, "[ProfReader] Times (tot): %s",
+    logv(__LOG_ARGS__, LOG_DBG2, "[ProfReader] Times (tot): %s",
          SerializeVector(times, 10).c_str());
 
     nlines_read = nblocks;
@@ -143,7 +145,7 @@ class BinProfileReader : public ProfileReader {
     if (eof_) return -1;
     ReadHeader();
 
-    logf(LOG_WARN, "Not implemented.");
+    logv(__LOG_ARGS__, LOG_WARN, "Not implemented.");
 
     // int ts_read;
     // int nblocks;
@@ -171,7 +173,8 @@ class BinProfileReader : public ProfileReader {
     fd_ = fopen(csv_path_.c_str(), "r");
 
     if (fd_ == nullptr) {
-      logf(LOG_ERRO, "[ProfReader] Unable to open: %s", csv_path_.c_str());
+      logv(__LOG_ARGS__, LOG_ERRO, "[ProfReader] Unable to open: %s",
+           csv_path_.c_str());
       ABORT("Unable to open specified BIN.");
     }
 
@@ -179,7 +182,8 @@ class BinProfileReader : public ProfileReader {
 
     int nread = fread(&nts_, sizeof(int), 1, fd_);
     if (nread != 1) {
-      logf(LOG_ERRO, "[ProfReader] Unable to read nts: %s", csv_path_.c_str());
+      logv(__LOG_ARGS__, LOG_ERRO, "[ProfReader] Unable to read nts: %s",
+           csv_path_.c_str());
       ABORT("Unable to read nts.");
     }
   }
