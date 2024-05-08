@@ -12,10 +12,7 @@
 #include <Profile/TauPlugin.h>
 #include <Profile/TauSampling.h>
 #include <Profile/TauTrace.h>
-#include <iostream>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string>
 
 int stop_tracing = 0;
 
@@ -46,7 +43,7 @@ int Tau_plugin_event_function_entry(
     Tau_plugin_event_function_entry_data_t* data) {
   if (stop_tracing) return 0;
 
-  if (!strncmp(data->timer_group, "TAU_USER", 8) == 0) return 0;
+  if (strncmp(data->timer_group, "TAU_USER", 8) != 0) return 0;
 
   tracer->MarkBegin(data->timer_name, data->timestamp);
 
@@ -62,7 +59,7 @@ int Tau_plugin_event_function_exit(
     Tau_plugin_event_function_exit_data_t* data) {
   if (stop_tracing) return 0;
 
-  if (!strncmp(data->timer_group, "TAU_USER", 8) == 0) return 0;
+  if (strncmp(data->timer_group, "TAU_USER", 8) != 0) return 0;
   tracer->MarkEnd(data->timer_name, data->timestamp);
 
   if (tracer->MyRank() == 0) {
