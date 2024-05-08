@@ -10,7 +10,7 @@
 #include <vector>
 
 class RankMap;
-std::unique_ptr<RankMap> RANK_MAP;
+extern std::unique_ptr<RankMap> RANK_MAP;
 
 struct Triplet {
   int x;

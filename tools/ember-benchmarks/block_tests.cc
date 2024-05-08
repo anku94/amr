@@ -2,6 +2,8 @@
 #include <gtest/gtest.h>
 #include "block_common.h"
 
+std::unique_ptr<RankMap> RANK_MAP;
+
 class BlockTests : public ::testing::Test {
  protected:
   void SetUp() override {
