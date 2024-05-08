@@ -45,7 +45,7 @@ class PolicyRow : public TableRow {
           FormatProp(avg_cost / 1e6, "s"),
           FormatProp(max_cost / 1e6, "s"),
           FormatProp(loc_score * 100, "%"),
-          FormatProp(exec_time_us / 1e6, "%")
+          FormatProp(exec_time_us / 1e6, "s")
           }) {}
   // clang-format on
 

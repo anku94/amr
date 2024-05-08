@@ -5,6 +5,9 @@
 
 const char* policy_file = nullptr;
 
+double rtmax_total = 0;
+double rtavg_total = 0;
+
 void RunPolicy(const char* policy_name, std::vector<double> const& costlist,
                int nranks) {
   std::vector<int> ranklist;
@@ -22,21 +25,31 @@ void RunPolicy(const char* policy_name, std::vector<double> const& costlist,
 
   logv(__LOG_ARGS__, LOG_INFO, "Policy %12s. Avg: %12.0lf, Max: %12.0lf",
        policy_name, rtavg, rtmax);
+
+  rtavg_total += rtavg;
+  rtmax_total += rtmax;
 }
 
 void Run(const char* policy_file) {
   pdlfs::Env* env = pdlfs::Env::Default();
   CSVReader reader(policy_file, env);
 
-  int nlines = 1;
+  int nlines = 100;
+  int ntoskip = 0;
+  reader.SkipLines(ntoskip);
+
   for (int i = 0; i < nlines; i++) {
-    logv(__LOG_ARGS__, LOG_INFO, "-----------\nLine %d", i);
+    logv(__LOG_ARGS__, LOG_INFO, "-----------\nLine %d", i + ntoskip);
 
     auto vec = reader.ReadOnce();
     reader.PreviewVector(vec, 10);
 
     RunPolicy("lpt", vec, 512);
-    RunPolicy("hybrid70", vec, 512);
+    RunPolicy("cdp", vec, 512);
+    // RunPolicy("hybrid10", vec, 512);
+    // RunPolicy("hybrid30", vec, 512);
+    // RunPolicy("hybrid50", vec, 512);
+    // RunPolicy("hybrid70", vec, 512);
     RunPolicy("hybrid90", vec, 512);
   }
   // auto vec = reader.ReadOnce();
@@ -45,6 +58,9 @@ void Run(const char* policy_file) {
   // RunPolicy("lpt", vec, 512);
   // RunPolicy("hybrid70", vec, 512);
   // RunPolicy("hybrid90", vec, 512);
+  //
+  logv(__LOG_ARGS__, LOG_INFO, "Total Avg: %12.0lf, Max: %12.0lf", rtavg_total,
+       rtmax_total);
 }
 
 int main(int argc, char* argv[]) {

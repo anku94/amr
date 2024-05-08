@@ -27,10 +27,10 @@ struct BlockSimulatorOpts {
   const char* prof_time_combine_policy;
 };
 
-#define FAIL_IF(cond, msg) \
-  if (cond) {              \
-    logf(LOG_ERRO, msg);   \
-    ABORT(msg);            \
+#define FAIL_IF(cond, msg)             \
+  if (cond) {                          \
+    logv(__LOG_ARGS__, LOG_ERRO, msg); \
+    ABORT(msg);                        \
   }
 
 class BlockSimulator {

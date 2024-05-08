@@ -25,6 +25,13 @@ class CSVReader {
     }
   }
 
+  void SkipLines(int nlines) {
+    for (int i = 0; i < nlines; i++) {
+      ReadLine(fh_);
+      ReadLine(fh_);
+    }
+  }
+
   std::vector<double> ReadOnce() {
     auto line = ReadLine(fh_);
     auto vec_times = ParseCSVLine(line);

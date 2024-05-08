@@ -23,48 +23,84 @@ void BlockSimulator::SetupAllPolicies() {
                         TriggerPolicy::kEveryNTimesteps);
   SetupPolicy(policy_opts);
 
-  policy_opts.SetPolicy("LPT/Extrapolated-Cost", "lpt",
-                        CostEstimationPolicy::kExtrapolatedCost,
+  // policy_opts.SetPolicy("LPT/Extrapolated-Cost", "lpt",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("kContigImproved/Extrapolated-Cost", "cdp",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("CppIter/Extrapolated-Cost", "cdpi50",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+
+  // policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid10",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid20",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid30",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid50",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid70",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+
+  // policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid90",
+  //                       CostEstimationPolicy::kExtrapolatedCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+
+  // policy_opts.SetPolicy("Hybrid/Actual-Cost", "hybrid90",
+  //                       CostEstimationPolicy::kOracleCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+
+  policy_opts.SetPolicy("LPT/Actual-Cost", "lpt",
+                        CostEstimationPolicy::kOracleCost,
                         TriggerPolicy::kEveryNTimesteps);
   SetupPolicy(policy_opts);
 
-  policy_opts.SetPolicy("kContigImproved/Extrapolated-Cost", "cdp",
-                        CostEstimationPolicy::kExtrapolatedCost,
+  policy_opts.SetPolicy("CDP/Actual-Cost", "cdp",
+                        CostEstimationPolicy::kOracleCost,
                         TriggerPolicy::kEveryNTimesteps);
   SetupPolicy(policy_opts);
 
-  policy_opts.SetPolicy("CppIter/Extrapolated-Cost", "cdpi50",
-                        CostEstimationPolicy::kExtrapolatedCost,
-                        TriggerPolicy::kEveryNTimesteps);
-  SetupPolicy(policy_opts);
 
-  policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid10",
-                        CostEstimationPolicy::kExtrapolatedCost,
-                        TriggerPolicy::kEveryNTimesteps);
-  SetupPolicy(policy_opts);
+  // policy_opts.SetPolicy("Hybrid/Actual-Cost", "hybrid30",
+  //                       CostEstimationPolicy::kOracleCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("Hybrid/Actual-Cost", "hybrid50",
+  //                       CostEstimationPolicy::kOracleCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
+  //
+  // policy_opts.SetPolicy("Hybrid/Actual-Cost", "hybrid70",
+  //                       CostEstimationPolicy::kOracleCost,
+  //                       TriggerPolicy::kEveryNTimesteps);
+  // SetupPolicy(policy_opts);
 
-  policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid20",
-                        CostEstimationPolicy::kExtrapolatedCost,
-                        TriggerPolicy::kEveryNTimesteps);
-  SetupPolicy(policy_opts);
-
-  policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid30",
-                        CostEstimationPolicy::kExtrapolatedCost,
-                        TriggerPolicy::kEveryNTimesteps);
-  SetupPolicy(policy_opts);
-
-  policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid50",
-                        CostEstimationPolicy::kExtrapolatedCost,
-                        TriggerPolicy::kEveryNTimesteps);
-  SetupPolicy(policy_opts);
-
-  policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid70",
-                        CostEstimationPolicy::kExtrapolatedCost,
-                        TriggerPolicy::kEveryNTimesteps);
-  SetupPolicy(policy_opts);
-
-  policy_opts.SetPolicy("Hybrid/Extrapolated-Cost", "hybrid90",
-                        CostEstimationPolicy::kExtrapolatedCost,
+  policy_opts.SetPolicy("Hybrid/Actual-Cost", "hybrid90",
+                        CostEstimationPolicy::kOracleCost,
                         TriggerPolicy::kEveryNTimesteps);
   SetupPolicy(policy_opts);
 }
