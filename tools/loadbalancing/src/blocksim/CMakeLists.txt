@@ -1,5 +1,5 @@
 find_package(pdlfs-common REQUIRED)
-find_package(lb REQUIRED)
+# find_package(lb REQUIRED)
 
 set(blocksim_srcs
     block_alloc_sim.cc

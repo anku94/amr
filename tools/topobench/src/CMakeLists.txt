@@ -11,9 +11,10 @@ set(topo_srcs
 
 add_library(topo ${topo_srcs} ${common_srcs})
 target_include_directories(topo PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${common_include}")
+target_link_libraries(topo pdlfs-common)
 
 add_executable(topobench topobench.cc)
-target_link_libraries(topobench topo pdlfs-common)
+target_link_libraries(topobench topo)
 
 # Find required packages
 find_package (MPI MODULE REQUIRED)

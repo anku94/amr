@@ -1,7 +1,3 @@
 [submodule "tools/external/pdlfs-common"]
 	path = tools/external/pdlfs-common
 	url = https://github.com/pdlfs/pdlfs-common
-[submodule "tools/external/libfort"]
-	path = tools/external/libfort
-	url = https://github.com/seleznevae/libfort
-	branch = master
