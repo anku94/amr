@@ -13,7 +13,7 @@ set (lb_srcs
         ${CMAKE_SOURCE_DIR}/tools/common/common.cc
         )
 
-add_library(lb ${lb_srcs} ${common_srcs})
+add_library(lb SHARED ${lb_srcs} ${common_srcs})
 
 # if GUROBI is found, set macro GUROBI_ENABLED
 if (GUROBI_FOUND)
