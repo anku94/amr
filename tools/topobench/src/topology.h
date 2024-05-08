@@ -28,7 +28,7 @@ class Topology {
   Status GenerateMeshDynamic(Mesh& mesh, int ts) {
     Status s = Status::OK;
 
-    logf(LOG_INFO, "Generating Mesh: Dynamic. NOT IMPLEMENTED YET.");
+    logv(__LOG_ARGS__, LOG_INFO, "Generating Mesh: Dynamic. NOT IMPLEMENTED YET.");
 
     return s;
   }

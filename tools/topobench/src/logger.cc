@@ -66,11 +66,11 @@ void Logger::Aggregate() {
   if (Globals::my_rank == 0) {
     double sent_mbps = global_sent_mb / global_time;
     double rcvd_mbps = global_rcvd_mb / global_time;
-    logf(LOG_INFO, "Bytes Exchanged: %" PRIu64 " B/%" PRIu64 " MB", global_sent,
+    logv(__LOG_ARGS__, LOG_INFO, "Bytes Exchanged: %" PRIu64 " B/%" PRIu64 " MB", global_sent,
          global_rcvd);
-    logf(LOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB", global_sent_mb,
+    logv(__LOG_ARGS__, LOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB", global_sent_mb,
          global_rcvd_mb);
-    logf(LOG_INFO, "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps,
+    logv(__LOG_ARGS__, LOG_INFO, "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps,
          rcvd_mbps);
     LogToFile(sent_mbps, rcvd_mbps);
   }

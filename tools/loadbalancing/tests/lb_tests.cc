@@ -30,7 +30,7 @@ class LoadBalancingPoliciesTest : public ::testing::Test {
 };
 
 TEST_F(LoadBalancingPoliciesTest, SPTTest1) {
-  logf(LOG_INFO, "SPT Test 1");
+  logv(__LOG_ARGS__, LOG_INFO, "SPT Test 1");
 
   std::vector<double> costlist = {1, 2, 3, 4};
   std::vector<int> ranklist;
@@ -40,14 +40,14 @@ TEST_F(LoadBalancingPoliciesTest, SPTTest1) {
   AssignBlocksSPT(costlist, ranklist, nranks);
 
   std::string ranklist_str = SerializeVector(ranklist);
-  logf(LOG_INFO, "Assignment: %s", ranklist_str.c_str());
+  logv(__LOG_ARGS__, LOG_INFO, "Assignment: %s", ranklist_str.c_str());
 
   ASSERT_EQ(ranklist[0], ranklist[2]);
   ASSERT_EQ(ranklist[1], ranklist[3]);
 }
 
 TEST_F(LoadBalancingPoliciesTest, LPTTest1) {
-  logf(LOG_INFO, "LPT Test 1");
+  logv(__LOG_ARGS__, LOG_INFO, "LPT Test 1");
 
   std::vector<double> costlist = {1, 2, 3, 4};
   std::vector<int> ranklist;
@@ -57,14 +57,14 @@ TEST_F(LoadBalancingPoliciesTest, LPTTest1) {
   AssignBlocksLPT(costlist, ranklist, nranks);
 
   std::string ranklist_str = SerializeVector(ranklist);
-  logf(LOG_INFO, "Assignment: %s", ranklist_str.c_str());
+  logv(__LOG_ARGS__, LOG_INFO, "Assignment: %s", ranklist_str.c_str());
 
   ASSERT_EQ(ranklist[0], ranklist[3]);
   ASSERT_EQ(ranklist[1], ranklist[2]);
 }
 
 TEST_F(LoadBalancingPoliciesTest, LPTTest2) {
-  logf(LOG_INFO, "LPT Test 2");
+  logv(__LOG_ARGS__, LOG_INFO, "LPT Test 2");
 
   std::vector<double> costlist = {1, 2, 3, 4, 5, 6, 8, 11};
   std::vector<int> ranklist;
@@ -74,7 +74,7 @@ TEST_F(LoadBalancingPoliciesTest, LPTTest2) {
   AssignBlocksLPT(costlist, ranklist, nranks);
 
   std::string ranklist_str = SerializeVector(ranklist);
-  logf(LOG_INFO, "Assignment: %s", ranklist_str.c_str());
+  logv(__LOG_ARGS__, LOG_INFO, "Assignment: %s", ranklist_str.c_str());
 
   AssertEqual(ranklist, {1, 2, 0, 1, 2, 2, 1, 0});
 }

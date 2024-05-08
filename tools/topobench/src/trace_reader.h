@@ -41,15 +41,15 @@ class TraceReader {
   Status ParseLine(char* buf, size_t buf_sz);
 
   void PrintSummary() {
-    logf(LOG_INFO, "Timesteps upto ts %d discovered", max_ts_);
+    logv(__LOG_ARGS__, LOG_INFO, "Timesteps upto ts %d discovered", max_ts_);
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_snd_map_[t];
-      logf(LOG_DBUG, "[Send] TS %d: %zu msgs", t, msgs_ts.size());
+      logv(__LOG_ARGS__, LOG_DBUG, "[Send] TS %d: %zu msgs", t, msgs_ts.size());
     }
 
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_rcv_map_[t];
-      logf(LOG_DBUG, "[Recv] TS %d: %zu msgs", t, msgs_ts.size());
+      logv(__LOG_ARGS__, LOG_DBUG, "[Recv] TS %d: %zu msgs", t, msgs_ts.size());
     }
   }
 

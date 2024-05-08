@@ -16,11 +16,11 @@ Status TraceReader::Read() {
    */
   file_read_ = true;
 
-  logf(LOG_DBUG, "[TraceReader] Reading %s\n", trace_file_.c_str());
+  logv(__LOG_ARGS__, LOG_DBUG, "[TraceReader] Reading %s\n", trace_file_.c_str());
 
   FILE* f = fopen(trace_file_.c_str(), "r");
   if (f == nullptr) {
-    logf(LOG_ERRO, "[TraceReader] Read Failed: %s", strerror(errno));
+    logv(__LOG_ARGS__, LOG_ERRO, "[TraceReader] Read Failed: %s", strerror(errno));
     s = Status::Error;
     return s;
   }
@@ -66,7 +66,7 @@ Status TraceReader::ParseLine(char* buf, size_t buf_sz) {
     return s;
   }
 
-  logf(LOG_DBG2, "TS %d: Msg (%d -> %d), MsgSz: %dB", ts, rank, peer, msg_sz);
+  logv(__LOG_ARGS__, LOG_DBG2, "TS %d: Msg (%d -> %d), MsgSz: %dB", ts, rank, peer, msg_sz);
 
   if (s_or_r == 0) {
     ts_snd_map_[ts].push_back(std::pair<int, int>(peer, msg_sz));

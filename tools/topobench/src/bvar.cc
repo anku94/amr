@@ -16,7 +16,7 @@ void BoundaryVariable::SetupPersistentMPI() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
   for (auto nb : pmb->nbrvec_snd_) {
-    logf(LOG_DBG2, "[SEND] Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
+    logv(__LOG_ARGS__, LOG_DBG2, "[SEND] Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
          nb.peer_rank, nb.buf_id);
 
     if (bd_var_.req_send[nb.buf_id] != MPI_REQUEST_NULL)
@@ -29,7 +29,7 @@ void BoundaryVariable::SetupPersistentMPI() {
   }
 
   for (auto nb : pmb->nbrvec_rcv_) {
-    logf(LOG_DBG2, "[RECV] Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
+    logv(__LOG_ARGS__, LOG_DBG2, "[RECV] Us: %d, Neighbor: %d (bufid: %d)", Globals::my_rank,
          nb.peer_rank, nb.buf_id);
 
     if (bd_var_.req_recv[nb.buf_id] != MPI_REQUEST_NULL)
@@ -47,10 +47,10 @@ void BoundaryVariable::StartReceiving() {
   for (auto nb : pmb->nbrvec_rcv_) {
     int status = MPI_Start(&(bd_var_.req_recv[nb.buf_id]));
     if (status != MPI_SUCCESS) {
-      logf(LOG_ERRO, "MPI Start Failed");
+      logv(__LOG_ARGS__, LOG_ERRO, "MPI Start Failed");
     }
 
-    logf(LOG_DBG2, "Rank %d - Receive POSTED %d", Globals::my_rank, nb.buf_id);
+    logv(__LOG_ARGS__, LOG_DBG2, "Rank %d - Receive POSTED %d", Globals::my_rank, nb.buf_id);
   }
 }
 void BoundaryVariable::ClearBoundary() {
@@ -73,12 +73,12 @@ void BoundaryVariable::SendBoundaryBuffers() {
 
   for (auto nb : pmb->nbrvec_snd_) {
     // some fence
-    logf(LOG_DBG2, "Rank %d - Send START %d", Globals::my_rank, nb.buf_id);
+    logv(__LOG_ARGS__, LOG_DBG2, "Rank %d - Send START %d", Globals::my_rank, nb.buf_id);
 
     int status = MPI_Start(&(bd_var_.req_send[nb.buf_id]));
     MPI_CHECK(status, "MPI Start Failed");
 
-    logf(LOG_DBG2, "Rank %d - Send POSTED %d", Globals::my_rank, nb.buf_id);
+    logv(__LOG_ARGS__, LOG_DBG2, "Rank %d - Send POSTED %d", Globals::my_rank, nb.buf_id);
   }
 }
 bool BoundaryVariable::ReceiveBoundaryBuffers() {

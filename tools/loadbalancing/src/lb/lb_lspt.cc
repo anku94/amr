@@ -45,7 +45,7 @@ void AssignBlocks(std::vector<double> const& costlist,
     Rank minLoadRank = rank_queue.top();
     rank_queue.pop();
 
-    logv(__LOG_ARGS__, LOG_DBG2,
+    logv(__LOG_ARGS__, LOG_DBG3,
          "[LPT] Block (%d, %.1f) assigned to rank (%d, %.1f)", idx,
          costlist[idx], minLoadRank.id, minLoadRank.load);
 

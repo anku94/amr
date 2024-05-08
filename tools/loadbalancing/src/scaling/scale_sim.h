@@ -37,10 +37,10 @@ class ScaleSim {
     std::vector<int> ranks(rp.nranks, 0);
 
     for (auto& r : suite) {
-      logf(LOG_INFO, "[RUN] %s", r.ToString().c_str());
+      logv(__LOG_ARGS__, LOG_INFO, "[RUN] %s", r.ToString().c_str());
     }
 
-    logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
 
     for (auto& r : suite) {
@@ -57,7 +57,7 @@ class ScaleSim {
       double time_avg = 0, time_max = 0;
       PolicyUtils::ComputePolicyCosts(r.nranks, costs, ranks, rank_times,
                                       time_avg, time_max);
-      logf(LOG_INFO,
+      logv(__LOG_ARGS__, LOG_INFO,
            "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
            r.policy_name.c_str(), time_avg, time_max);
 
@@ -73,7 +73,7 @@ class ScaleSim {
   }
 
   void Run() {
-    logf(LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
 
     std::vector<RunProfile> run_profiles;
@@ -84,7 +84,7 @@ class ScaleSim {
     int nruns = suite.size();
 
     for (auto& r : run_profiles) {
-      logf(LOG_INFO,
+      logv(__LOG_ARGS__, LOG_INFO,
            "[Running profile] nranks_: %d, nblocks: %d, iters: %d, nruns: %d",
            r.nranks, r.nblocks, Constants::kScaleSimIters, nruns);
 
@@ -106,7 +106,7 @@ class ScaleSim {
     std::string table_out = options_.output_dir + "/scalesim.log.csv";
     std::stringstream table_stream;
     table_.emitTable(table_stream, n);
-    logf(LOG_INFO, "Table: \n%s", table_stream.str().c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Table: \n%s", table_stream.str().c_str());
 
     Utils::WriteToFile(options_.env, table_out, table_.toCSV());
   }

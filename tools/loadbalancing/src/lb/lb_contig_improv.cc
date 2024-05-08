@@ -69,6 +69,8 @@ int AssignBlocksDP(std::vector<double> const& costlist,
   int nalloc_b = nblocks % nranks;
   int nalloc_a = nranks - nalloc_b;
 
+  logv(__LOG_ARGS__, LOG_DBG2, "nalloc_a: %d, nalloc_b: %d", nalloc_a, nalloc_b);
+
   for (int i = 1; i < nblocks; i++) {
     cum_costlist[i] += cum_costlist[i - 1];
   }
@@ -112,11 +114,12 @@ int AssignBlocksDP(std::vector<double> const& costlist,
 
       if (dp_cost != kBigDouble) {
         dp[i][j] = dp_cost;
+        // logv(__LOG_ARGS__, LOG_DBG3, "DP[%d][%d]: %.2lf", i, j, dp[i][j]);
       }
     }
   }
 
-  logv(__LOG_ARGS__, LOG_DBG2, "DP Cost: %.2lf", dp[nalloc_a][nalloc_b]);
+  // logv(__LOG_ARGS__, LOG_DBG2, "DP Cost: %.2lf", dp[nalloc_a][nalloc_b]);
 
   int i = nalloc_a;
   int j = nalloc_b;

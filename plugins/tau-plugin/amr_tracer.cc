@@ -61,7 +61,7 @@ void AMRTracer::ProcessTriggerMsg(void* data) {
       ProcessTriggerMsgLogSend(msg->data);
       break;
     default:
-      logf(LOG_ERRO, "Unknown trigger msg type!");
+      logv(__LOG_ARGS__, LOG_ERRO, "Unknown trigger msg type!");
       break;
   }
 
@@ -74,8 +74,8 @@ void AMRTracer::ProcessTriggerMsgBlockAssignment(void* data) {
   // std::string clstr = JoinVec(*(msg->costlist));
   // std::string rlstr = JoinVec(*(msg->ranklist));
 
-  // logf(LOG_DBG2, "[Rank %d: CL] %s\n", rank_, clstr.c_str());
-  // logf(LOG_DBG2, "[Rank %d: RL] %s\n", rank_, rlstr.c_str());
+  // logv(__LOG_ARGS__, LOG_DBG2, "[Rank %d: CL] %s\n", rank_, clstr.c_str());
+  // logv(__LOG_ARGS__, LOG_DBG2, "[Rank %d: RL] %s\n", rank_, rlstr.c_str());
 
   // statelog_->LogKV(timestep_, "CL", clstr.c_str());
   // statelog_->LogKV(timestep_, "RL", rlstr.c_str());

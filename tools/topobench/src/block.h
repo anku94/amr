@@ -15,7 +15,7 @@
 
 #define MPI_CHECK(status, msg) \
   if (status != MPI_SUCCESS) { \
-    logf(LOG_ERRO, msg);       \
+    logv(__LOG_ARGS__, LOG_ERRO, msg);       \
   }
 
 struct NeighborBlock {
@@ -67,15 +67,15 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
                 std::to_string(nbr.peer_rank) + ",";
     }
 
-    logf(LOG_DBUG, "Rank %d, Block ID %d, Neighbors: %s", Globals::my_rank,
+    logv(__LOG_ARGS__, LOG_DBUG, "Rank %d, Block ID %d, Neighbors: %s", Globals::my_rank,
          block_id_, nbrstr.c_str());
   }
 
   Status AllocateBoundaryVariables() {
-    logf(LOG_DBUG, "Allocating boundary variables");
+    logv(__LOG_ARGS__, LOG_DBUG, "Allocating boundary variables");
     pbval_ = std::make_unique<BoundaryVariable>(shared_from_this());
     pbval_->SetupPersistentMPI();
-    logf(LOG_DBUG, "Allocating boundary variables - DONE!");
+    logv(__LOG_ARGS__, LOG_DBUG, "Allocating boundary variables - DONE!");
     return Status::OK;
   }
 
@@ -133,27 +133,27 @@ class Mesh {
   Status DoCommunicationRound() {
     logger_.LogBegin();
 
-    logf(LOG_DBUG, "Start Receiving...");
+    logv(__LOG_ARGS__, LOG_DBUG, "Start Receiving...");
     for (const auto& b : blocks_) {
       b->StartReceiving();
     }
 
-    logf(LOG_DBUG, "Sending Boundary Buffers...");
+    logv(__LOG_ARGS__, LOG_DBUG, "Sending Boundary Buffers...");
     for (const auto& b : blocks_) {
       b->SendBoundaryBuffers();
     }
 
-    logf(LOG_DBUG, "Receiving Boundary Buffers...");
+    logv(__LOG_ARGS__, LOG_DBUG, "Receiving Boundary Buffers...");
     for (const auto& b : blocks_) {
       b->ReceiveBoundaryBuffers();
     }
 
-    logf(LOG_DBUG, "Receiving Remaining Boundary Buffers...");
+    logv(__LOG_ARGS__, LOG_DBUG, "Receiving Remaining Boundary Buffers...");
     for (const auto& b : blocks_) {
       b->ReceiveBoundaryBuffersWithWait();
     }
 
-    logf(LOG_DBUG, "Clearing Boundaries...");
+    logv(__LOG_ARGS__, LOG_DBUG, "Clearing Boundaries...");
     for (auto b : blocks_) {
       b->ClearBoundary();
     }

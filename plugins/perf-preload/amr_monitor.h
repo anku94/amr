@@ -97,7 +97,7 @@ class AMRMonitor {
   }
 
   void LogKey(MetricMap& map, const char* key, uint64_t val) {
-    fprintf(stderr, "Rank %d: key %s, val: %" PRIu64 "\n", rank_, key, val);
+    Verbose(__LOG_ARGS__, 1, "Rank %d: key %s, val: %" PRIu64 "\n", rank_, key, val);
     // must use iterators because Metric class has const variables,
     // and therefore can not be assigned to and all
     auto it = map.find(key);

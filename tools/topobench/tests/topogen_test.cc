@@ -36,7 +36,7 @@ TEST(Topogen_Test, NormalGenerator) {
 
   double prop_1sd = w1sd * 1.0 / reps;
 
-  logf(LOG_INFO, "Normal Generator Test: +-1std: %d/%d", w1sd, reps);
+  logv(__LOG_ARGS__, LOG_INFO, "Normal Generator Test: +-1std: %d/%d", w1sd, reps);
 
   ASSERT_TRUE(prop_1sd > 0.6 and prop_1sd < 0.8);
 }

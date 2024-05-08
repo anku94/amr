@@ -27,7 +27,7 @@ void GraphGenerator::GenerateDynamic(int nnodes, int avg_deg) {
 bool Graph::SanityCheck() {
 #define FAIL_IF(x, msg)   \
   if (x) {                \
-    logf(LOG_WARN, msg);  \
+    logv(__LOG_ARGS__, LOG_WARN, msg);  \
     check_passed = false; \
     goto check_completed; \
   }
@@ -52,7 +52,7 @@ bool Graph::SanityCheck() {
 #undef FAIL_IF
 check_completed:
   if (check_passed) {
-    logf(LOG_DBUG, "Graph sanity check passed!");
+    logv(__LOG_ARGS__, LOG_DBUG, "Graph sanity check passed!");
   }
 
   return check_passed;
@@ -60,7 +60,7 @@ check_completed:
 
 bool Graph::AddEdge(int u, int v) {
   if (graph_[u][v] == true or graph_[v][u] == true) {
-    logf(LOG_DBUG, "%d and %d are already connected", u, v);
+    logv(__LOG_ARGS__, LOG_DBUG, "%d and %d are already connected", u, v);
     return false;
   }
 
@@ -95,17 +95,17 @@ bool LeastConnectedGraph::AddEdge() {
   }
 
   if (v.second == -1) {
-    logf(LOG_ERRO, "No viable node found!!");
+    logv(__LOG_ARGS__, LOG_ERRO, "No viable node found!!");
     return false;
   }
 
-  logf(LOG_DBG2, "Least connected nodes: %d and %d (edgecnt: %d and %d)",
+  logv(__LOG_ARGS__, LOG_DBG2, "Least connected nodes: %d and %d (edgecnt: %d and %d)",
        u.second, v.second, u.first, v.first);
 
   bool add_ret = Graph::AddEdge(u.second, v.second);
 
   if (!add_ret) {
-    logf(LOG_DBUG, "Edge add failed! Graph must be full.");
+    logv(__LOG_ARGS__, LOG_DBUG, "Edge add failed! Graph must be full.");
   }
 
   // Bump u and v's connectivity
@@ -136,9 +136,9 @@ void LeastConnectedGraph::PrintConnectivityStats() const {
   float nedge_var = e_x2 - e_x * e_x;
   float nedge_std = std::pow(nedge_var, 0.5);
 
-  logf(LOG_INFO, "Nodes: %d, Edges: %d (Max: %d, %%Full: %.2f%%)", nnodes_,
+  logv(__LOG_ARGS__, LOG_INFO, "Nodes: %d, Edges: %d (Max: %d, %%Full: %.2f%%)", nnodes_,
        sum_x, nedges_compl, sum_x * 100.0 / nedges_compl);
 
-  logf(LOG_INFO, "Edge Count, Max/Max: %d/%d (Mean += std: %.1f += %.1f)",
+  logv(__LOG_ARGS__, LOG_INFO, "Edge Count, Max/Max: %d/%d (Mean += std: %.1f += %.1f)",
        min_x, max_x, sum_x * 1.0 / nnodes_, nedge_std);
 }

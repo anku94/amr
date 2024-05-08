@@ -56,7 +56,7 @@ class PolicyTest : public ::testing::Test {
 
 TEST_F(PolicyTest, ContiguousTest1) {
 #include "lb_test1.h"
-  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  logv(__LOG_ARGS__, LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -68,7 +68,7 @@ TEST_F(PolicyTest, ContiguousTest1) {
 
 TEST_F(PolicyTest, LPTTest1) {
 #include "lb_test1.h"
-  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  logv(__LOG_ARGS__, LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -96,7 +96,7 @@ TEST_F(PolicyTest, ContigImprovedTest1) {
 
 TEST_F(PolicyTest, ContigImprovedTest2) {
 #include "lb_test1.h"
-  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  logv(__LOG_ARGS__, LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -108,7 +108,7 @@ TEST_F(PolicyTest, ContigImprovedTest2) {
 
 TEST_F(PolicyTest, ContigImprovedTest3) {
 #include "lb_test2.h"
-  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  logv(__LOG_ARGS__, LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -120,7 +120,7 @@ TEST_F(PolicyTest, ContigImprovedTest3) {
 
 TEST_F(PolicyTest, IterTest) {
 #include "lb_test3.h"
-  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  logv(__LOG_ARGS__, LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -134,13 +134,13 @@ TEST_F(PolicyTest, IterTest) {
 
   double avg_cost, max_cost;
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost);
-  logf(LOG_DBUG, "IterativeSolver. Avg Cost: %.0lf, Max Cost: %.0lf\n",
+  logv(__LOG_ARGS__, LOG_DBUG, "IterativeSolver. Avg Cost: %.0lf, Max Cost: %.0lf\n",
        avg_cost, max_cost);
 }
 
 TEST_F(PolicyTest, IterTest2) {
 #include "lb_test4.h"
-  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  logv(__LOG_ARGS__, LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -151,7 +151,7 @@ TEST_F(PolicyTest, IterTest2) {
 
   double avg_cost, max_cost_lpt, max_cost_cpp, max_cost_iter;
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_lpt);
-  logf(LOG_INFO, "LPT. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
+  logv(__LOG_ARGS__, LOG_INFO, "LPT. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
        max_cost_lpt);
 
   rv = AssignBlocksContigImproved(costlist, ranklist, nranks);
@@ -159,7 +159,7 @@ TEST_F(PolicyTest, IterTest2) {
   EXPECT_TRUE(AssertAllRanksAssigned(ranklist, nranks));
 
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_cpp);
-  logf(LOG_INFO, "Contig++. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
+  logv(__LOG_ARGS__, LOG_INFO, "Contig++. Avg Cost: %.0lf, Max Cost: %.0lf\n", avg_cost,
        max_cost_cpp);
 
   auto solver = Solver();
@@ -167,8 +167,8 @@ TEST_F(PolicyTest, IterTest2) {
   solver.AssignBlocks(costlist, ranklist, nranks, max_cost_lpt, iters);
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_iter);
 
-  logf(LOG_INFO, "IterativeSolver finished. Took %d iters.", iters);
-  logf(LOG_INFO,
+  logv(__LOG_ARGS__, LOG_INFO, "IterativeSolver finished. Took %d iters.", iters);
+  logv(__LOG_ARGS__, LOG_INFO,
        "Initial Cost: %.0lf, Target Cost: %.0lf.\n"
        "\t- Avg Cost: %.0lf, Max Cost: %.0lf",
        max_cost_cpp, max_cost_lpt, avg_cost, max_cost_iter);
@@ -176,7 +176,7 @@ TEST_F(PolicyTest, IterTest2) {
 
 TEST_F(PolicyTest, IterTest3) {
 #include "lb_test4.h"
-  logf(LOG_INFO, "Costlist Size: %zu\n", costlist.size());
+  logv(__LOG_ARGS__, LOG_INFO, "Costlist Size: %zu\n", costlist.size());
   int nranks = 512;
   std::vector<int> ranklist(costlist.size(), -1);
 
@@ -190,7 +190,7 @@ TEST_F(PolicyTest, IterTest3) {
 
   double avg_cost, max_cost;
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost);
-  logf(LOG_DBUG, "IterativeSolver. Avg Cost: %.0lf, Max Cost: %.0lf\n",
+  logv(__LOG_ARGS__, LOG_DBUG, "IterativeSolver. Avg Cost: %.0lf, Max Cost: %.0lf\n",
        avg_cost, max_cost);
 }
 }  // namespace amr

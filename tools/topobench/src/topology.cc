@@ -47,7 +47,7 @@ Status Topology::GenerateMeshRing(Mesh& mesh, int ts) const {
 Status Topology::GenerateMeshAllToAll(Mesh& mesh, int ts) const {
   if (opts_.blocks_per_rank <= Globals::nranks and
       (opts_.blocks_per_rank % Globals::nranks == 0)) {
-    logf(LOG_ERRO, "Invalid arguments");
+    logv(__LOG_ARGS__, LOG_ERRO, "Invalid arguments");
     ABORT("Invalid arguments");
   }
 
@@ -69,7 +69,7 @@ Status Topology::GenerateMeshAllToAll(Mesh& mesh, int ts) const {
       int bid_i_off = bid_i + off;
       int nrl_bid_off = nrl_bid + off;
       int nrr_bid_off = nrr_bid + off;
-      logf(LOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off, nrl_bid_off,
+      logv(__LOG_ARGS__, LOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off, nrl_bid_off,
            nrr_bid_off);
 
       auto mb = std::make_shared<MeshBlock>(bid_i_off);
@@ -84,7 +84,7 @@ Status Topology::GenerateMeshAllToAll(Mesh& mesh, int ts) const {
 Status Topology::GenerateMeshFromTrace(Mesh& mesh, int ts) {
   Status s = Status::OK;
 
-  logf(LOG_INFO, "Generating Mesh: From Trace");
+  logv(__LOG_ARGS__, LOG_INFO, "Generating Mesh: From Trace");
 
   s = reader_.Read();
 
@@ -92,7 +92,7 @@ Status Topology::GenerateMeshFromTrace(Mesh& mesh, int ts) {
   std::vector<RankSizePair> msgs_rcv = reader_.GetMsgsRcvd(ts);
 
   if (msgs_snd.size() != msgs_rcv.size()) {
-    logf(LOG_ERRO, "msg_send count is not the same as msg_rcv count");
+    logv(__LOG_ARGS__, LOG_ERRO, "msg_send count is not the same as msg_rcv count");
     return Status::Error;
   }
 

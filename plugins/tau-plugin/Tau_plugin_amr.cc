@@ -48,7 +48,7 @@ int Tau_plugin_event_function_entry(
   tracer->MarkBegin(data->timer_name, data->timestamp);
 
   if (tracer->MyRank() == 0) {
-    logf(LOG_DBUG, "FUNC ENTER %d: %s %s", tracer->MyRank(),
+    logv(__LOG_ARGS__, LOG_DBUG, "FUNC ENTER %d: %s %s", tracer->MyRank(),
             data->timer_name, data->timer_group);
   }
 
@@ -63,7 +63,7 @@ int Tau_plugin_event_function_exit(
   tracer->MarkEnd(data->timer_name, data->timestamp);
 
   if (tracer->MyRank() == 0) {
-    logf(LOG_DBUG, "FUNC EXIT %d: %s %s", tracer->MyRank(), data->timer_name,
+    logv(__LOG_ARGS__, LOG_DBUG, "FUNC EXIT %d: %s %s", tracer->MyRank(), data->timer_name,
             data->timer_group);
   }
 
