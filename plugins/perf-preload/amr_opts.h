@@ -24,7 +24,7 @@ class AMROptUtils {
     }                                            \
   }
 
-    AMR_OPT(print_topk, "AMRMON_PRINT_TOPK", 20);
+    AMR_OPT(print_topk, "AMRMON_PRINT_TOPK", 40);
     AMR_OPT(p2p_enable_matrix_reduce, "AMRMON_P2P_ENABLE_REDUCE", 1);
     AMR_OPT(p2p_enable_matrix_put, "AMRMON_P2P_ENABLE_PUT", 1);
 

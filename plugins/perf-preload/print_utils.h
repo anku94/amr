@@ -108,7 +108,7 @@ class MetricPrintUtils {
 
     int bufsz = 256;
     char buf[bufsz];
-    snprintf(buf, bufsz, "%.1lf %s", size_d, units.c_str());
+    snprintf(buf, bufsz, "%.2lf %s", size_d, units.c_str());
 
     return std::string(buf);
   }
@@ -132,7 +132,7 @@ class MetricPrintUtils {
 
     int bufsz = 256;
     char buf[bufsz];
-    snprintf(buf, bufsz, "%.0lf %s", size_d, units.c_str());
+    snprintf(buf, bufsz, "%.2lf %s", size_d, units.c_str());
 
     return std::string(buf);
   }
