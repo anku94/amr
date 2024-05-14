@@ -57,8 +57,8 @@ amr_prepare_deck() {
 #
 # args: arg_pre, arg_amr_bin, arg_amr_deck, arg_nodes, arg_cpubind
 # uses: amru_prefix, cores, ppn, logfile, exp_logfile, arg_amr_monp2p_reduce,
-#       arg_amr_monp2p_put, arg_amr_mon_topk, arg_amr_glog_minloglevel,
-#       arg_amr_glog_v
+#       arg_amr_monp2p_put, arg_amr_mon_rankwise, arg_amr_mon_output_dir,
+#       arg_amr_mon_topk, arg_amr_glog_minloglevel, arg_amr_glog_v
 #
 # creates:
 # side effects: changes current directory to $exp_jobdir
@@ -101,6 +101,8 @@ amr_do_run() {
     "AMRMON_PRINT_TOPK" "${arg_amr_mon_topk}"
     "AMRMON_P2P_ENABLE_REDUCE" "${arg_amr_monp2p_reduce}"
     "AMRMON_P2P_ENABLE_PUT" "${arg_amr_monp2p_put}"
+    "AMRMON_RANKWISE_ENABLED" "${arg_amr_mon_rankwise}"
+    "AMRMON_OUTPUT_DIR" "${arg_amr_mon_output_dir}"
     "GLOG_minloglevel" "${arg_amr_glog_minloglevel}"
     "GLOG_v" "${arg_amr_glog_v}"
   )

@@ -13,9 +13,11 @@ arg_amr_bin="advection-example"
 arg_amr_deck="advection.example.16"
 arg_amr_glog_minloglevel="0"
 arg_amr_glog_v="0"
-arg_amr_monp2p_reduce="0"
+arg_amr_monp2p_reduce="1"
 arg_amr_monp2p_put="0"
-arg_amr_mon_topk="10"
+arg_amr_mon_topk="20"
+arg_amr_mon_rankwise="1"
+arg_amr_mon_output_dir="/tmp"
 arg_cpubind="none"
 arg_host_suffix=""
 arg_lb_policy="baseline"
@@ -45,6 +47,9 @@ timein=`date`
 
 ### lustre (or some other shared area for output) ###
 get_jobdir
+
+### set output directory for amrmon ###
+arg_amr_mon_output_dir="${jobdir}"
 
 ### machine list ###
 gen_hosts
