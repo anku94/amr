@@ -2,6 +2,7 @@
 
 #include "metric.h"
 #include "p2p.h"
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
 #include <sstream>

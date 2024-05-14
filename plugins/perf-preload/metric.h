@@ -8,6 +8,7 @@
 #include <cmath>
 #include <functional>
 #include <mpi.h>
+#include <sstream>
 
 #define SAFE_MPI_REDUCE(...)                     \
   {                                              \
@@ -16,7 +17,6 @@
       Error(__LOG_ARGS__, "PMPI_Reduce failed"); \
     }                                            \
   }
-
 
 namespace amr {
 class MetricCollectionUtils;
@@ -57,7 +57,30 @@ class Metric {
     sum_sq_val_ += val * val;
   }
 
-  static std::vector<MetricStats> CollectMetrics(StringVec& metrics,
+ public:
+  std::string GetMetricRankwise(int nranks) const {
+    std::ostringstream oss;
+
+    oss << name_ << "\n";
+
+    auto metric = GetMetricRankwiseInner(nranks);
+    if (rank_ != 0) {
+      return "";
+    }
+
+    for (int i = 0; i < nranks; ++i) {
+      if (i == 0) {
+        oss << metric[i];
+      } else {
+        oss << "," << metric[i];
+      }
+    }
+
+    oss << "\n";
+    return oss.str();
+  }
+
+  static std::vector<MetricStats> CollectMetrics(StringVec const& metrics,
                                                  MetricMap& times) {
     size_t nmetrics = metrics.size();
 
@@ -123,7 +146,7 @@ class Metric {
   double sum_sq_val_;
 
   template <typename T>
-  static std::vector<T> GetVecByKey(StringVec& metrics, MetricMap& times,
+  static std::vector<T> GetVecByKey(StringVec const& metrics, MetricMap& times,
                                     std::function<T(Metric&)> f) {
     std::vector<T> vec;
     for (auto& m : metrics) {
@@ -133,6 +156,20 @@ class Metric {
       }
     }
     return vec;
+  }
+
+  std::vector<double> GetMetricRankwiseInner(int nranks) const {
+    std::vector<double> metric(nranks, 0);
+    metric[rank_] = sum_val_;
+
+    if (rank_ == 0) {
+      SAFE_MPI_REDUCE(MPI_IN_PLACE, metric.data(), nranks, MPI_DOUBLE, MPI_SUM,
+                      0, MPI_COMM_WORLD);
+    } else {
+      SAFE_MPI_REDUCE(metric.data(), nullptr, nranks, MPI_DOUBLE, MPI_SUM,
+                      0, MPI_COMM_WORLD);
+    }
+    return metric;
   }
 };
 }  // namespace amr

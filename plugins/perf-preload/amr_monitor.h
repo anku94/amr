@@ -14,8 +14,6 @@
 
 namespace amr {
 
-#define TOP_K_COUNT 20
-
 class AMRMonitor {
  public:
   AMRMonitor(pdlfs::Env* env, int rank, int nranks)
@@ -29,7 +27,7 @@ class AMRMonitor {
   }
 
   ~AMRMonitor() {
-    LogMetrics(TOP_K_COUNT);
+    LogMetrics();
     Verbose(__LOG_ARGS__, 1, "AMRMonitor destroyed on rank %d", rank_);
   }
 
@@ -97,7 +95,8 @@ class AMRMonitor {
   }
 
   void LogKey(MetricMap& map, const char* key, uint64_t val) {
-    Verbose(__LOG_ARGS__, 1, "Rank %d: key %s, val: %" PRIu64 "\n", rank_, key, val);
+    Verbose(__LOG_ARGS__, 1, "Rank %d: key %s, val: %" PRIu64 "\n", rank_, key,
+            val);
     // must use iterators because Metric class has const variables,
     // and therefore can not be assigned to and all
     auto it = map.find(key);
@@ -109,31 +108,6 @@ class AMRMonitor {
     it->second.LogInstance(val);
   }
 
-  std::string CollectMetrics(int top_k) {
-    std::string metrics;
-
-    // First, need to get metrics that are logged on all ranks
-    // as collectives will block on ranks that are missing a given metric
-    StringVec common_metrics = GetCommonMetrics();
-    auto all_metric_stats = Metric::CollectMetrics(
-        common_metrics, times_us_);
-
-    metrics += MetricPrintUtils::SortAndSerialize(all_metric_stats, top_k);
-    metrics += "\n\n";
-
-    metrics += p2p_comm_.CollectAndAnalyze(rank_, nranks_);
-
-    return metrics;
-  }
-
-  void LogMetrics(int top_k) {
-    auto metrics = CollectMetrics(amr_opts.print_topk);
-
-    if (rank_ == 0) {
-      fprintf(stderr, "%s", metrics.c_str());
-    }
-  }
-
   StringVec GetCommonMetrics() {
     StringVec local_metrics;
     for (auto& kv : times_us_) {
@@ -142,6 +116,55 @@ class AMRMonitor {
 
     auto intersection_computer = CommonComputer(local_metrics, rank_, nranks_);
     return intersection_computer.Compute();
+  }
+
+  std::string CollectMetricSummary(StringVec const& metric_vec, int top_k) {
+    std::string all_metric_summary;
+
+    // First, need to get metrics that are logged on all ranks
+    // as collectives will block on ranks that are missing a given metric
+    auto all_metric_stats = Metric::CollectMetrics(metric_vec, times_us_);
+
+    all_metric_summary += MetricPrintUtils::SortAndSerialize(all_metric_stats, top_k);
+    all_metric_summary += "\n\n";
+
+    all_metric_summary += p2p_comm_.CollectAndAnalyze(rank_, nranks_);
+
+    return all_metric_summary;
+  }
+
+  void LogMetrics() {
+    StringVec common_metrics = GetCommonMetrics();
+    auto metric_summary = CollectMetricSummary(common_metrics, amr_opts.print_topk);
+
+    if (rank_ == 0) {
+      fprintf(stderr, "%s", metric_summary.c_str());
+    }
+
+    if (amr_opts.rankwise_enabled) {
+      CollectMetricsDetailed(common_metrics);
+    }
+  }
+
+  void CollectMetricsDetailed(StringVec const& metrics) {
+    pdlfs::WritableFile* f;
+    pdlfs::Status s =
+        env_->NewWritableFile(amr_opts.rankwise_fpath.c_str(), &f);
+    if (!s.ok()) {
+      Warn(__LOG_ARGS__, "Failed to open file %s",
+           amr_opts.rankwise_fpath.c_str());
+      return;
+    }
+
+    for (auto& m : metrics) {
+      auto it = times_us_.find(m);
+      if (it != times_us_.end()) {
+        auto metric_str = it->second.GetMetricRankwise(nranks_);
+        if (rank_ == 0) {
+          f->Append(pdlfs::Slice(metric_str.c_str(), metric_str.size()));
+        }
+      }
+    }
   }
 
  private:
