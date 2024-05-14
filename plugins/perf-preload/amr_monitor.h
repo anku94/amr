@@ -35,6 +35,7 @@ class AMRMonitor {
     auto now = env_->NowMicros();
     return now;
   }
+
   void LogMPICollective(const char* type, uint64_t time_us) {
     LogKey(times_us_, type, time_us);
   }
