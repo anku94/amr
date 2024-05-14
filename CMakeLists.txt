@@ -26,6 +26,7 @@ set (DEBUG_SANITIZER Off CACHE STRING "Sanitizer for debug builds")
 set_property (CACHE DEBUG_SANITIZER PROPERTY STRINGS
   "Off" "Address" "Thread")
 set (CMAKE_PREFIX_PATH "" CACHE STRING "External dependencies path")
+set (BUILD_TAU_PLUGIN Off CACHE BOOL "Build TAU plugin")
 
 set (as_flags "-fsanitize=address -O1 -fno-omit-frame-pointer")
 set (ts_flags "-fsanitize=thread  -O1 -fno-omit-frame-pointer")
