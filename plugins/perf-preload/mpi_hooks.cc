@@ -21,7 +21,7 @@ int MPI_Init(int* argc, char*** argv) {
 
   amr::monitor = std::make_unique<amr::AMRMonitor>(pdlfs::Env::Default(), rank, nranks);
 
-  Info(__LOG_ARGS__, "AMRMonitor initialized on rank %d", rank);
+  amr::Info(__LOG_ARGS__, "AMRMonitor initialized on rank %d", rank);
 
   return rv;
 }
