@@ -2,6 +2,7 @@
 
 #include "metric.h"
 #include "p2p.h"
+
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
@@ -44,50 +45,71 @@ class MetricPrintUtils {
     char buf[bufsz];
 
     const char* header_fmt = "%20s %12s %12s %12s\n";
-    snprintf(buf, bufsz, header_fmt, "Matrix", "Local", "Global", "PctLocal");
+    snprintf(buf, bufsz, header_fmt, "CommStat", "Sum", "Mean", "Std");
 
     std::string dashes(20 + 12 * 3 + 3, '-');
     return std::string(buf) + dashes + "\n";
   }
 
-  static std::string CountMatrixAnalysisToStr(const char* matrix_name,
-                                              const MatrixAnalysis& ma) {
+  static std::string CountMatrixStatToStr(const char* stat_name,
+                                          const MatrixStat& ms) {
+    double mean, std;
+    ms.GetMeanAndStd(mean, std);
+
+    auto count_str = CountToStr(ms.GetSum());
+    auto mean_str = CountToStr(mean);
+    auto std_str = CountToStr(std);
+
     int bufsz = 256;
     char buf[bufsz];
+    const char* matrix_fmt = "%20s %12s %12s %12s\n";
 
-    const char* matrix_fmt = "%20s %12s %12s %6.2lf%%\n";
-    auto local_str = CountToStr(ma.sum_local);
-    auto global_str = CountToStr(ma.sum_global);
-    double pct_local = 0;
-
-    if (ma.sum_global > 0) {
-      pct_local = 100.0 * ma.sum_local / ma.sum_global;
-    }
-
-    snprintf(buf, bufsz, matrix_fmt, matrix_name, local_str.c_str(),
-             global_str.c_str(), pct_local);
+    snprintf(buf, bufsz, matrix_fmt, stat_name, count_str.c_str(),
+             mean_str.c_str(), std_str.c_str());
 
     return std::string(buf);
   }
 
-  static std::string SizeMatrixAnalysisToStr(const char* matrix_name,
-                                             const MatrixAnalysis& ma) {
+  static std::string SizeMatrixStatToStr(const char* stat_name,
+                                         const MatrixStat& ms) {
+    double mean, std;
+    ms.GetMeanAndStd(mean, std);
+
     int bufsz = 256;
     char buf[bufsz];
-
-    const char* matrix_fmt = "%20s %12s %12s %6.2lf%%\n";
-    auto local_str = BytesToStr(ma.sum_local);
-    auto global_str = BytesToStr(ma.sum_global);
-    double pct_local = 0;
-
-    if (ma.sum_global > 0) {
-      pct_local = 100.0 * ma.sum_local / ma.sum_global;
-    }
-
-    snprintf(buf, bufsz, matrix_fmt, matrix_name, local_str.c_str(),
-             global_str.c_str(), pct_local);
+    const char* matrix_fmt = "%20s %12s %12s %12s\n";
+    snprintf(buf, bufsz, matrix_fmt, stat_name, BytesToStr(ms.GetSum()).c_str(),
+             BytesToStr(mean).c_str(), BytesToStr(std).c_str());
 
     return std::string(buf);
+  }
+
+  static std::string IntMatrixStatToStr(const char* stat_name,
+                                        const MatrixStat& ms) {
+    double mean, std;
+    ms.GetMeanAndStd(mean, std);
+
+    int bufsz = 256;
+    char buf[bufsz];
+    const char* matrix_fmt = "%20s %12d %12d %12d\n";
+    snprintf(buf, bufsz, matrix_fmt, stat_name, ms.GetSum(), (int)mean,
+             (int)std);
+
+    return std::string(buf);
+  }
+
+  static std::string CountMatrixAnalysisToStr(const char* matrix_name,
+                                              const MatrixAnalysis& ma) {
+    return CountMatrixStatToStr("P2P_Count_Local", ma.local) +
+           CountMatrixStatToStr("P2P_Count_Global", ma.global);
+  }
+
+  static std::string SizeMatrixAnalysisToStr(const char* matrix_name,
+                                             const MatrixAnalysis& ma) {
+    return SizeMatrixStatToStr("P2P_Size_Local", ma.local) +
+           SizeMatrixStatToStr("P2P_Size_Global", ma.global) +
+           IntMatrixStatToStr("P2P_Degree_Local", ma.npeers_local) +
+           IntMatrixStatToStr("P2P_Degree_Global", ma.npeers_global);
   }
 
   static std::string BytesToStr(uint64_t size) {
@@ -122,18 +144,18 @@ class MetricPrintUtils {
       units = "";
     } else if (size_d < 1000 * 1000) {
       size_d /= 1000;
-      units = "K";
+      units = " K";
     } else if (size_d < 1000 * 1000 * 1000) {
       size_d /= 1000 * 1000;
-      units = "M";
+      units = " M";
     } else {
       size_d /= 1000 * 1000 * 1000;
-      units = "B";
+      units = " B";
     }
 
     int bufsz = 256;
     char buf[bufsz];
-    snprintf(buf, bufsz, "%.2lf %s", size_d, units.c_str());
+    snprintf(buf, bufsz, "%.2lf%s", size_d, units.c_str());
 
     return std::string(buf);
   }

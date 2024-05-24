@@ -54,23 +54,40 @@ int ComputeRanksPerNode(int nranks) {
 }
 
 MatrixAnalysis AnalyzeMatrix(uint64_t* matrix, int nranks, int npernode) {
+  MatrixAnalysis ma;
+
   uint64_t sum_local = 0;
   uint64_t sum_global = 0;
+
+  std::vector<int> nneighbors(nranks, 0);
+  std::vector<int> nneighbors_local(nranks, 0);
 
   for (int i = 0; i < nranks; i++) {
     for (int j = 0; j < nranks; j++) {
       auto val = matrix[i * nranks + j];
 
+      if (val == 0) {
+        continue;
+      }
+
       // Assuming sequential allocation of ranks to nodes
       int inode = i / npernode;
       int jnode = j / npernode;
 
-      sum_local += (inode == jnode) ? val : 0;
-      sum_global += val;
+      ma.local.Add((inode == jnode) ? val : 0);
+      ma.global.Add(val);
+
+      nneighbors[i]++;
+      nneighbors_local[i] += (inode == jnode) ? 1 : 0;
     }
   }
 
-  return {sum_local, sum_global};
+  for (int i = 0; i < nranks; i++) {
+    ma.npeers_local.Add(nneighbors_local[i]);
+    ma.npeers_global.Add(nneighbors[i]);
+  }
+
+  return ma;
 }
 
 void MPIMemDeleter(void* ptr) {
@@ -114,7 +131,7 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithReduce(
   std::vector<uint64_t> matrix_global(nranks_ * nranks_, 0);
   auto matrix_local = MapToMatrix(m, my_rank_, nranks_, is_send);
 
-  MatrixAnalysis analysis{0, 0};
+  MatrixAnalysis analysis;
 
   SAFE_MPI(PMPI_Reduce(matrix_local.data(), matrix_global.data(),
                        matrix_local.size(), MPI_UINT64_T, MPI_SUM, 0,
@@ -134,7 +151,7 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithReduce(
 MatrixAnalysis P2PCommCollector::CollectMatrixWithPuts(
     const std::unordered_map<int, uint64_t>& map, bool is_send) {
   int rv = 0;
-  MatrixAnalysis analysis{0, 0};
+  MatrixAnalysis analysis;
   uint64_t* matrix_global = nullptr;
 
   MPI_Win win;

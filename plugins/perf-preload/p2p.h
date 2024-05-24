@@ -1,13 +1,55 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
 
 namespace amr {
+struct MatrixStat {
+ private:
+  uint64_t sum;
+  uint64_t sum_sq;
+  uint64_t count; // used to compute mean/std
+
+ public:
+  MatrixStat() : sum(0), sum_sq(0), count(0) {}
+
+  void Add(uint64_t val) {
+    if (val == 0) {
+      return;
+    }
+
+    sum += val;
+    sum_sq += val * val;
+    count++;
+  }
+
+  uint64_t GetSum() const { return sum; }
+
+  uint64_t GetCount() const { return count; }
+
+  void GetMeanAndStd(double& mean, double& std) const {
+    if (count == 0) {
+      mean = 0;
+      std = 0;
+      return;
+    }
+
+    mean = static_cast<double>(sum) / count;
+    double mean_sq = static_cast<double>(sum_sq) / count;
+    std = sqrt(mean_sq - mean * mean);
+  }
+};
+
+// Two kinds of MatrixAnalysis:
+// 1. For the message sizes
+// 2. For the message counts
 struct MatrixAnalysis {
-  uint64_t sum_local;
-  uint64_t sum_global;
+  MatrixStat local;          // local message size or count
+  MatrixStat global;         // global message size or count
+  MatrixStat npeers_local;   // degree of the communication graph
+  MatrixStat npeers_global;  // degree of the communication graph
 };
 
 class P2PCommCollector {
