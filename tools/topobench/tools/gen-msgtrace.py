@@ -83,7 +83,7 @@ def gen_msgs_ring(nranks, nts, trace_path):
 def run():
     nranks = 4
     nts = 2
-    trace_path = "msgs"
+    trace_path = "/l0/msgs"
     gen_msgs_ring(nranks, nts, trace_path)
 
 

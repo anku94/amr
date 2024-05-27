@@ -14,25 +14,27 @@ using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
 class MeshBlock;
 
 class Logger {
- public:
+public:
   Logger()
-      : start_ms_{},
-        end_ms_{},
-        total_sent_(0),
-        total_rcvd_(0),
-        total_time_(0) {}
+      : start_ms_{}, end_ms_{}, total_sent_(0), total_rcvd_(0), total_time_(0),
+        num_obs_(0) {}
 
   void LogBegin() { start_ms_ = Now(); }
 
-  void LogEnd() { end_ms_ = Now(); }
+  void LogEnd() {
+    end_ms_ = Now();
+    num_obs_++;
+  }
 
-  void LogData(std::vector<std::shared_ptr<MeshBlock>>& blocks_);
+  void LogData(std::vector<std::shared_ptr<MeshBlock>> &blocks_);
 
   void Aggregate();
 
   void LogToFile(double send_bw, double recv_bw);
 
- private:
+private:
+  int GetNumRanks() const;
+
   uint64_t Now() const {
     // https://stackoverflow.com/questions/31255486/c-how-do-i-convert-a-stdchronotime-point-to-long-and-back
     return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -45,4 +47,5 @@ class Logger {
   uint64_t total_sent_;
   uint64_t total_rcvd_;
   double total_time_;
+  uint64_t num_obs_;
 };

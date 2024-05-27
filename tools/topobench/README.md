@@ -30,3 +30,29 @@ Source Code
    communication.
 2. `topology.h` contains the two topology generation methods. It is not necessary to understand them - it can be assumed
    that they generate meshblocks with the necessary topologies.
+
+## Update 20240527
+
+# topobench
+
+A P2P MPI communication benchmarking tool for different topologies. The goal is to simulate boundary communication in mesh-based physics codes.
+
+Reconstructs topology from a trace of messages. The trace can either be synthetically generated or captured from anactual dataset.
+
+Process:
+
+1. A mesh is generated using `topology.GenerateMesh`
+2. `MPI_Request` structures are initialized, communication happens for a given number of rounds, and stats are printed.
+
+## Mesh Construction
+
+Four mechanisms
+
+1. Ring (each rank communicates with `r+1` and `r-1`).
+2. All-to-all (each rank communicates with all other ranks).
+3. Dynamic (??)
+4. FromTrace
+
+## Trace Generation Utils
+
+`gen-msgtrace.py`
