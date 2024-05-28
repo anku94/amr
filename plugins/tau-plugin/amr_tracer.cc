@@ -49,6 +49,7 @@ void AMRTracer::ProcessTriggerMsg(void* data) {
       ProcessTriggerMsgTargetCost(msg->data);
       break;
     case MsgType::kTsEnd:
+      msglog_->Flush(ts_sim_);
       ts_sim_++;
       break;
     case MsgType::kBlockEvent:
@@ -94,12 +95,13 @@ void AMRTracer::ProcessTriggerMsgBlockEvent(void* data) {
 
 void AMRTracer::ProcessTriggerMsgCommChannel(void* data) {
   MsgCommChannel* msg = (MsgCommChannel*)data;
-  // msglog_->LogChannel(msg->ptr, msg->block_id, msg->block_rank, msg->nbr_id, msg->nbr_rank,
-                     // msg->tag, msg->is_flux);
+  msglog_->LogChannel(msg->ptr, msg->block_id, msg->block_rank, msg->nbr_id,
+                      msg->nbr_rank, msg->tag, msg->is_flux);
 }
 
 void AMRTracer::ProcessTriggerMsgLogSend(void* data) {
   MsgSend* msg = (MsgSend*)data;
-  // msglog_->LogSend(msg->ptr, msg->buf_sz, msg->recv_rank, msg->tag, msg->timestamp);
+  msglog_->LogSend(msg->ptr, msg->buf_sz, msg->recv_rank, msg->tag,
+                   msg->timestamp);
 }
 }  // namespace tau

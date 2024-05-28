@@ -48,12 +48,14 @@ struct DriverOpts {
   int topology_nbrcnt; // XXX: Is this used anywhere?
   size_t blocks_per_rank;
   size_t size_per_msg;
-  int comm_rounds;
+  int comm_rounds; // number of rounds to repeat each topo for
+  int comm_nts; // only used for trace mode
   const char *trace_root;
 
   DriverOpts()
       : topology(NeighborTopology::Ring), topology_nbrcnt(-1),
         blocks_per_rank(SIZE_MAX), size_per_msg(SIZE_MAX), comm_rounds(-1),
+        comm_nts(-1),
         trace_root("") {}
 
 #define NA_IF(x)                                                               \
@@ -80,6 +82,7 @@ private:
   bool IsValidFromTrace() {
     NA_IF(topology != NeighborTopology::FromTrace);
     INVALID_IF(trace_root == nullptr);
+    INVALID_IF(comm_nts == -1);
     IS_VALID();
   }
 

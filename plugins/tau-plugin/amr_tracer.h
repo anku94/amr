@@ -50,7 +50,7 @@ class AMRTracer {
 
     const char* dir = GetLogDir();
 
-    // msglog_ = std::make_unique<MsgLog>(dir, rank_);
+    msglog_ = std::make_unique<MsgLog>(dir, rank_);
     // funclog_ = std::make_unique<FuncLog>(dir, rank_);
     // statelog_ = std::make_unique<StateLog>(dir, rank_);
     proflog_ = std::make_unique<ProfLog>(dir, rank_);
@@ -216,8 +216,9 @@ class AMRTracer {
   }
 
   void MarkMakeOutputsEnd() {
+    // XXX: not used, kTsEnd is handled directly in ProcessTriggerMsg
     // msglog_->Flush(timestep_);
-    timestep_++;
+    // timestep_++;
   }
 
   void ProcessTriggerMsgBlockAssignment(void* data);
@@ -238,7 +239,7 @@ class AMRTracer {
   int num_redistrib_;
   AMRPhase phase_;
 
-  // std::unique_ptr<MsgLog> msglog_;
+  std::unique_ptr<MsgLog> msglog_;
   // std::unique_ptr<FuncLog> funclog_;
   // std::unique_ptr<StateLog> statelog_;
   std::unique_ptr<ProfLog> proflog_;
