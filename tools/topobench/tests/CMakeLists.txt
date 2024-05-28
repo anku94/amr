@@ -1,15 +1,13 @@
 find_package(GTest CONFIG)
 
 if (NOT GTest_FOUND)
+  message(WARNING "GTest not found, tests will not be built")
   return()
 endif()
 
 set(amr-tests topogen_test.cc)
 
-foreach (lcv ${amr-tests})
-    get_filename_component(id ${lcv} NAME_WE)
-    message(STATUS "Building test: ${id}")
-    add_executable(${id} EXCLUDE_FROM_ALL ${lcv})
-    target_link_libraries(${id} GTest::gtest_main topo)
-    gtest_discover_tests(${id})
-endforeach()
+add_executable(topogen_test topogen_test.cc)
+add_test(NAME topogen_test COMMAND topogen_test)
+target_link_libraries(topogen_test GTest::gtest_main topo)
+gtest_discover_tests(topogen_test)

@@ -5,6 +5,7 @@
 #include "trace_reader.h"
 
 #include <common.h>
+#include <glog/logging.h>
 #include <graph.h>
 #include <gtest/gtest.h>
 
@@ -42,8 +43,15 @@ TEST(Topogen_Test, NormalGenerator) {
 }
 
 TEST(Topogen_Test, TraceReader) {
-  TraceReader tr("/Users/schwifty/Repos/amr/tools/topobench/tools/msgs/msgs.0.csv");
-  tr.Read();
+  // TraceReader tr("/Users/schwifty/Repos/amr/tools/topobench/tools/msgs/msgs.0.csv");
+  // tr.Read();
+
+  // const char* trace_file = "/mnt/ltio/parthenon-topo/test10/trace/msgs.aggr.joined.csv";
+  const char* trace_file = "/mnt/ltio/parthenon-topo/blastw512.msgtrace.01.baseline/trace/msgs.aggr.joined.csv";
+  TraceReader tr(trace_file);
+  tr.Read(0);
+
+  logv(__LOG_ARGS__, LOG_INFO, "Num Timesteps: %d", tr.GetNumTimesteps());
 }
 
 TEST(Topogen_Test, LeastConnectedGraph) {
@@ -57,4 +65,10 @@ TEST(Topogen_Test, LeastConnectedGraph) {
   ASSERT_FALSE(g.AddEdge());
   g.PrintConnectivityStats();
   GraphGenerator::GenerateDynamic(512, 30);
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    google::InitGoogleLogging(argv[0]);
+    return RUN_ALL_TESTS();
 }

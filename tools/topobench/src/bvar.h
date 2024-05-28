@@ -9,7 +9,7 @@
 #include <memory>
 #include <mpi.h>
 
-#define NMAX_NEIGHBORS 56
+#define NMAX_NEIGHBORS 2048
 #define MAX_MSGSZ 16384
 
 class MeshBlock;

@@ -1,9 +1,9 @@
 //
 // Created by Ankush J on 4/12/22.
-//
 
 #pragma once
 
+#include "common.h"
 #include <chrono>
 #include <memory>
 #include <vector>
@@ -23,6 +23,10 @@ public:
 
   void LogEnd() {
     end_ms_ = Now();
+
+    logv(__LOG_ARGS__, LOG_DBUG, "Total time: %.2f us",
+         (end_ms_ - start_ms_) * 1e3);
+
     num_obs_++;
   }
 
@@ -30,7 +34,9 @@ public:
 
   void Aggregate();
 
-  void LogToFile(double send_bw, double recv_bw);
+  void LogRun(double send_mb, double send_mbps, double recv_mb,
+              double recv_mbps, double time_avg_ms, double time_min_ms,
+              double time_max_ms, int num_obs);
 
 private:
   int GetNumRanks() const;

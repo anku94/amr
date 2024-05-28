@@ -1,6 +1,7 @@
 #include "driver.h"
 
 #include <getopt.h>
+#include <glog/logging.h>
 #include <iostream>
 
 void PrintHelp() {
@@ -29,10 +30,13 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
   extern char* optarg;
   extern int optind;
 
-  while ((c = getopt(argc, argv, "b:p:r:s:t:")) != -1) {
+  while ((c = getopt(argc, argv, "b:n:p:r:s:t:")) != -1) {
     switch (c) {
       case 'b':
         opts.blocks_per_rank = std::stoi(optarg);
+        break;
+      case 'n':
+        opts.comm_nts = std::stoi(optarg);
         break;
       case 'p':
         opts.trace_root = optarg;
@@ -59,6 +63,8 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
 }
 
 int main(int argc, char* argv[]) {
+  google::InitGoogleLogging(argv[0]);
+
   DriverOpts opts;
   parse_opts(argc, argv, opts);
   Driver driver(opts);

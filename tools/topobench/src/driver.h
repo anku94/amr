@@ -6,15 +6,16 @@
 
 #include "block.h"
 #include "common.h"
+#include "mesh.h"
 #include "topology.h"
 
 #include <mpi.h>
 
 class Driver {
- public:
-  Driver(const DriverOpts& opts) : opts_(opts) { Globals::driver_opts = opts; }
+public:
+  Driver(const DriverOpts &opts) : opts_(opts) { Globals::driver_opts = opts; }
 
-  Status Setup(int argc, char* argv[]) {
+  Status Setup(int argc, char *argv[]) {
     if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
       return Status::MPIError;
     }
@@ -46,9 +47,21 @@ class Driver {
     }
   }
 
-  void Run(int argc, char* argv[]) {
+  void Run(int argc, char *argv[]) {
     Setup(argc, argv);
     PrintOpts();
+
+    if (opts_.topology == NeighborTopology::FromTrace) {
+      RunInternalTrace();
+    } else {
+      RunInternalNonTrace();
+    }
+
+    mesh_.PrintStats();
+    Destroy();
+  }
+
+  void RunInternalNonTrace() {
     Topology topology(opts_);
 
     int nrounds = topology.GetNumTimesteps();
@@ -60,12 +73,38 @@ class Driver {
       mesh_.DoCommunicationRound();
       mesh_.Reset();
     }
-
-    mesh_.PrintStats();
-    Destroy();
   }
 
- private:
+  void RunInternalTrace() {
+    Topology topology(opts_);
+
+    // int nrounds = topology.GetNumTimesteps();
+    const int nts = topology.GetNumTimesteps();
+    const int nts_to_run = std::min(nts, opts_.comm_nts);
+    const int nrounds = opts_.comm_rounds;
+
+    printf("num_ts found: %d, num_ts to run: %d, rounds per ts: %d\n", nts, nts_to_run, nrounds);
+    printf("(will skip first ts)\n");
+
+    // first ts does init comm that is not reflective of other rounds
+    // we start from ts=1
+    for (int ts = 1; ts < nts_to_run; ts++) {
+      topology.GenerateMesh(opts_, mesh_, ts);
+      MPI_Barrier(MPI_COMM_WORLD);
+
+      mesh_.AllocateBoundaryVariables();
+      mesh_.PrintConfig();
+
+      for (int rnum = 0; rnum < nrounds; rnum++) {
+        mesh_.DoCommunicationRound();
+        MPI_Barrier(MPI_COMM_WORLD);
+      }
+
+      mesh_.Reset();
+    }
+  }
+
+private:
   Mesh mesh_;
   const DriverOpts opts_;
 };

@@ -5,19 +5,20 @@
 #pragma once
 
 #include "block.h"
+#include "mesh.h"
 #include "common.h"
-#include "graph.h"
 #include "trace_reader.h"
 
 class Topology {
  public:
-  Topology(const DriverOpts& opts) : opts_(opts), reader_(opts.trace_root, Globals::my_rank) {}
+  Topology(const DriverOpts& opts) : opts_(opts), reader_(opts.trace_root) {}
 
   Status GenerateMesh(const DriverOpts& opts, Mesh& mesh, int ts);
 
   int GetNumTimesteps() {
-    reader_.Read();
-    return std::max(reader_.GetNumTimesteps(), opts_.comm_rounds);
+    reader_.Read(Globals::my_rank);
+    // return std::max(reader_.GetNumTimesteps(), opts_.comm_rounds);
+    return reader_.GetNumTimesteps();
   }
 
  private:

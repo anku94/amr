@@ -12,33 +12,26 @@
 
 typedef std::pair<int, int> RankSizePair;
 
+struct CommNeighbor {
+  int block_id;
+  int peer_rank;
+  int msg_sz;
+};
+
 class TraceReader {
  public:
-  TraceReader(const char* trace_root, int rank)
-      : max_ts_(-1), file_read_(false) {
-    if (trace_root == nullptr or trace_root[0] == '\0') {
-      trace_file_ = "";
-      return;
-    }
+  TraceReader(const char* trace_file) : trace_file_(trace_file), max_ts_(-1), file_read_(false) {}
 
-    size_t buf_sz = trace_file_.size() + 64;
-    char buf[buf_sz];
-    snprintf(buf, buf_sz, "%s/msgs.%d.csv", trace_root, rank);
-    trace_file_ = buf;
-  }
-
-  TraceReader(const char* trace_file) : trace_file_(trace_file), max_ts_(0) {}
-
-  Status Read();
+  Status Read(int rank);
 
   int GetNumTimesteps() const { return max_ts_ + 1; }
 
-  std::vector<RankSizePair> GetMsgsSent(int ts) { return ts_snd_map_[ts]; }
+  std::vector<CommNeighbor> GetMsgsSent(int ts) { return ts_snd_map_[ts]; }
 
-  std::vector<RankSizePair> GetMsgsRcvd(int ts) { return ts_rcv_map_[ts]; }
+  std::vector<CommNeighbor> GetMsgsRcvd(int ts) { return ts_rcv_map_[ts]; }
 
  private:
-  Status ParseLine(char* buf, size_t buf_sz);
+  Status ParseLine(char* buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
     logv(__LOG_ARGS__, LOG_INFO, "Timesteps upto ts %d discovered", max_ts_);
@@ -54,8 +47,8 @@ class TraceReader {
   }
 
   std::string trace_file_;
-  std::map<int, std::vector<RankSizePair>> ts_snd_map_;
-  std::map<int, std::vector<RankSizePair>> ts_rcv_map_;
+  std::map<int, std::vector<CommNeighbor>> ts_snd_map_;
+  std::map<int, std::vector<CommNeighbor>> ts_rcv_map_;
   int max_ts_;
   bool file_read_;
 };

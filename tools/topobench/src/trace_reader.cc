@@ -4,11 +4,19 @@
 
 #include "trace_reader.h"
 
-Status TraceReader::Read() {
+Status TraceReader::Read(int rank) {
   Status s = Status::OK;
 
-  if (trace_file_ == "" or file_read_) {
-    return s;
+  logv(__LOG_ARGS__, LOG_INFO, "[TraceReader] Reading trace file: %s",
+       trace_file_.c_str());
+
+  if (trace_file_ == "") {
+    logv(__LOG_ARGS__, LOG_ERRO, "[TraceReader] No trace file provided");
+    return Status::Error;
+  }
+
+  if (file_read_) {
+    return Status::OK;
   }
 
   /* XXX: catch here is that Read can return FAIL the first time
@@ -16,11 +24,13 @@ Status TraceReader::Read() {
    */
   file_read_ = true;
 
-  logv(__LOG_ARGS__, LOG_DBUG, "[TraceReader] Reading %s\n", trace_file_.c_str());
+  logv(__LOG_ARGS__, LOG_DBUG, "[TraceReader] Reading %s\n",
+       trace_file_.c_str());
 
-  FILE* f = fopen(trace_file_.c_str(), "r");
+  FILE *f = fopen(trace_file_.c_str(), "r");
   if (f == nullptr) {
-    logv(__LOG_ARGS__, LOG_ERRO, "[TraceReader] Read Failed: %s", strerror(errno));
+    logv(__LOG_ARGS__, LOG_ERRO, "[TraceReader] Read Failed: %s",
+         strerror(errno));
     s = Status::Error;
     return s;
   }
@@ -30,11 +40,23 @@ Status TraceReader::Read() {
 
   /* scan header */
   int ret = fscanf(f, "%4095[^\n]\n", buf);
-  while (ret != EOF) {
+  while (!feof(f)) {
     ret = fscanf(f, "%4095[^\n]\n", buf);
-    s = ParseLine(buf, ret);
-    if (s != Status::OK) return s;
+    if (ret == EOF or ret == 0)
+      break;
+
+    s = ParseLine(buf, ret, rank);
+    if (s != Status::OK)
+      return s;
   }
+  // while (ret != EOF) {
+  //   ret = fscanf(f, "%4095[^\n]\n", buf);
+  //   if (ret == EOF)
+  //     break;
+  //   s = ParseLine(buf, ret, rank);
+  //   if (s != Status::OK)
+  //     return s;
+  // }
 
   fclose(f);
 
@@ -42,36 +64,31 @@ Status TraceReader::Read() {
   return Status::OK;
 }
 
-Status TraceReader::ParseLine(char* buf, size_t buf_sz) {
+Status TraceReader::ParseLine(char *buf, size_t buf_sz, const int rank) {
   Status s = Status::OK;
 
-  /* rank|peer|ts|phase_name|msg_id|sorr|msg_sz|timestamp */
-  int rank, peer, ts, msg_id, s_or_r, msg_sz;
-  char phase_name[128];
-  long long unsigned int timestamp;
+  logv(__LOG_ARGS__, LOG_DBG3, "Parsing: %s", buf);
 
-  const char* fmtstr =
-      "%d|%d|%d|%127[^|]|"
-      "%d|%d|%d|%llu";
+  /* ts,blk_id,blk_rank,nbr_id,nbr_rank,msgsz,isflx */
 
-  int ret = sscanf(buf, fmtstr, &rank, &peer, &ts, &phase_name, &msg_id,
-                   &s_or_r, &msg_sz, &timestamp);
+  const char *fmtstr = "%d,%d,%d,%d,%d,%d,%d";
 
-  if (ret != 8) {
+  int ts, send_rank, send_blk, recv_rank, recv_blk, msg_sz, is_flx;
+
+  int ret = sscanf(buf, fmtstr, &ts, &send_blk, &send_rank, &recv_blk,
+                   &recv_rank, &msg_sz, &is_flx);
+
+  if (ret != 7) {
     return Status::Error;
   }
 
-  /* XXX: parameterize phase_name maybe */
-  if (strncmp(phase_name, "BoundaryComm", 12)) {
-    return s;
-  }
+  logv(__LOG_ARGS__, LOG_DBG3, "TS %d: Msg (%d -> %d), MsgSz: %dB", ts,
+       send_rank, recv_rank, msg_sz);
 
-  logv(__LOG_ARGS__, LOG_DBG2, "TS %d: Msg (%d -> %d), MsgSz: %dB", ts, rank, peer, msg_sz);
-
-  if (s_or_r == 0) {
-    ts_snd_map_[ts].push_back(std::pair<int, int>(peer, msg_sz));
-  } else {
-    ts_rcv_map_[ts].push_back(std::pair<int, int>(peer, msg_sz));
+  if (send_rank == rank && !is_flx) {
+    ts_snd_map_[ts].push_back({recv_blk, recv_rank, msg_sz});
+  } else if (recv_rank == rank && !is_flx) {
+    ts_rcv_map_[ts].push_back({send_blk, send_rank, msg_sz});
   }
 
   max_ts_ = std::max(ts, max_ts_);

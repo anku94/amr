@@ -4,27 +4,27 @@
 
 #include "topology.h"
 
-Status Topology::GenerateMesh(const DriverOpts& opts, Mesh& mesh, int ts) {
+Status Topology::GenerateMesh(const DriverOpts &opts, Mesh &mesh, int ts) {
   // TODO: clear old mesh first
   switch (opts.topology) {
-    case NeighborTopology::Ring:
-      return GenerateMeshRing(mesh, ts);
-      break;
-    case NeighborTopology::AllToAll:
-      return GenerateMeshAllToAll(mesh, ts);
-      break;
-    case NeighborTopology::Dynamic:
-      return GenerateMeshDynamic(mesh, ts);
-      break;
-    case NeighborTopology::FromTrace:
-      return GenerateMeshFromTrace(mesh, ts);
-      break;
+  case NeighborTopology::Ring:
+    return GenerateMeshRing(mesh, ts);
+    break;
+  case NeighborTopology::AllToAll:
+    return GenerateMeshAllToAll(mesh, ts);
+    break;
+  case NeighborTopology::Dynamic:
+    return GenerateMeshDynamic(mesh, ts);
+    break;
+  case NeighborTopology::FromTrace:
+    return GenerateMeshFromTrace(mesh, ts);
+    break;
   }
 
   return Status::Error;
 }
 
-Status Topology::GenerateMeshRing(Mesh& mesh, int ts) const {
+Status Topology::GenerateMeshRing(Mesh &mesh, int ts) const {
   for (size_t i = 0; i < opts_.blocks_per_rank; i++) {
     int ring_delta = i * Globals::nranks;
     int bid_rel = Globals::my_rank;
@@ -44,7 +44,7 @@ Status Topology::GenerateMeshRing(Mesh& mesh, int ts) const {
   return Status::OK;
 }
 
-Status Topology::GenerateMeshAllToAll(Mesh& mesh, int ts) const {
+Status Topology::GenerateMeshAllToAll(Mesh &mesh, int ts) const {
   if (opts_.blocks_per_rank <= Globals::nranks and
       (opts_.blocks_per_rank % Globals::nranks == 0)) {
     logv(__LOG_ARGS__, LOG_ERRO, "Invalid arguments");
@@ -69,8 +69,8 @@ Status Topology::GenerateMeshAllToAll(Mesh& mesh, int ts) const {
       int bid_i_off = bid_i + off;
       int nrl_bid_off = nrl_bid + off;
       int nrr_bid_off = nrr_bid + off;
-      logv(__LOG_ARGS__, LOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off, nrl_bid_off,
-           nrr_bid_off);
+      logv(__LOG_ARGS__, LOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off,
+           nrl_bid_off, nrr_bid_off);
 
       auto mb = std::make_shared<MeshBlock>(bid_i_off);
       mb->AddNeighborSendRecv(nrl_bid_off, nrl, opts_.size_per_msg);
@@ -81,41 +81,63 @@ Status Topology::GenerateMeshAllToAll(Mesh& mesh, int ts) const {
   return Status::OK;
 }
 
-Status Topology::GenerateMeshFromTrace(Mesh& mesh, int ts) {
+Status Topology::GenerateMeshFromTrace(Mesh &mesh, int ts) {
   Status s = Status::OK;
 
   logv(__LOG_ARGS__, LOG_INFO, "Generating Mesh: From Trace");
 
-  s = reader_.Read();
+  s = reader_.Read(Globals::my_rank);
 
-  std::vector<RankSizePair> msgs_snd = reader_.GetMsgsSent(ts);
-  std::vector<RankSizePair> msgs_rcv = reader_.GetMsgsRcvd(ts);
+  // std::vector<RankSizePair> msgs_snd = reader_.GetMsgsSent(ts);
+  // std::vector<RankSizePair> msgs_rcv = reader_.GetMsgsRcvd(ts);
+
+  auto msgs_snd = reader_.GetMsgsSent(ts);
+  auto msgs_rcv = reader_.GetMsgsRcvd(ts);
 
   if (msgs_snd.size() != msgs_rcv.size()) {
-    logv(__LOG_ARGS__, LOG_ERRO, "msg_send count is not the same as msg_rcv count");
+    logv(__LOG_ARGS__, LOG_ERRO,
+         "msg_send count is not the same as msg_rcv count");
+    ABORT("msg_send count is not the same as msg_rcv count");
     return Status::Error;
   }
 
   int mbidx = 0;
   std::vector<std::shared_ptr<MeshBlock>> mb_vec;
+  auto mb = std::make_shared<MeshBlock>(0);
+
+  int nbr_idx = 0;
 
   for (auto it : msgs_snd) {
-    int peer = it.first;
-    int msgsz = it.second;
-
-    auto mb = std::make_shared<MeshBlock>(mbidx);
-    mb->AddNeighborSend(mbidx, peer, msgsz);
-    mb_vec.push_back(mb);
+    mb->AddNeighborSend(nbr_idx++, it.peer_rank, it.msg_sz);
   }
 
-  mbidx = 0;
   for (auto it : msgs_rcv) {
-    int peer = it.first;
-    int msgsz = it.second;
-
-    mb_vec[mbidx]->AddNeighborRecv(mbidx, peer, msgsz);
-    mesh.AddBlock(mb_vec[mbidx]);
+    mb->AddNeighborRecv(nbr_idx++, it.peer_rank, it.msg_sz);
   }
+
+  mesh.AddBlock(mb);
+
+  logv(__LOG_ARGS__, LOG_INFO,
+       "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d", Globals::my_rank,
+       nbr_idx);
+
+  // for (auto it : msgs_snd) {
+  //   int peer = it.first;
+  //   int msgsz = it.second;
+  //
+  //   auto mb = std::make_shared<MeshBlock>(mbidx);
+  //   mb->AddNeighborSend(mbidx, peer, msgsz);
+  //   mb_vec.push_back(mb);
+  // }
+  //
+  // mbidx = 0;
+  // for (auto it : msgs_rcv) {
+  //   int peer = it.first;
+  //   int msgsz = it.second;
+  //
+  //   mb_vec[mbidx]->AddNeighborRecv(mbidx, peer, msgsz);
+  //   mesh.AddBlock(mb_vec[mbidx]);
+  // }
 
   return s;
 }

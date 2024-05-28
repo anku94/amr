@@ -9,6 +9,10 @@
 #include <inttypes.h>
 #include <mpi.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 namespace {
 std::string GetMPIStr() {
   char version_str[MPI_MAX_LIBRARY_VERSION_STRING];
@@ -19,13 +23,17 @@ std::string GetMPIStr() {
   std::string token = s.substr(0, s.find(delim));
   return token;
 }
-const char *TopologyToStr() {
+
+const std::string TopologyToStrUtil() {
   switch (Globals::driver_opts.topology) {
   case NeighborTopology::Ring:
     return "RING";
     break;
   case NeighborTopology::AllToAll:
     return "ALLTOALL";
+    break;
+  case NeighborTopology::FromTrace:
+    return Globals::driver_opts.trace_root;
     break;
   default:
     break;
@@ -50,49 +58,77 @@ void Logger::LogData(std::vector<std::shared_ptr<MeshBlock>> &blocks_) {
 
 void Logger::Aggregate() {
   uint64_t global_sent, global_rcvd;
-  double global_time;
+
+  double global_time_avg, global_time_min, global_time_max;
 
   MPI_Reduce(&total_sent_, &global_sent, 1, MPI_UINT64_T, MPI_SUM, 0,
              MPI_COMM_WORLD);
   MPI_Reduce(&total_rcvd_, &global_rcvd, 1, MPI_UINT64_T, MPI_SUM, 0,
              MPI_COMM_WORLD);
-  MPI_Reduce(&total_time_, &global_time, 1, MPI_DOUBLE, MPI_SUM, 0,
+
+  MPI_Reduce(&total_time_, &global_time_avg, 1, MPI_DOUBLE, MPI_SUM, 0,
+             MPI_COMM_WORLD);
+  MPI_Reduce(&total_time_, &global_time_min, 1, MPI_DOUBLE, MPI_MIN, 0,
+             MPI_COMM_WORLD);
+  MPI_Reduce(&total_time_, &global_time_max, 1, MPI_DOUBLE, MPI_MAX, 0,
              MPI_COMM_WORLD);
 
+  if (Globals::my_rank != 0)
+    return;
+
   const int nranks = GetNumRanks();
-  double global_avg = global_time / nranks;
+  global_time_avg /= nranks;
 
   const uint64_t bytes_per_mb = 1ull << 30;
   double global_sent_mb = global_sent * 1.0 / bytes_per_mb;
   double global_rcvd_mb = global_rcvd * 1.0 / bytes_per_mb;
 
-  if (Globals::my_rank == 0) {
-    double sent_mbps = global_sent_mb / global_time;
-    double rcvd_mbps = global_rcvd_mb / global_time;
-    logv(__LOG_ARGS__, LOG_INFO,
-         "Bytes Exchanged: %" PRIu64 " B/%" PRIu64 " MB", global_sent,
-         global_rcvd);
-    logv(__LOG_ARGS__, LOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB",
-         global_sent_mb, global_rcvd_mb);
-    logv(__LOG_ARGS__, LOG_INFO,
-         "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps,
-         rcvd_mbps);
-    logv(__LOG_ARGS__, LOG_INFO,
-         "Total Time: %.2lf ms, Time/Round: %.2lf ms (%d rounds)",
-         global_time * 1e3, global_avg * 1e3, num_obs_);
-    LogToFile(sent_mbps, rcvd_mbps);
-  }
+  double sent_mbps = global_sent_mb / global_time_avg;
+  double rcvd_mbps = global_rcvd_mb / global_time_avg;
+  logv(__LOG_ARGS__, LOG_INFO, "Bytes Exchanged: %" PRIu64 " B/%" PRIu64 " B",
+       global_sent, global_rcvd);
+  logv(__LOG_ARGS__, LOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB",
+       global_sent_mb, global_rcvd_mb);
+  logv(__LOG_ARGS__, LOG_INFO,
+       "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps, rcvd_mbps);
+  logv(__LOG_ARGS__, LOG_INFO,
+       "Time Avg: %.2lf ms, Min: %.2lf ms, Max: %.2lf ms (%d rounds)",
+       global_time_avg * 1e3, global_time_min * 1e3, global_time_max * 1e3,
+       num_obs_);
+
+  LogRun(global_sent_mb, sent_mbps, global_rcvd_mb, rcvd_mbps,
+         global_time_avg * 1e3, global_time_min * 1e3, global_time_max * 1e3,
+         num_obs_);
 }
 
-void Logger::LogToFile(double send_bw, double recv_bw) {
+void Logger::LogRun(double send_mb, double send_mbps, double recv_mb, double recv_mbps,
+            double time_avg_ms, double time_min_ms, double time_max_ms,
+            int num_obs) {
+  struct stat statbuf;
+  if (stat("topolog.txt", &statbuf) != 0) {
+    FILE *f = fopen("topolog.txt", "w");
+    if (f == nullptr)
+      return;
+
+    fprintf(f,
+            "mpi_prov,send_mb,send_mbps,recv_mb,recv_mbps,"
+            "time_avg_ms,time_min_ms,time_max_ms,num_obs,topology\n");
+    fclose(f);
+  }
   FILE *f = fopen("topolog.txt", "a+");
   if (f == nullptr)
     return;
 
-  std::string mpi_str = ::GetMPIStr();
+  const std::string mpi_str = ::GetMPIStr();
+  const std::string topo_str = ::TopologyToStrUtil();
 
-  fprintf(f, "%s,%d,%.3f,%.3f,%s\n", mpi_str.c_str(), Globals::nranks, send_bw,
-          recv_bw, TopologyToStr());
+  fprintf(f,
+          "%s,%.6lf,%.6lf,%.6lf,%.6lf," // send-recv mb/mbps
+          "%.3lf,%.3lf,%.3lf,%d,"      // time avg-min-max, num_obs
+          "%s\n",                      // time avg-min-max
+          mpi_str.c_str(), send_mb, send_mbps, recv_mb, recv_mbps, 
+          time_avg_ms, time_min_ms, time_max_ms, num_obs, topo_str.c_str());
+
   fclose(f);
 
   return;

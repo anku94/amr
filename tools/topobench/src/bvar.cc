@@ -66,6 +66,11 @@ void BoundaryVariable::ClearBoundary() {
 
     bytes_sent_ += bd_var_.sendbufsz[nb.buf_id];
   }
+
+  for (auto nb : pmb->nbrvec_rcv_) {
+    bd_var_.flag[nb.buf_id] = BoundaryStatus::waiting;
+    bd_var_.sflag[nb.buf_id] = BoundaryStatus::waiting;
+  }
 }
 
 void BoundaryVariable::SendBoundaryBuffers() {
