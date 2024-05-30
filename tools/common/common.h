@@ -26,6 +26,17 @@ int logv(pdlfs::Logger *info_log, const char *file, int line, int level,
          const char *fmt, ...);
 int loge(const char *op, const char *path);
 
+#define EXPAND_ARGS(...) __VA_ARGS__
+
+#define logvat0_expand(info_log, file, line, level, fmt, ...)                  \
+  if (Globals::my_rank == 0) {                                                 \
+    logv(info_log, file, line, level, fmt, ##__VA_ARGS__);                     \
+  } else {                                                                     \
+    logv(info_log, file, line, level + 1, fmt, ##__VA_ARGS__);                 \
+  }
+
+#define logvat0(...) EXPAND_ARGS(logvat0_expand(__VA_ARGS__))
+
 /*
  * logging facilities and helpers
  */
@@ -49,14 +60,14 @@ struct DriverOpts {
   size_t blocks_per_rank;
   size_t size_per_msg;
   int comm_rounds; // number of rounds to repeat each topo for
-  int comm_nts; // only used for trace mode
+  int comm_nts;    // only used for trace mode
   const char *trace_root;
+  const char* bench_log;
 
   DriverOpts()
       : topology(NeighborTopology::Ring), topology_nbrcnt(-1),
         blocks_per_rank(SIZE_MAX), size_per_msg(SIZE_MAX), comm_rounds(-1),
-        comm_nts(-1),
-        trace_root("") {}
+        comm_nts(-1), trace_root("") {}
 
 #define NA_IF(x)                                                               \
   if (x)                                                                       \
@@ -76,6 +87,7 @@ private:
     INVALID_IF(blocks_per_rank == SIZE_MAX);
     INVALID_IF(size_per_msg == SIZE_MAX);
     INVALID_IF(comm_rounds == -1);
+    INVALID_IF(bench_log == nullptr);
     IS_VALID();
   }
 
@@ -83,6 +95,7 @@ private:
     NA_IF(topology != NeighborTopology::FromTrace);
     INVALID_IF(trace_root == nullptr);
     INVALID_IF(comm_nts == -1);
+    INVALID_IF(bench_log == nullptr);
     IS_VALID();
   }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "logging.h"
-#include "metric.h"
 #include "types.h"
 
 #include <mpi.h>
@@ -28,9 +27,8 @@ class CommonComputer {
       return StringVec();
     }
 
-    if (rank_ == 0) {
-      Verbose(__LOG_ARGS__, 1, "Number of items: %d", num_items);
-    }
+    logv(__LOG_ARGS__, LOG_DBUG, "[Rank %d] Number of items: %d", rank_,
+         num_items);
 
     StringVec common_strings;
     for (int i = 0; i < num_items; ++i) {
@@ -63,7 +61,7 @@ class CommonComputer {
 
     int rv = PMPI_Bcast(&num_items, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "MPI_Bcast failed");
+      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Bcast failed");
       return -1;
     }
 
@@ -76,16 +74,17 @@ class CommonComputer {
     memset(buf, 0, bufsz);
 
     if (key == nullptr and rank_ == 0) {
-      Error(__LOG_ARGS__, "Key is null.");
+      logv(__LOG_ARGS__, LOG_ERRO, "Key is null.");
       return "";
     }
 
     if (rank_ == 0) {
-      Verbose(__LOG_ARGS__, 1, "Checking for key: %s", key);
+      logv(__LOG_ARGS__, LOG_DBG2, "Checking for key: %s", key);
 
       size_t key_len = strlen(key);
       if (key_len >= bufsz) {
-        Error(__LOG_ARGS__, "Key too long: %s. Will be truncated.", key);
+        logv(__LOG_ARGS__, LOG_ERRO, "Key too long: %s. Will be truncated.",
+             key);
       }
 
       strncpy(buf, key, bufsz);
@@ -94,7 +93,7 @@ class CommonComputer {
 
     int rv = PMPI_Bcast(buf, bufsz, MPI_CHAR, 0, MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "MPI_Bcast failed");
+      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Bcast failed");
       return "";
     }
 
@@ -104,19 +103,19 @@ class CommonComputer {
     rv = PMPI_Allreduce(&exists_locally, &exists_globally, 1, MPI_INT, MPI_MIN,
                         MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      Error(__LOG_ARGS__, "MPI_Reduce failed");
+      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Reduce failed");
       return "";
     }
 
     if (exists_globally) {
       if (rank_ == 0) {
-        Verbose(__LOG_ARGS__, 1, "Key %s exists globally: %d", buf,
-                exists_globally);
+        logv(__LOG_ARGS__, LOG_DBG2, "Key %s exists globally: %d", buf,
+             exists_globally);
       }
       return std::string(buf);
     }
 
-    Verbose(__LOG_ARGS__, 1, "Key %s does not exist globally.", buf);
+    logv(__LOG_ARGS__, LOG_DBG2, "Key %s does not exist globally.", buf);
     return "";
   }
 };

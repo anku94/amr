@@ -8,8 +8,8 @@ extern "C" {
 void kokkosp_init_library(const int loadSeq, const uint64_t interfaceVer,
                           const uint32_t devInfoCount, void* deviceInfo) {
   if (amr::monitor == nullptr) {
-    amr::Error(
-        __LOG_ARGS__,
+    logv(
+        __LOG_ARGS__, LOG_ERRO,
         "AMRMonitor not initialized by MPI_Init. This is unexpected behavior.");
   }
 }

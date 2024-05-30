@@ -10,12 +10,12 @@
 #include <mpi.h>
 #include <sstream>
 
-#define SAFE_MPI_REDUCE(...)                     \
-  {                                              \
-    int rv = PMPI_Reduce(__VA_ARGS__);           \
-    if (rv != MPI_SUCCESS) {                     \
-      Error(__LOG_ARGS__, "PMPI_Reduce failed"); \
-    }                                            \
+#define SAFE_MPI_REDUCE(...)           \
+  {                                    \
+    int rv = PMPI_Reduce(__VA_ARGS__); \
+    if (rv != MPI_SUCCESS) {           \
+      ABORT("PMPI_Reduce failed");     \
+    }                                  \
   }
 
 namespace amr {
@@ -166,8 +166,8 @@ class Metric {
       SAFE_MPI_REDUCE(MPI_IN_PLACE, metric.data(), nranks, MPI_DOUBLE, MPI_SUM,
                       0, MPI_COMM_WORLD);
     } else {
-      SAFE_MPI_REDUCE(metric.data(), nullptr, nranks, MPI_DOUBLE, MPI_SUM,
-                      0, MPI_COMM_WORLD);
+      SAFE_MPI_REDUCE(metric.data(), nullptr, nranks, MPI_DOUBLE, MPI_SUM, 0,
+                      MPI_COMM_WORLD);
     }
     return metric;
   }

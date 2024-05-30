@@ -8,13 +8,13 @@
 #include <mpi.h>
 #include <vector>
 
-#define SAFE_MPI(call, ret_val)                          \
-  do {                                                   \
-    int rv = call;                                       \
-    if (rv != MPI_SUCCESS) {                             \
-      Error(__LOG_ARGS__, "MPI call failed: %s", #call); \
-      return ret_val;                                    \
-    }                                                    \
+#define SAFE_MPI(call, ret_val)                                   \
+  do {                                                            \
+    int rv = call;                                                \
+    if (rv != MPI_SUCCESS) {                                      \
+      logv(__LOG_ARGS__, LOG_ERRO, "MPI call failed: %s", #call); \
+      return ret_val;                                             \
+    }                                                             \
   } while (0)
 
 namespace amr {
@@ -97,7 +97,7 @@ void MPIMemDeleter(void* ptr) {
 
   int rv = MPI_Free_mem(ptr);
   if (rv != MPI_SUCCESS) {
-    Error(__LOG_ARGS__, "MPI_Free_mem failed");
+    logv(__LOG_ARGS__, LOG_ERRO, "MPI_Free_mem failed");
   }
 }
 
@@ -141,8 +141,8 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithReduce(
   analysis = AnalyzeMatrix(matrix_global.data(), nranks_, npernode_);
 
   if (my_rank_ == 0) {
-    Verbose(__LOG_ARGS__, 1, "Global Comm Matrix: \n%s\n",
-            MetricPrintUtils::MatrixToStr(matrix_global, nranks_).c_str());
+    logv(__LOG_ARGS__, LOG_DBG2, "Global Comm Matrix: \n%s\n",
+         MetricPrintUtils::MatrixToStr(matrix_global, nranks_).c_str());
   }
 
   return analysis;
@@ -197,7 +197,7 @@ std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks) {
   npernode_ = ComputeRanksPerNode(nranks);
 
   if (my_rank == 0) {
-    Info(__LOG_ARGS__, "Ranks per node: %d", npernode_);
+    logv(__LOG_ARGS__, LOG_INFO, "Ranks per node: %d", npernode_);
   }
 
   std::string analysis_str = "";
