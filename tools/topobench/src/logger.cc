@@ -105,8 +105,10 @@ void Logger::LogRun(double send_mb, double send_mbps, double recv_mb, double rec
             double time_avg_ms, double time_min_ms, double time_max_ms,
             int num_obs) {
   struct stat statbuf;
-  if (stat("topolog.txt", &statbuf) != 0) {
-    FILE *f = fopen("topolog.txt", "w");
+  const char* log_fpath = Globals::driver_opts.bench_log;
+
+  if (stat(log_fpath, &statbuf) != 0) {
+    FILE *f = fopen(log_fpath, "w");
     if (f == nullptr)
       return;
 
@@ -115,7 +117,8 @@ void Logger::LogRun(double send_mb, double send_mbps, double recv_mb, double rec
             "time_avg_ms,time_min_ms,time_max_ms,num_obs,topology\n");
     fclose(f);
   }
-  FILE *f = fopen("topolog.txt", "a+");
+
+  FILE *f = fopen(log_fpath, "a+");
   if (f == nullptr)
     return;
 

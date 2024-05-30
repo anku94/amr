@@ -56,6 +56,8 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
     }
   }
 
+  opts.bench_log = "topobench.csv";
+
   if (!opts.IsValid()) {
     PrintHelp();
     exit(-1);

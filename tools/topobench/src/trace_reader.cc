@@ -7,7 +7,7 @@
 Status TraceReader::Read(int rank) {
   Status s = Status::OK;
 
-  logv(__LOG_ARGS__, LOG_INFO, "[TraceReader] Reading trace file: %s",
+  logvat0(__LOG_ARGS__, LOG_INFO, "[TraceReader] Reading trace file: %s",
        trace_file_.c_str());
 
   if (trace_file_ == "") {

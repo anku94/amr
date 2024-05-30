@@ -84,21 +84,21 @@ Status Topology::GenerateMeshAllToAll(Mesh &mesh, int ts) const {
 Status Topology::GenerateMeshFromTrace(Mesh &mesh, int ts) {
   Status s = Status::OK;
 
-  logv(__LOG_ARGS__, LOG_INFO, "Generating Mesh: From Trace");
+  logvat0(__LOG_ARGS__, LOG_INFO, "Generating Mesh: From Trace (ts: %d)", ts);
 
   s = reader_.Read(Globals::my_rank);
-
-  // std::vector<RankSizePair> msgs_snd = reader_.GetMsgsSent(ts);
-  // std::vector<RankSizePair> msgs_rcv = reader_.GetMsgsRcvd(ts);
 
   auto msgs_snd = reader_.GetMsgsSent(ts);
   auto msgs_rcv = reader_.GetMsgsRcvd(ts);
 
   if (msgs_snd.size() != msgs_rcv.size()) {
-    logv(__LOG_ARGS__, LOG_ERRO,
-         "msg_send count is not the same as msg_rcv count");
-    ABORT("msg_send count is not the same as msg_rcv count");
-    return Status::Error;
+    logv(__LOG_ARGS__, LOG_WARN,
+         "[Rank %d] msg_send count is not the same as msg_rcv count",
+         Globals::my_rank);
+
+    // in the trace replay mode, this is not a bug.
+    // as all ranks see the same trace, they create a consistent
+    // communication graph
   }
 
   int mbidx = 0;
@@ -117,27 +117,9 @@ Status Topology::GenerateMeshFromTrace(Mesh &mesh, int ts) {
 
   mesh.AddBlock(mb);
 
-  logv(__LOG_ARGS__, LOG_INFO,
-       "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d", Globals::my_rank,
-       nbr_idx);
-
-  // for (auto it : msgs_snd) {
-  //   int peer = it.first;
-  //   int msgsz = it.second;
-  //
-  //   auto mb = std::make_shared<MeshBlock>(mbidx);
-  //   mb->AddNeighborSend(mbidx, peer, msgsz);
-  //   mb_vec.push_back(mb);
-  // }
-  //
-  // mbidx = 0;
-  // for (auto it : msgs_rcv) {
-  //   int peer = it.first;
-  //   int msgsz = it.second;
-  //
-  //   mb_vec[mbidx]->AddNeighborRecv(mbidx, peer, msgsz);
-  //   mesh.AddBlock(mb_vec[mbidx]);
-  // }
+  logvat0(__LOG_ARGS__, LOG_INFO,
+          "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d", Globals::my_rank,
+          nbr_idx);
 
   return s;
 }

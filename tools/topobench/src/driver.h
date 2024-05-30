@@ -37,14 +37,17 @@ public:
   }
 
   void PrintOpts() {
-    if (Globals::my_rank == 0) {
-      if (opts_.topology != NeighborTopology::FromTrace) {
-        printf("[Blocks Per Rank] %zu\n", opts_.blocks_per_rank);
-        printf("[Size Per Msg] %zu\n", opts_.size_per_msg);
-      }
-      printf("[Comm Rounds] %d\n", opts_.comm_rounds);
-      printf("[Topology] %s\n", TopologyToStr(opts_.topology).c_str());
+    if (opts_.topology != NeighborTopology::FromTrace) {
+      logvat0(__LOG_ARGS__, LOG_INFO, "[Blocks Per Rank] %zu\n",
+              opts_.blocks_per_rank);
+      logvat0(__LOG_ARGS__, LOG_INFO, "[Size Per Msg] %zu\n",
+              opts_.size_per_msg);
     }
+
+    logvat0(__LOG_ARGS__, LOG_INFO, "[Comm Rounds] %d\n", opts_.comm_rounds);
+    logvat0(__LOG_ARGS__, LOG_INFO, "[Topology] %s\n",
+            TopologyToStr(opts_.topology).c_str());
+    logvat0(__LOG_ARGS__, LOG_INFO, "[Log output] %s\n", opts_.bench_log);
   }
 
   void Run(int argc, char *argv[]) {
@@ -83,8 +86,10 @@ public:
     const int nts_to_run = std::min(nts, opts_.comm_nts);
     const int nrounds = opts_.comm_rounds;
 
-    printf("num_ts found: %d, num_ts to run: %d, rounds per ts: %d\n", nts, nts_to_run, nrounds);
-    printf("(will skip first ts)\n");
+    logvat0(__LOG_ARGS__, LOG_INFO,
+            "num_ts found: %d, num_ts to run: %d, rounds per ts: %d\n"
+            "(will skip first ts)",
+            nts, nts_to_run, nrounds);
 
     // first ts does init comm that is not reflective of other rounds
     // we start from ts=1
