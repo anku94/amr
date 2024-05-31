@@ -66,7 +66,11 @@ class P2PCommCollector {
     recv_sz_[src] += msg_sz;
   }
 
-  std::string CollectAndAnalyze(int my_rank, int nranks);
+  // Collect the P2P comm matrix [nranks][nranks], analyze it, serialize analysis
+  // @my_rank: my_rank
+  // @nranks: nranks
+  // @use_rma_put: uses RMA PUTs if set, AllReduce otherwise
+  std::string CollectAndAnalyze(int my_rank, int nranks, bool use_rma_put);
 
  private:
   std::string CollectWithReduce();

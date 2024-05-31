@@ -28,6 +28,7 @@ struct MetricStats {
   double avg;
   double std;
 };
+
 /* Metric: Maintains and aggregates summary statistics for a single metric
  *
  * Stats tracked: min/max/avg/std
@@ -82,6 +83,7 @@ class Metric {
 
   static std::vector<MetricStats> CollectMetrics(StringVec const& metrics,
                                                  MetricMap& times) {
+
     size_t nmetrics = metrics.size();
 
     auto get_invoke_cnt = [](Metric& m) { return m.invoke_count_; };

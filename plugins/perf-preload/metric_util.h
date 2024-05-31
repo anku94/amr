@@ -79,7 +79,7 @@ class CommonComputer {
     }
 
     if (rank_ == 0) {
-      logv(__LOG_ARGS__, LOG_DBG2, "Checking for key: %s", key);
+      logv(__LOG_ARGS__, LOG_DBUG, "Checking for key: %s", key);
 
       size_t key_len = strlen(key);
       if (key_len >= bufsz) {

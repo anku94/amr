@@ -124,38 +124,42 @@ class AMRMonitor {
     return intersection;
   }
 
-  std::string CollectMetricSummary(StringVec const& metric_vec, int top_k) {
-    logvat0(__LOG_ARGS__, LOG_DBUG, "Entering CollectMetricSummary.");
-
-    std::string all_metric_summary;
-
-    // First, need to get metrics that are logged on all ranks
-    // as collectives will block on ranks that are missing a given metric
-    auto all_metric_stats = Metric::CollectMetrics(metric_vec, times_us_);
-
-    all_metric_summary +=
-        MetricPrintUtils::SortAndSerialize(all_metric_stats, top_k);
-    all_metric_summary += "\n\n";
-
-    all_metric_summary += p2p_comm_.CollectAndAnalyze(rank_, nranks_);
-
-    logvat0(__LOG_ARGS__, LOG_DBUG, "Exiting CollectMetricSummary.");
-    return all_metric_summary;
-  }
-
   void LogMetrics() {
     logvat0(__LOG_ARGS__, LOG_DBUG, "Entering LogMetrics.");
 
+    // First, need to get metrics that are logged on all ranks
+    // as collectives will block on ranks that are missing a given metric
     StringVec common_metrics = GetCommonMetrics();
-    auto metric_summary =
-        CollectMetricSummary(common_metrics, amr_opts.print_topk);
+
+    auto compute_metric_stats =
+        Metric::CollectMetrics(common_metrics, times_us_);
+    auto compute_metric_str = MetricPrintUtils::SortAndSerialize(
+        compute_metric_stats, amr_opts.print_topk);
 
     if (rank_ == 0) {
-      fprintf(stderr, "%s", metric_summary.c_str());
+      fprintf(stderr, "%s\n\n", compute_metric_str.c_str());
     }
 
     if (amr_opts.rankwise_enabled) {
       CollectMetricsDetailed(common_metrics);
+    }
+
+    if (amr_opts.p2p_enable_matrix_put) {
+      logvat0(__LOG_ARGS__, LOG_DBUG, "Collecting P2P matrix with RMA PUT.");
+
+      auto p2p_matrix_str = p2p_comm_.CollectAndAnalyze(rank_, nranks_, true);
+      if (rank_ == 0) {
+        fprintf(stderr, "%s\n", p2p_matrix_str.c_str());
+      }
+    }
+
+    if (amr_opts.p2p_enable_matrix_reduce) {
+      logvat0(__LOG_ARGS__, LOG_DBUG, "Collecting P2P matrix with RMA PUT.");
+
+      auto p2p_matrix_str = p2p_comm_.CollectAndAnalyze(rank_, nranks_, false);
+      if (rank_ == 0) {
+        fprintf(stderr, "%s\n", p2p_matrix_str.c_str());
+      }
     }
 
     logvat0(__LOG_ARGS__, LOG_DBUG, "Exiting LogMetrics.");

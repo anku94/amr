@@ -191,7 +191,7 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithPuts(
   return analysis;
 }
 
-std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks) {
+std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks, bool use_rma_put) {
   my_rank_ = my_rank;
   nranks_ = nranks;
   npernode_ = ComputeRanksPerNode(nranks);
@@ -200,18 +200,11 @@ std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks) {
     logv(__LOG_ARGS__, LOG_INFO, "Ranks per node: %d", npernode_);
   }
 
-  std::string analysis_str = "";
-  if (amr_opts.p2p_enable_matrix_reduce) {
-    analysis_str += CollectWithReduce();
-    analysis_str += "\n";
+  if (use_rma_put) {
+    return CollectWithPuts();
+  } else {
+    return CollectWithReduce();
   }
-
-  if (amr_opts.p2p_enable_matrix_put) {
-    analysis_str += CollectWithPuts();
-    analysis_str += "\n";
-  }
-
-  return analysis_str;
 }
 
 std::string P2PCommCollector::CollectWithReduce() {
