@@ -1,0 +1,9 @@
+job_name,amr_bin,amr_deck,ranks,procs_per_node,nodes,lb_policy,nlim,preload,niters,job_time
+amr-minimal,advection-example,advection.example.16.pin,16,16,1,<all>,10,libprof_preload.so,1,00:10:00
+blast-wave,phoebus,blast_wave_3d.512.pin,512,16,32,<all>,10,libprof_preload.so,1,00:10:00
+blast-wave,phoebus,blast_wave_3d.1024.pin,1024,16,64,<all>,10,libprof_preload.so,1,00:10:00
+blast-wave,phoebus,blast_wave_3d.2048.pin,2048,16,128,<all>,10,libprof_preload.so,1,00:10:00
+blast-wave,phoebus,blast_wave_3d.4096.pin,4096,16,256,<all>,10,libprof_preload.so,1,00:10:00
+stochsg,stochsg_2d,stochsg_2d.512.pin,512,16,32,<all>,10,libprof_preload.so,1,00:10:00
+stochsg,stochsg_2d,stochsg_2d.1024.pin,1024,16,64,<all>,10,libprof_preload.so,1,00:10:00
+stoschsg,stochsg_2d,stochsg_2d.2048.pin,2048,16,128,<all>,10,libprof_preload.so,1,00:10:00
