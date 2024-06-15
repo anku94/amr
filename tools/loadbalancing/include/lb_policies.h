@@ -44,6 +44,9 @@ class LoadBalancePolicies {
   static int AssignBlocksContigImproved(std::vector<double> const& costlist,
                                         std::vector<int>& ranklist, int nranks);
 
+  static int AssignBlocksContigImproved2(std::vector<double> const& costlist,
+                                        std::vector<int>& ranklist, int nranks);
+
   static int AssignBlocksCppIter(std::vector<double> const& costlist,
                                  std::vector<int>& ranklist, int nranks,
                                  PolicyOptsCDPI const& opts);

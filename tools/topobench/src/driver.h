@@ -47,6 +47,7 @@ public:
     logvat0(__LOG_ARGS__, LOG_INFO, "[Comm Rounds] %d\n", opts_.comm_rounds);
     logvat0(__LOG_ARGS__, LOG_INFO, "[Topology] %s\n",
             TopologyToStr(opts_.topology).c_str());
+    logvat0(__LOG_ARGS__, LOG_INFO, "[Job dir] %s\n", opts_.job_dir);
     logvat0(__LOG_ARGS__, LOG_INFO, "[Log output] %s\n", opts_.bench_log);
   }
 

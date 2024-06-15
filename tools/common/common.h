@@ -63,6 +63,7 @@ struct DriverOpts {
   int comm_nts;    // only used for trace mode
   const char *trace_root;
   const char* bench_log;
+  const char* job_dir;
 
   DriverOpts()
       : topology(NeighborTopology::Ring), topology_nbrcnt(-1),
@@ -88,6 +89,7 @@ private:
     INVALID_IF(size_per_msg == SIZE_MAX);
     INVALID_IF(comm_rounds == -1);
     INVALID_IF(bench_log == nullptr);
+    INVALID_IF(job_dir == nullptr);
     IS_VALID();
   }
 
@@ -96,6 +98,7 @@ private:
     INVALID_IF(trace_root == nullptr);
     INVALID_IF(comm_nts == -1);
     INVALID_IF(bench_log == nullptr);
+    INVALID_IF(job_dir == nullptr);
     IS_VALID();
   }
 

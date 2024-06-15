@@ -26,6 +26,7 @@ enum class LoadBalancePolicy {
   kPolicyLPT,
   kPolicyILP,
   kPolicyContigImproved,
+  kPolicyContigImproved2,
   kPolicyCppIter,
   kPolicyHybrid,
   kPolicyHybridCppFirst,

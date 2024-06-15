@@ -9,8 +9,8 @@
 #include <inttypes.h>
 #include <mpi.h>
 
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 namespace {
@@ -101,24 +101,25 @@ void Logger::Aggregate() {
          num_obs_);
 }
 
-void Logger::LogRun(double send_mb, double send_mbps, double recv_mb, double recv_mbps,
-            double time_avg_ms, double time_min_ms, double time_max_ms,
-            int num_obs) {
+void Logger::LogRun(double send_mb, double send_mbps, double recv_mb,
+                    double recv_mbps, double time_avg_ms, double time_min_ms,
+                    double time_max_ms, int num_obs) {
   struct stat statbuf;
-  const char* log_fpath = Globals::driver_opts.bench_log;
 
-  if (stat(log_fpath, &statbuf) != 0) {
-    FILE *f = fopen(log_fpath, "w");
+  auto log_fpath =
+      std::string(Globals::driver_opts.job_dir) + "/bench_log.csv";
+
+  if (stat(log_fpath.c_str(), &statbuf) != 0) {
+    FILE *f = fopen(log_fpath.c_str(), "w");
     if (f == nullptr)
       return;
 
-    fprintf(f,
-            "mpi_prov,send_mb,send_mbps,recv_mb,recv_mbps,"
-            "time_avg_ms,time_min_ms,time_max_ms,num_obs,topology\n");
+    fprintf(f, "mpi_prov,send_mb,send_mbps,recv_mb,recv_mbps,"
+               "time_avg_ms,time_min_ms,time_max_ms,num_obs,topology\n");
     fclose(f);
   }
 
-  FILE *f = fopen(log_fpath, "a+");
+  FILE *f = fopen(log_fpath.c_str(), "a+");
   if (f == nullptr)
     return;
 
@@ -127,10 +128,10 @@ void Logger::LogRun(double send_mb, double send_mbps, double recv_mb, double rec
 
   fprintf(f,
           "%s,%.6lf,%.6lf,%.6lf,%.6lf," // send-recv mb/mbps
-          "%.3lf,%.3lf,%.3lf,%d,"      // time avg-min-max, num_obs
-          "%s\n",                      // time avg-min-max
-          mpi_str.c_str(), send_mb, send_mbps, recv_mb, recv_mbps, 
-          time_avg_ms, time_min_ms, time_max_ms, num_obs, topo_str.c_str());
+          "%.3lf,%.3lf,%.3lf,%d,"       // time avg-min-max, num_obs
+          "%s\n",                       // time avg-min-max
+          mpi_str.c_str(), send_mb, send_mbps, recv_mb, recv_mbps, time_avg_ms,
+          time_min_ms, time_max_ms, num_obs, topo_str.c_str());
 
   fclose(f);
 

@@ -1,4 +1,5 @@
 #include "driver.h"
+#include "file_utils.h"
 
 #include <getopt.h>
 #include <glog/logging.h>
@@ -6,7 +7,8 @@
 
 void PrintHelp() {
   printf(
-      "\n\t./prog -b <blocks_per_rank> -r <num_rounds>"
+      "\n\t./prog -j <job_dir> \n"
+      " -b <blocks_per_rank> -r <num_rounds> \n"
       " -s <msg_sz> -t <topology:1234> -p <prof_dir>\n");
 }
 
@@ -30,10 +32,13 @@ void parse_opts(int argc, char* argv[], DriverOpts& opts) {
   extern char* optarg;
   extern int optind;
 
-  while ((c = getopt(argc, argv, "b:n:p:r:s:t:")) != -1) {
+  while ((c = getopt(argc, argv, "b:j:n:p:r:s:t:")) != -1) {
     switch (c) {
       case 'b':
         opts.blocks_per_rank = std::stoi(optarg);
+        break;
+      case 'j':
+        opts.job_dir = optarg;
         break;
       case 'n':
         opts.comm_nts = std::stoi(optarg);

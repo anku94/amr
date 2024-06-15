@@ -27,6 +27,16 @@ class LoadBalancingPoliciesTest : public ::testing::Test {
                        std::vector<int>& ranklist, int nranks) {
     LoadBalancePolicies::AssignBlocksLPT(costlist, ranklist, nranks);
   }
+
+  void AssignBlocksContigImproved(std::vector<double> const& costlist,
+                                   std::vector<int>& ranklist, int nranks) {
+    LoadBalancePolicies::AssignBlocksContigImproved(costlist, ranklist, nranks);
+  }
+
+  void AssignBlocksContigImproved2(std::vector<double> const& costlist,
+                                   std::vector<int>& ranklist, int nranks) {
+    LoadBalancePolicies::AssignBlocksContigImproved2(costlist, ranklist, nranks);
+  }
 };
 
 TEST_F(LoadBalancingPoliciesTest, SPTTest1) {
@@ -77,5 +87,17 @@ TEST_F(LoadBalancingPoliciesTest, LPTTest2) {
   logv(__LOG_ARGS__, LOG_INFO, "Assignment: %s", ranklist_str.c_str());
 
   AssertEqual(ranklist, {1, 2, 0, 1, 2, 2, 1, 0});
+}
+
+TEST_F(LoadBalancingPoliciesTest, CDPTest1) {
+  logv(__LOG_ARGS__, LOG_INFO, "CDP Test 1");
+  /*std::vector<double> costlist = {2, 3, 2, 3, 2, 3, 2, 3, 2, 3};*/
+  std::vector<double> costlist = { 1, 2, 3, 4, 1, 2, 10};
+  std::vector<int> ranklist;
+  ranklist.resize(costlist.size());
+
+  int nranks = 3;
+  AssignBlocksContigImproved(costlist, ranklist, nranks);
+  AssignBlocksContigImproved2(costlist, ranklist, nranks);
 }
 }  // namespace amr

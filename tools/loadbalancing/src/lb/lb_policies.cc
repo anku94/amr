@@ -54,6 +54,8 @@ int LoadBalancePolicies::AssignBlocks(const char* policy_name,
       return AssignBlocksILP(costlist, ranklist, nranks, policy.ilp_opts);
     case LoadBalancePolicy::kPolicyContigImproved:
       return AssignBlocksContigImproved(costlist, ranklist, nranks);
+    case LoadBalancePolicy::kPolicyContigImproved2:
+      return AssignBlocksContigImproved2(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyCppIter:
       return AssignBlocksCppIter(costlist, ranklist, nranks, policy.cdp_opts);
     case LoadBalancePolicy::kPolicyHybrid:

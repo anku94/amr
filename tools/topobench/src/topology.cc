@@ -3,6 +3,37 @@
 //
 
 #include "topology.h"
+namespace {
+static void GatherNeighborCounts(int count_local) {
+  std::vector<int> counts(Globals::nranks);
+
+  int rv = MPI_Gather(&count_local, 1, MPI_INT, counts.data(), 1, MPI_INT, 0,
+                      MPI_COMM_WORLD);
+  if (rv != MPI_SUCCESS) {
+    logv(__LOG_ARGS__, LOG_ERRO, "MPI_Allgather failed");
+    ABORT("MPI_Allgather failed");
+  }
+
+  if (Globals::my_rank != 0) {
+    return;
+  }
+
+  const char *fname = "neighbor_counts.txt";
+  std::string fpath = std::string(Globals::driver_opts.job_dir) + "/" + fname;
+  FILE *f = fopen(fpath.c_str(), "w");
+  if (f == nullptr) {
+    logv(__LOG_ARGS__, LOG_ERRO, "Failed to open file: %s", fpath.c_str());
+    return;
+  }
+
+  for (int i = 0; i < Globals::nranks - 1; i++) {
+    fprintf(f, "%d,", counts[i]);
+  }
+
+  fprintf(f, "%d\n", counts[Globals::nranks - 1]);
+  fclose(f);
+}
+} // namespace
 
 Status Topology::GenerateMesh(const DriverOpts &opts, Mesh &mesh, int ts) {
   // TODO: clear old mesh first
@@ -118,8 +149,11 @@ Status Topology::GenerateMeshFromTrace(Mesh &mesh, int ts) {
   mesh.AddBlock(mb);
 
   logvat0(__LOG_ARGS__, LOG_INFO,
-          "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d", Globals::my_rank,
+          "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"
+          "(full log in neighbor_counts.txt)", Globals::my_rank,
           nbr_idx);
+
+  GatherNeighborCounts(nbr_idx);
 
   return s;
 }

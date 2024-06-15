@@ -3,6 +3,7 @@ find_package(GUROBI)
 
 set (lb_srcs
         lb_contig_improv.cc
+        lb_contig_improv2.cc
         lb_ilp.cc
         lb_lspt.cc
         lb_cpp_iter.cc
