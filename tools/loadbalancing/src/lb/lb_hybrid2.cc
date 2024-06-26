@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "lb_policies.h"
-#include "policy.h"
+#include "policy_utils.h"
 #include "policy_wopts.h"
 
 struct PartialLPTSolution {

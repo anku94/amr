@@ -8,7 +8,7 @@
 
 #include "common.h"
 #include "cost_cache.h"
-#include "policy.h"
+#include "policy_utils.h"
 #include "policy_wopts.h"
 
 namespace amr {

@@ -10,7 +10,7 @@ set (lb_srcs
         lb_hybrid.cc
         lb_hybrid2.cc
         lb_policies.cc
-        policy.cc
+        policy_utils.cc
         ${CMAKE_SOURCE_DIR}/tools/common/common.cc
         )
 

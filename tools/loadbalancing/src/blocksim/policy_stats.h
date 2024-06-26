@@ -6,7 +6,7 @@
 
 #include <pdlfs-common/env.h>
 
-#include "policy.h"
+#include "policy_utils.h"
 #include "tabular_data.h"
 #include "writable_file.h"
 

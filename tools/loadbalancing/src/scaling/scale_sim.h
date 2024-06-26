@@ -6,6 +6,7 @@
 
 #include "constants.h"
 #include "distrib/distributions.h"
+#include "policy_utils.h"
 #include "run_utils.h"
 #include "scale_stats.h"
 #include "tabular_data.h"

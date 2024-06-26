@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "policy.h"
+#include "policy_utils.h"
 #include "policy_wopts.h"
 
 namespace amr {
@@ -24,16 +25,10 @@ struct PolicyOpts {
 int LoadBalancePolicies::AssignBlocks(const char* policy_name,
                                       std::vector<double> const& costlist,
                                       std::vector<int>& ranklist, int nranks) {
-  if (kPolicyMap.find(policy_name) == kPolicyMap.end()) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in AssignBlocks" << std::endl
-        << "Policy " << policy_name << " not found in kPolicyMap" << std::endl;
-    ABORT(msg.str().c_str());
-  }
-
   ranklist.resize(costlist.size());
 
-  const LBPolicyWithOpts& policy = kPolicyMap.at(policy_name);
+  const LBPolicyWithOpts& policy = PolicyUtils::GetPolicy(policy_name);
+
   switch (policy.policy) {
     case LoadBalancePolicy::kPolicyActual:
       return 0;
@@ -96,8 +91,8 @@ int LoadBalancePolicies::AssignBlocksSkewed(const std::vector<double>& costlist,
 
   if (rank0_alloc >= nblocks) {
     std::stringstream msg;
-    msg << "### FATAL ERROR rank0_alloc >= nblocks "
-        << "(" << rank0_alloc << ", " << nblocks << ")" << std::endl;
+    msg << "### FATAL ERROR rank0_alloc >= nblocks " << "(" << rank0_alloc
+        << ", " << nblocks << ")" << std::endl;
     ABORT(msg.str().c_str());
   }
 

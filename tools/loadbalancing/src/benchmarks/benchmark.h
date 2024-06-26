@@ -7,7 +7,7 @@
 #include "distrib/distributions.h"
 #include "globals.h"
 #include "lb_policies.h"
-#include "policy.h"
+#include "policy_utils.h"
 #include "run_utils.h"
 #include "tabular_data.h"
 #include "trace_utils.h"

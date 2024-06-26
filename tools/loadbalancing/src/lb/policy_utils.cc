@@ -2,7 +2,7 @@
 // Created by Ankush J on 5/4/23.
 //
 
-#include "policy.h"
+#include "policy_utils.h"
 
 #include <algorithm>
 #include <cassert>
@@ -11,15 +11,52 @@
 
 #include "common.h"
 #include "constants.h"
+#include "policy.h"
 #include "policy_wopts.h"
 
 namespace amr {
-LBPolicyWithOpts const& PolicyUtils::GetPolicy(const char* policy_id) {
-  if (kPolicyMap.find(policy_id) == kPolicyMap.end()) {
-    throw std::runtime_error("Unknown policy: " + std::string(policy_id));
+const std::map<std::string, LBPolicyWithOpts> PolicyUtils::kPolicyMap = {
+    {"actual",
+     {.id = "actual",
+      .name = "Actual",
+      .policy = LoadBalancePolicy::kPolicyActual}},
+    {"baseline",
+     {.id = "baseline",
+      .name = "Baseline",
+      .policy = LoadBalancePolicy::kPolicyContiguousUnitCost}},
+    {"lpt",
+     {.id = "lpt", .name = "LPT", .policy = LoadBalancePolicy::kPolicyLPT}},
+    {"cdp",
+     {.id = "cdp",
+      .name = "Contiguous-DP (CDP)",
+      .policy = LoadBalancePolicy::kPolicyContigImproved}},
+    {"cdpi50",
+     {.id = "cdpi50",
+      .name = "CDP-I50",
+      .policy = LoadBalancePolicy::kPolicyCppIter,
+      .cdp_opts = {.niter_frac = 0, .niters = 50}}},
+    {"cdpi250",
+     {.id = "cdpi250",
+      .name = "CDP-I250",
+      .policy = LoadBalancePolicy::kPolicyCppIter,
+      .cdp_opts = {.niter_frac = 0, .niters = 250}}},
+};
+
+const LBPolicyWithOpts PolicyUtils::GetPolicy(const char* policy_name) {
+  std::string policy_str(policy_name);
+
+  if (policy_str.substr(0, 6) == "hybrid") {
+    return GenHybrid(policy_str);
   }
 
-  return kPolicyMap.at(policy_id);
+  if (kPolicyMap.find(policy_name) == kPolicyMap.end()) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in GetPolicy" << std::endl
+        << "Policy " << policy_name << " not found in kPolicyMap" << std::endl;
+    ABORT(msg.str().c_str());
+  }
+
+  return kPolicyMap.at(policy_name);
 }
 LoadBalancePolicy PolicyUtils::StringToPolicy(std::string const& policy_str) {
   if (policy_str == "baseline") {
@@ -253,4 +290,39 @@ std::string PolicyUtils::GetLogPath(const char* output_dir,
        policy_name, result.c_str());
   return result;
 }
+
+const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
+  // policy_name = hybridX, where X is to be parsed into lpt_frac
+  // parse policy_name, throw error if not in the correct format
+
+  if (policy_str.substr(0, 6) != "hybrid") {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in GenHybrid" << std::endl
+        << "Policy " << policy_str << " not in the correct format" << std::endl;
+    ABORT(msg.str().c_str());
+  }
+
+  int lpt_frac = std::stoi(policy_str.substr(6));
+  if (lpt_frac < 0 or lpt_frac > 100) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in GenHybrid" << std::endl
+        << "Policy " << policy_str << " not in the correct format" << std::endl;
+    ABORT(msg.str().c_str());
+  }
+
+  std::string policy_name_friendly =
+      "Hybrid (" + std::to_string(lpt_frac) + "%)";
+
+  LBPolicyWithOpts policy = {
+      .id = policy_str,
+      .name = policy_name_friendly,
+      .policy = LoadBalancePolicy::kPolicyHybridCppFirstV2,
+      .hcf_opts = {.v2 = true, .lpt_frac = lpt_frac / 100.0}};
+
+  logv(__LOG_ARGS__, LOG_DBUG, "Generated policy: %s",
+       policy_name_friendly.c_str());
+
+  return policy;
+}
+
 }  // namespace amr
