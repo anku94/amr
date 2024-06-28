@@ -1,4 +1,4 @@
-#include "timeless_trace_reader.h"
+#include "single_ts_trace_reader.h"
 
 Status SingleTimestepTraceReader::Read(int rank) {
   Status s = Status::OK;

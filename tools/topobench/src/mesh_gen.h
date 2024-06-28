@@ -1,6 +1,6 @@
 #include "common.h"
 #include "mesh.h"
-#include "timeless_trace_reader.h"
+#include "single_ts_trace_reader.h"
 #include "trace_reader.h"
 
 class MeshGenerator {
