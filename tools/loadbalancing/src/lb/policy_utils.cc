@@ -310,6 +310,13 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
     ABORT(msg.str().c_str());
   }
 
+  static bool first_time = true;
+  if (first_time) {
+    logv(__LOG_ARGS__, LOG_INFO, "[LB] Using Hybrid policy with LPT frac: %d",
+         lpt_frac);
+    first_time = false;
+  }
+
   std::string policy_name_friendly =
       "Hybrid (" + std::to_string(lpt_frac) + "%)";
 
