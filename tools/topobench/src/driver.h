@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "block.h"
 #include "common.h"
 #include "mesh.h"
-#include "topology.h"
+#include "mesh_gen.h"
 
 #include <mpi.h>
 
@@ -37,7 +36,8 @@ public:
   }
 
   void PrintOpts() {
-    if (opts_.topology != NeighborTopology::FromTrace) {
+    if (opts_.topology != NeighborTopology::FromSingleTSTrace and
+        opts_.topology != NeighborTopology::FromMultiTSTrace) {
       logvat0(__LOG_ARGS__, LOG_INFO, "[Blocks Per Rank] %zu\n",
               opts_.blocks_per_rank);
       logvat0(__LOG_ARGS__, LOG_INFO, "[Size Per Msg] %zu\n",
@@ -55,7 +55,8 @@ public:
     Setup(argc, argv);
     PrintOpts();
 
-    if (opts_.topology == NeighborTopology::FromTrace) {
+    if (opts_.topology == NeighborTopology::FromSingleTSTrace or
+        opts_.topology == NeighborTopology::FromMultiTSTrace) {
       RunInternalTrace();
     } else {
       RunInternalNonTrace();
@@ -66,12 +67,12 @@ public:
   }
 
   void RunInternalNonTrace() {
-    Topology topology(opts_);
+    auto mesh_gen = MeshGenerator::Create(opts_);
 
-    int nrounds = topology.GetNumTimesteps();
+    int nrounds = mesh_gen->GetNumTimesteps();
 
     for (int rnum = 0; rnum < nrounds; rnum++) {
-      topology.GenerateMesh(opts_, mesh_, rnum);
+      mesh_gen->GenerateMesh(mesh_, rnum);
       mesh_.AllocateBoundaryVariables();
       mesh_.PrintConfig();
       mesh_.DoCommunicationRound();
@@ -80,10 +81,10 @@ public:
   }
 
   void RunInternalTrace() {
-    Topology topology(opts_);
+    auto mesh_gen = MeshGenerator::Create(opts_);
 
     // int nrounds = topology.GetNumTimesteps();
-    const int nts = topology.GetNumTimesteps();
+    const int nts = mesh_gen->GetNumTimesteps();
     const int nts_to_run = std::min(nts, opts_.comm_nts);
     const int nrounds = opts_.comm_rounds;
 
@@ -92,10 +93,15 @@ public:
             "(will skip first ts)",
             nts, nts_to_run, nrounds);
 
-    // first ts does init comm that is not reflective of other rounds
-    // we start from ts=1
-    for (int ts = 1; ts < nts_to_run; ts++) {
-      topology.GenerateMesh(opts_, mesh_, ts);
+    int ts_beg = 0;
+    if (opts_.topology == NeighborTopology::FromMultiTSTrace) {
+      // in multi-ts trace, we skip the first timestep
+      // as it contains bootstrap communication
+      ts_beg = 1;
+    }
+
+    for (int ts = ts_beg; ts < nts_to_run; ts++) {
+      mesh_gen->GenerateMesh(mesh_, ts);
       MPI_Barrier(MPI_COMM_WORLD);
 
       mesh_.AllocateBoundaryVariables();

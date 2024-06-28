@@ -6,8 +6,10 @@ set(topo_srcs
         driver.cc
         graph.cc
         logger.cc
-        topology.cc
-        trace_reader.cc)
+        mesh_gen.cc
+        trace_reader.cc
+        single_ts_trace_reader.cc
+      )
 
 add_library(topo ${topo_srcs} ${common_srcs})
 target_include_directories(topo PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${common_include}")

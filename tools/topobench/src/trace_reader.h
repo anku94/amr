@@ -12,15 +12,10 @@
 
 typedef std::pair<int, int> RankSizePair;
 
-struct CommNeighbor {
-  int block_id;
-  int peer_rank;
-  int msg_sz;
-};
-
 class TraceReader {
- public:
-  TraceReader(const char* trace_file) : trace_file_(trace_file), max_ts_(-1), file_read_(false) {}
+public:
+  TraceReader(const char *trace_file)
+      : trace_file_(trace_file), max_ts_(-1), file_read_(false) {}
 
   Status Read(int rank);
 
@@ -30,19 +25,21 @@ class TraceReader {
 
   std::vector<CommNeighbor> GetMsgsRcvd(int ts) { return ts_rcv_map_[ts]; }
 
- private:
-  Status ParseLine(char* buf, size_t buf_sz, const int rank);
+private:
+  Status ParseLine(char *buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
     logvat0(__LOG_ARGS__, LOG_INFO, "Timesteps upto ts %d discovered", max_ts_);
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_snd_map_[t];
-      logvat0(__LOG_ARGS__, LOG_DBUG, "[Send] TS %d: %zu msgs", t, msgs_ts.size());
+      logvat0(__LOG_ARGS__, LOG_DBUG, "[Send] TS %d: %zu msgs", t,
+              msgs_ts.size());
     }
 
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_rcv_map_[t];
-      logvat0(__LOG_ARGS__, LOG_DBUG, "[Recv] TS %d: %zu msgs", t, msgs_ts.size());
+      logvat0(__LOG_ARGS__, LOG_DBUG, "[Recv] TS %d: %zu msgs", t,
+              msgs_ts.size());
     }
   }
 

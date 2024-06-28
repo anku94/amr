@@ -32,8 +32,11 @@ const std::string TopologyToStrUtil() {
   case NeighborTopology::AllToAll:
     return "ALLTOALL";
     break;
-  case NeighborTopology::FromTrace:
-    return Globals::driver_opts.trace_root;
+  case NeighborTopology::FromSingleTSTrace:
+    return std::string("[SingleTS]") + Globals::driver_opts.trace_root;
+    break;
+  case NeighborTopology::FromMultiTSTrace:
+    return std::string("[MultiTS]") + Globals::driver_opts.trace_root;
     break;
   default:
     break;
@@ -106,8 +109,7 @@ void Logger::LogRun(double send_mb, double send_mbps, double recv_mb,
                     double time_max_ms, int num_obs) {
   struct stat statbuf;
 
-  auto log_fpath =
-      std::string(Globals::driver_opts.job_dir) + "/bench_log.csv";
+  auto log_fpath = std::string(Globals::driver_opts.job_dir) + "/bench_log.csv";
 
   if (stat(log_fpath.c_str(), &statbuf) != 0) {
     FILE *f = fopen(log_fpath.c_str(), "w");

@@ -1,12 +1,5 @@
-//
-// Created by Ankush J on 4/11/22.
-//
+#include "mesh_gen.h"
 
-#include "topology.h"
-
-// TODO: move definitions to separate file
-// #include "mesh_gen.h"
-//
 namespace {
 static void GatherNeighborCounts(int count_local) {
   std::vector<int> counts(Globals::nranks);
@@ -39,24 +32,28 @@ static void GatherNeighborCounts(int count_local) {
 }
 } // namespace
 
-Status Topology::GenerateMesh(const DriverOpts &opts, Mesh &mesh, int ts) {
-  // TODO: clear old mesh first
-  switch (opts.topology) {
+std::unique_ptr<MeshGenerator> MeshGenerator::Create(const DriverOpts &opts) {
+  NeighborTopology t = opts.topology;
+
+  switch (t) {
   case NeighborTopology::Ring:
-    return GenerateMeshRing(mesh, ts);
+    return std::make_unique<RingMeshGenerator>(opts);
     break;
   case NeighborTopology::AllToAll:
-    return GenerateMeshAllToAll(mesh, ts);
+    return std::make_unique<AllToAllMeshGenerator>(opts);
     break;
   case NeighborTopology::Dynamic:
-    return GenerateMeshDynamic(mesh, ts);
+    ABORT("Not implemented");
     break;
-  case NeighborTopology::FromTrace:
-    return GenerateMeshFromTrace(mesh, ts);
+  case NeighborTopology::FromSingleTSTrace:
+    return std::make_unique<SingleTimestepTraceMeshGenerator>(opts);
+    break;
+  case NeighborTopology::FromMultiTSTrace:
+    return std::make_unique<MultiTimestepTraceMeshGenerator>(opts);
     break;
   }
 
-  return Status::Error;
+  return nullptr;
 }
 
 Status RingMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
@@ -111,21 +108,20 @@ Status AllToAllMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
       mb->AddNeighborSendRecv(nrl_bid_off, nrl, opts_.size_per_msg);
       mb->AddNeighborSendRecv(nrr_bid_off, nrr, opts_.size_per_msg);
 
-      MeshGenerator::AddMeshBlock(mesh, mb);
-    }
+      MeshGenerator::AddMeshBlock(mesh, mb); }
   }
   return Status::OK;
 }
 
-Status Topology::GenerateMeshFromTrace(Mesh &mesh, int ts) {
+Status SingleTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
   Status s = Status::OK;
 
   logvat0(__LOG_ARGS__, LOG_INFO, "Generating Mesh: From Trace (ts: %d)", ts);
 
   s = reader_.Read(Globals::my_rank);
 
-  auto msgs_snd = reader_.GetMsgsSent(ts);
-  auto msgs_rcv = reader_.GetMsgsRcvd(ts);
+  auto msgs_snd = reader_.GetMsgsSent();
+  auto msgs_rcv = reader_.GetMsgsRcvd();
 
   if (msgs_snd.size() != msgs_rcv.size()) {
     logv(__LOG_ARGS__, LOG_WARN,
@@ -151,7 +147,7 @@ Status Topology::GenerateMeshFromTrace(Mesh &mesh, int ts) {
     mb->AddNeighborRecv(nbr_idx++, it.peer_rank, it.msg_sz);
   }
 
-  mesh.AddBlock(mb);
+  MeshGenerator::AddMeshBlock(mesh, mb);
 
   logvat0(__LOG_ARGS__, LOG_INFO,
           "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"

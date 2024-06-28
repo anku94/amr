@@ -50,9 +50,21 @@ void msg_abort(int err, const char *msg, const char *func, const char *file,
 
 enum class Status { OK, MPIError, Error, InvalidPtr };
 
-enum class NeighborTopology { Ring, AllToAll, Dynamic, FromTrace };
+enum class NeighborTopology {
+  Ring,
+  AllToAll,
+  Dynamic,
+  FromSingleTSTrace,
+  FromMultiTSTrace
+};
 
 std::string TopologyToStr(NeighborTopology t);
+
+struct CommNeighbor {
+  int block_id;
+  int peer_rank;
+  int msg_sz;
+};
 
 struct DriverOpts {
   NeighborTopology topology;
@@ -62,8 +74,8 @@ struct DriverOpts {
   int comm_rounds; // number of rounds to repeat each topo for
   int comm_nts;    // only used for trace mode
   const char *trace_root;
-  const char* bench_log;
-  const char* job_dir;
+  const char *bench_log;
+  const char *job_dir;
 
   DriverOpts()
       : topology(NeighborTopology::Ring), topology_nbrcnt(-1),
@@ -84,7 +96,8 @@ struct DriverOpts {
 
 private:
   bool IsValidGeneric() {
-    NA_IF(topology == NeighborTopology::FromTrace);
+    NA_IF(topology == NeighborTopology::FromSingleTSTrace);
+    NA_IF(topology == NeighborTopology::FromMultiTSTrace);
     INVALID_IF(blocks_per_rank == SIZE_MAX);
     INVALID_IF(size_per_msg == SIZE_MAX);
     INVALID_IF(comm_rounds == -1);
@@ -94,7 +107,8 @@ private:
   }
 
   bool IsValidFromTrace() {
-    NA_IF(topology != NeighborTopology::FromTrace);
+    NA_IF(topology != NeighborTopology::FromSingleTSTrace
+        and topology != NeighborTopology::FromMultiTSTrace);
     INVALID_IF(trace_root == nullptr);
     INVALID_IF(comm_nts == -1);
     INVALID_IF(bench_log == nullptr);

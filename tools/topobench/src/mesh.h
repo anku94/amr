@@ -78,4 +78,5 @@ class Mesh {
   Logger logger_;
 
   friend class Topology;
+  friend class MeshGenerator;
 };

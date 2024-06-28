@@ -3,7 +3,6 @@
 
 #include <getopt.h>
 #include <glog/logging.h>
-#include <iostream>
 
 void PrintHelp() {
   printf(
@@ -21,7 +20,9 @@ NeighborTopology parse_topology(int topo_id) {
     case 3:
       return NeighborTopology::Dynamic;
     case 4:
-      return NeighborTopology::FromTrace;
+      return NeighborTopology::FromSingleTSTrace;
+    case 5:
+      return NeighborTopology::FromMultiTSTrace;
   }
 
   return NeighborTopology::Ring;

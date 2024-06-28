@@ -23,8 +23,10 @@ std::string TopologyToStr(NeighborTopology t) {
     return "ALL_TO_ALL";
   case NeighborTopology::Dynamic:
     return "DYNAMIC";
-  case NeighborTopology::FromTrace:
-    return "FROM_TRACE";
+  case NeighborTopology::FromSingleTSTrace:
+    return "FROM_SINGLE_TS_TRACE";
+  case NeighborTopology::FromMultiTSTrace:
+    return "FROM_MULTI_TS_TRACE";
   }
 
   return "UNKNOWN";

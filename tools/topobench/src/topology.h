@@ -5,15 +5,15 @@
 #pragma once
 
 #include "block.h"
-#include "mesh.h"
 #include "common.h"
+#include "mesh.h"
 #include "trace_reader.h"
 
 class Topology {
- public:
-  Topology(const DriverOpts& opts) : opts_(opts), reader_(opts.trace_root) {}
+public:
+  Topology(const DriverOpts &opts) : opts_(opts), reader_(opts.trace_root) {}
 
-  Status GenerateMesh(const DriverOpts& opts, Mesh& mesh, int ts);
+  Status GenerateMesh(const DriverOpts &opts, Mesh &mesh, int ts);
 
   int GetNumTimesteps() {
     reader_.Read(Globals::my_rank);
@@ -21,21 +21,23 @@ class Topology {
     return reader_.GetNumTimesteps();
   }
 
- private:
-  Status GenerateMeshRing(Mesh& mesh, int ts) const;
+private:
+  Status GenerateMeshRing(Mesh &mesh, int ts) const;
 
-  Status GenerateMeshAllToAll(Mesh& mesh, int ts) const;
+  Status GenerateMeshAllToAll(Mesh &mesh, int ts) const;
 
-  Status GenerateMeshDynamic(Mesh& mesh, int ts) {
+  Status GenerateMeshDynamic(Mesh &mesh, int ts) {
     Status s = Status::OK;
 
-    logv(__LOG_ARGS__, LOG_INFO, "Generating Mesh: Dynamic. NOT IMPLEMENTED YET.");
+    logv(__LOG_ARGS__, LOG_INFO,
+         "Generating Mesh: Dynamic. NOT IMPLEMENTED YET.");
 
     return s;
   }
 
-  Status GenerateMeshFromTrace(Mesh& mesh, int ts);
+  Status GenerateMeshFromTrace(Mesh &mesh, int ts);
 
-  const DriverOpts& opts_;
+  const DriverOpts &opts_;
   TraceReader reader_;
 };
+
