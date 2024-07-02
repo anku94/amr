@@ -24,19 +24,19 @@ std::string GetMPIStr() {
   return token;
 }
 
-const std::string TopologyToStrUtil() {
-  switch (Globals::driver_opts.topology) {
-  case NeighborTopology::Ring:
-    return "RING";
+const std::string MeshGenMethodToStrUtil() {
+  switch (Globals::driver_opts.meshgen_method) {
+  case MeshGenMethod::Ring:
+    return "Ring";
     break;
-  case NeighborTopology::AllToAll:
-    return "ALLTOALL";
+  case MeshGenMethod::AllToAll:
+    return "AllToALl";
     break;
-  case NeighborTopology::FromSingleTSTrace:
-    return std::string("[SingleTS]") + Globals::driver_opts.trace_root;
+  case MeshGenMethod::FromSingleTSTrace:
+    return std::string("SingleTS:") + Globals::driver_opts.trace_root;
     break;
-  case NeighborTopology::FromMultiTSTrace:
-    return std::string("[MultiTS]") + Globals::driver_opts.trace_root;
+  case MeshGenMethod::FromMultiTSTrace:
+    return std::string("MultiTS:") + Globals::driver_opts.trace_root;
     break;
   default:
     break;
@@ -117,7 +117,7 @@ void Logger::LogRun(double send_mb, double send_mbps, double recv_mb,
       return;
 
     fprintf(f, "mpi_prov,send_mb,send_mbps,recv_mb,recv_mbps,"
-               "time_avg_ms,time_min_ms,time_max_ms,num_obs,topology\n");
+               "time_avg_ms,time_min_ms,time_max_ms,num_obs,meshgen_method\n");
     fclose(f);
   }
 
@@ -126,7 +126,7 @@ void Logger::LogRun(double send_mb, double send_mbps, double recv_mb,
     return;
 
   const std::string mpi_str = ::GetMPIStr();
-  const std::string topo_str = ::TopologyToStrUtil();
+  const std::string topo_str = ::MeshGenMethodToStrUtil();
 
   fprintf(f,
           "%s,%.6lf,%.6lf,%.6lf,%.6lf," // send-recv mb/mbps

@@ -33,22 +33,22 @@ static void GatherNeighborCounts(int count_local) {
 } // namespace
 
 std::unique_ptr<MeshGenerator> MeshGenerator::Create(const DriverOpts &opts) {
-  NeighborTopology t = opts.topology;
+  MeshGenMethod t = opts.meshgen_method;
 
   switch (t) {
-  case NeighborTopology::Ring:
+  case MeshGenMethod::Ring:
     return std::make_unique<RingMeshGenerator>(opts);
     break;
-  case NeighborTopology::AllToAll:
+  case MeshGenMethod::AllToAll:
     return std::make_unique<AllToAllMeshGenerator>(opts);
     break;
-  case NeighborTopology::Dynamic:
+  case MeshGenMethod::Dynamic:
     ABORT("Not implemented");
     break;
-  case NeighborTopology::FromSingleTSTrace:
+  case MeshGenMethod::FromSingleTSTrace:
     return std::make_unique<SingleTimestepTraceMeshGenerator>(opts);
     break;
-  case NeighborTopology::FromMultiTSTrace:
+  case MeshGenMethod::FromMultiTSTrace:
     return std::make_unique<MultiTimestepTraceMeshGenerator>(opts);
     break;
   }
@@ -108,7 +108,8 @@ Status AllToAllMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
       mb->AddNeighborSendRecv(nrl_bid_off, nrl, opts_.size_per_msg);
       mb->AddNeighborSendRecv(nrr_bid_off, nrr, opts_.size_per_msg);
 
-      MeshGenerator::AddMeshBlock(mesh, mb); }
+      MeshGenerator::AddMeshBlock(mesh, mb);
+    }
   }
   return Status::OK;
 }

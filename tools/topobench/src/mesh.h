@@ -77,6 +77,5 @@ class Mesh {
   std::vector<std::shared_ptr<MeshBlock>> blocks_;
   Logger logger_;
 
-  friend class Topology;
   friend class MeshGenerator;
 };

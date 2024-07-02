@@ -36,8 +36,8 @@ public:
   }
 
   void PrintOpts() {
-    if (opts_.topology != NeighborTopology::FromSingleTSTrace and
-        opts_.topology != NeighborTopology::FromMultiTSTrace) {
+    if (opts_.meshgen_method != MeshGenMethod::FromSingleTSTrace and
+        opts_.meshgen_method != MeshGenMethod::FromMultiTSTrace) {
       logvat0(__LOG_ARGS__, LOG_INFO, "[Blocks Per Rank] %zu\n",
               opts_.blocks_per_rank);
       logvat0(__LOG_ARGS__, LOG_INFO, "[Size Per Msg] %zu\n",
@@ -45,8 +45,8 @@ public:
     }
 
     logvat0(__LOG_ARGS__, LOG_INFO, "[Comm Rounds] %d\n", opts_.comm_rounds);
-    logvat0(__LOG_ARGS__, LOG_INFO, "[Topology] %s\n",
-            TopologyToStr(opts_.topology).c_str());
+    logvat0(__LOG_ARGS__, LOG_INFO, "[MeshGenMethod] %s\n",
+            MeshGenMethodToStr(opts_.meshgen_method).c_str());
     logvat0(__LOG_ARGS__, LOG_INFO, "[Job dir] %s\n", opts_.job_dir);
     logvat0(__LOG_ARGS__, LOG_INFO, "[Log output] %s\n", opts_.bench_log);
   }
@@ -55,8 +55,8 @@ public:
     Setup(argc, argv);
     PrintOpts();
 
-    if (opts_.topology == NeighborTopology::FromSingleTSTrace or
-        opts_.topology == NeighborTopology::FromMultiTSTrace) {
+    if (opts_.meshgen_method == MeshGenMethod::FromSingleTSTrace or
+        opts_.meshgen_method == MeshGenMethod::FromMultiTSTrace) {
       RunInternalTrace();
     } else {
       RunInternalNonTrace();
@@ -80,25 +80,38 @@ public:
     }
   }
 
+  int GetNumTimestepsToRunForTrace(int nts_trace) const {
+    if (opts_.meshgen_method == MeshGenMethod::FromSingleTSTrace) {
+      return 1;
+    } else if (opts_.meshgen_method == MeshGenMethod::FromMultiTSTrace) {
+      if (opts_.comm_nts > 1) {
+        return std::min(opts_.comm_nts, nts_trace);
+      } else {
+        // since we skip the first ts, make sure to run at least one
+        return std::min(2, nts_trace);
+      }
+    } else {
+      ABORT("Invalid usage");
+    }
+
+    // unreachable
+    return -1;
+  }
+
   void RunInternalTrace() {
     auto mesh_gen = MeshGenerator::Create(opts_);
-
-    // int nrounds = topology.GetNumTimesteps();
-    const int nts = mesh_gen->GetNumTimesteps();
-    const int nts_to_run = std::min(nts, opts_.comm_nts);
+    const int nts_trace = mesh_gen->GetNumTimesteps();
+    const int nts_to_run = GetNumTimestepsToRunForTrace(nts_trace);
+    // number of times to repeat a timestep
     const int nrounds = opts_.comm_rounds;
 
     logvat0(__LOG_ARGS__, LOG_INFO,
             "num_ts found: %d, num_ts to run: %d, rounds per ts: %d\n"
             "(will skip first ts)",
-            nts, nts_to_run, nrounds);
+            nts_trace, nts_to_run, nrounds);
 
-    int ts_beg = 0;
-    if (opts_.topology == NeighborTopology::FromMultiTSTrace) {
-      // in multi-ts trace, we skip the first timestep
-      // as it contains bootstrap communication
-      ts_beg = 1;
-    }
+    const int ts_beg =
+        (opts_.meshgen_method == MeshGenMethod::FromMultiTSTrace) ? 1 : 0;
 
     for (int ts = ts_beg; ts < nts_to_run; ts++) {
       mesh_gen->GenerateMesh(mesh_, ts);

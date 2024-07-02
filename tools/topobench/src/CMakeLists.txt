@@ -50,3 +50,5 @@ foreach (tgt topo topobench)
             ${MPI_CXX_LINK_FLAGS})
 
 endforeach ()
+
+install(TARGETS topobench RUNTIME DESTINATION bin)
