@@ -1,0 +1,56 @@
+#######################
+# experiment params
+#######################
+#
+# flags to {script}
+#
+
+topo_trace_path={topo_trace_path}
+topo_trace={topo_trace_name}
+nodes={nodes}
+ppn={ppn}
+meshgen_method={meshgen_method}
+blocks_per_rank={blocks_per_rank}
+msgsz_bytes={msgsz}
+num_rounds={num_rounds}
+num_timesteps={num_timesteps}
+hostsuffix={hostsuffix}
+cpubind={cpubind}
+
+#######################
+
+#
+# workaround a bash bug where "I-0" matches "[a-z]*" when LANG is set
+# (only impacts some versions of bash)
+#
+unset LANG
+
+#
+# load in common.sh so we can get the jobdir for handling iterations
+#
+. @CMAKE_INSTALL_PREFIX@/scripts/common.sh
+
+get_jobdir      # this sets jobdir
+
+
+#
+# loop through iterations...
+#
+it=0
+while [ $it -lt {iterations} ];
+do
+    echo running iteration \$it
+    # XXX: should reset logfile name here
+    $prefix/scripts/{script}
+
+    if [ $prun_on != 0 ]; then
+      echo running postrun command
+      $postruncmd
+    fi
+    echo saving iteration in $jobdir/I-$it
+    mkdir -p $jobdir/I-$it
+    mv $jobdir/[a-z]* $jobdir/I-$it
+
+    it=`expr $it + 1`
+done
+

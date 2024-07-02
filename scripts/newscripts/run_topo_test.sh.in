@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+#
+# run_topo_test.sh  run one topobench instance using params on command line
+#
+
+set -euo pipefail
+
+#########################################
+# default values for tunable parameters #
+#########################################
+
+arg_topo_bin="topobench"
+# assumed to be in $INSTALL_PREFIX/traces/topobench/<trace_name>
+arg_topo_trace_path="traces/topobench/singlets"
+arg_topo_trace="blastw512.msgtrace.01.baseline.reg.csv"
+arg_nodes="32"
+arg_procs_per_node="16"
+arg_meshgen_method="4"
+arg_blocks_per_rank="1"
+arg_msgsz_bytes="1024"
+arg_num_rounds="1"
+arg_num_timesteps="1"
+arg_pre=""
+arg_host_suffix=""
+arg_cpubind="none"
+
+###############
+# Core script #
+###############
+
+source @CMAKE_INSTALL_PREFIX@/scripts/common.sh
+source ${dfsu_prefix}/scripts/amr_common.sh
+
+# load command line args into $arg_ vars (overwrites default values)
+loadargs "$@"
+
+# init global variables used by and shared with common modules
+nodes="$arg_nodes"
+ppn="$arg_procs_per_node"
+cores=$((ppn * nodes))
+host_suffix="$arg_host_suffix"
+
+message "Script begin..."
+# keep track of start time so we can see how long this takes
+timein=`date`
+
+### lustre (or some other shared area for output) ###
+get_jobdir
+
+### machine list ###
+gen_hosts
+
+### prepare the experiment directory ###
+topo_prepare_expdir
+
+# XXX: $vpic_nodes (an old name) has the list of allocated nodes sep'd
+# by a comma in it.   would have liked to use all_nodes, but that currently
+# uses a \n instead of a comma (bug?)
+#
+topo_do_run "$vpic_nodes" "$arg_cpubind"
+
+# overall time
+timeout=$(date)
+
+message "Script complete!"
+message "start: ${timein}"
+message "  end: ${timeout}"
+
+exit 0

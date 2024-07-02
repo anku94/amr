@@ -4,7 +4,6 @@ set -eu
 
 amru_prefix=$dfsu_prefix
 
-#
 # amr_prepare_expdir: prepare variables for a single experiment
 # and create the expdir. must be done before amr_prepare_deck
 #
@@ -109,4 +108,60 @@ amr_do_run() {
 
   do_mpirun $cores $ppn "$amr_cpubind" env_vars[@] \
     "$amr_nodes" "$amr_exec" "${EXTRA_MPIOPTS-}"
+}
+
+#
+# topo_prepare_expdir: prepare variables for a single experiment
+# and create the expdir. must be done before topo_do_run
+#
+
+topo_prepare_expdir() {
+  exp_tag="topobench_${arg_topo_trace}"
+  exp_tag="${exp_tag}_C${cores}_N${nodes}"
+  exp_tag="${exp_tag}_N${arg_num_timesteps}_R${arg_num_rounds}"
+
+  message "-INFO- Will use exp dir: $exp_tag in jobdir"
+  exp_jobdir="$jobdir/$exp_tag"
+  exp_logfile="$exp_jobdir/$exp_tag.log"
+
+  mkdir -p $exp_jobdir
+}
+
+#
+# topo_do_run: run a topobench experiment
+#
+#
+topo_do_run() {
+  local topo_nodes="${1}"
+  local topo_cpubind="${2}"
+
+  local topo_bin_fullpath="$amru_prefix/bin/$arg_topo_bin"
+  local topo_trace_fullpath="$amru_prefix/traces/topobench/$arg_topo_trace"
+
+  if [ "${arg_topo_trace:0:1}" != "/" ]; then
+    topo_trace_fullpath="${amru_prefix}/${arg_topo_trace_path}/${arg_topo_trace}"
+  else
+    topo_trace_fullpath="${arg_topo_trace_path}/${arg_topo_trace}"
+  fi
+
+  local topo_params=(
+    "-j" "${exp_jobdir}"
+    "-t" "${arg_meshgen_method}"
+    "-p" "${topo_trace_fullpath}"
+    "-b" "${arg_blocks_per_rank}"
+    "-s" "${arg_msgsz_bytes}"
+    "-n" "${arg_num_timesteps}"
+    "-r" "${arg_num_rounds}"
+  )
+
+  env_vars=(
+    "GLOG_logtostderr" "${arg_amr_glog_minloglevel:-1}"
+    "GLOG_minloglevel" "${arg_amr_glog_minloglevel:-0}"
+    "GLOG_v" "${arg_amr_glog_v:-0}"
+  )
+
+  local topo_exec="$topo_bin_fullpath ${topo_params[@]}"
+
+  do_mpirun $cores $ppn "$topo_cpubind" env_vars[@] \
+    "$topo_nodes" "$topo_exec" "${EXTRA_MPIOPTS-}"
 }
