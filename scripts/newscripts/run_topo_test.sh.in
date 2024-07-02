@@ -11,7 +11,8 @@ set -euo pipefail
 #########################################
 
 arg_topo_bin="topobench"
-# assumed to be in $INSTALL_PREFIX/traces/topobench/<trace_name>
+# if relative, assumed to be relative to install tree
+# if absolute, assumed to be full path to trace dir
 arg_topo_trace_path="traces/topobench/singlets"
 arg_topo_trace="blastw512.msgtrace.01.baseline.reg.csv"
 arg_nodes="32"
@@ -46,7 +47,9 @@ message "Script begin..."
 timein=`date`
 
 ### lustre (or some other shared area for output) ###
-get_jobdir
+if [ "${jobdir:-}" = "" ]; then
+  get_jobdir
+fi
 
 ### machine list ###
 gen_hosts

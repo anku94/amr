@@ -114,11 +114,23 @@ amr_do_run() {
 # topo_prepare_expdir: prepare variables for a single experiment
 # and create the expdir. must be done before topo_do_run
 #
+# uses: cores, arg_topo_trace, arg_num_rounds, jobdir
+# sets: topo_trace_fullpath, exp_tag, exp_jobdir, exp_logfile
+#
 
 topo_prepare_expdir() {
+  arg_topo_trace_fullpath=""
+
+  if [ "${arg_topo_trace_path:0:1}" != "/" ]; then
+    arg_topo_trace_fullpath="${amru_prefix}/${arg_topo_trace_path}/${arg_topo_trace}"
+  else
+    arg_topo_trace_fullpath="${arg_topo_trace_path}/${arg_topo_trace}"
+  fi
+
+  arg_topo_trace=$(basename $arg_topo_trace)
+
   exp_tag="topobench_${arg_topo_trace}"
-  exp_tag="${exp_tag}_C${cores}_N${nodes}"
-  exp_tag="${exp_tag}_N${arg_num_timesteps}_R${arg_num_rounds}"
+  exp_tag="${exp_tag}_C${cores}_R${arg_num_rounds}"
 
   message "-INFO- Will use exp dir: $exp_tag in jobdir"
   exp_jobdir="$jobdir/$exp_tag"
@@ -130,19 +142,21 @@ topo_prepare_expdir() {
 #
 # topo_do_run: run a topobench experiment
 #
+# args: arg_nodes, arg_cpubind
+# uses: amru_prefix, cores, ppn, logfile, exp_logfile, arg_topo_bin,
+#      arg_topo_trace_fullpath, arg_meshgen_method,
+#      arg_blocks_per_rank, arg_msgsz_bytes, arg_num_timesteps, arg_num_rounds,
+#      arg_amr_glog_minloglevel, arg_amr_glog_v
 #
 topo_do_run() {
   local topo_nodes="${1}"
   local topo_cpubind="${2}"
 
   local topo_bin_fullpath="$amru_prefix/bin/$arg_topo_bin"
-  local topo_trace_fullpath="$amru_prefix/traces/topobench/$arg_topo_trace"
+  local topo_trace_fullpath="$arg_topo_trace_fullpath"
 
-  if [ "${arg_topo_trace:0:1}" != "/" ]; then
-    topo_trace_fullpath="${amru_prefix}/${arg_topo_trace_path}/${arg_topo_trace}"
-  else
-    topo_trace_fullpath="${arg_topo_trace_path}/${arg_topo_trace}"
-  fi
+  [ -f "$topo_bin_fullpath" ] || die "Binary not found: $topo_bin_fullpath"
+  [ -f "$topo_trace_fullpath" ] || die "Trace not found: $topo_trace_fullpath"
 
   local topo_params=(
     "-j" "${exp_jobdir}"

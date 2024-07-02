@@ -15,17 +15,17 @@ int my_rank, nranks;
 DriverOpts driver_opts;
 } // namespace Globals
 
-std::string TopologyToStr(NeighborTopology t) {
+std::string MeshGenMethodToStr(MeshGenMethod t) {
   switch (t) {
-  case NeighborTopology::Ring:
+  case MeshGenMethod::Ring:
     return "RING";
-  case NeighborTopology::AllToAll:
+  case MeshGenMethod::AllToAll:
     return "ALL_TO_ALL";
-  case NeighborTopology::Dynamic:
+  case MeshGenMethod::Dynamic:
     return "DYNAMIC";
-  case NeighborTopology::FromSingleTSTrace:
+  case MeshGenMethod::FromSingleTSTrace:
     return "FROM_SINGLE_TS_TRACE";
-  case NeighborTopology::FromMultiTSTrace:
+  case MeshGenMethod::FromMultiTSTrace:
     return "FROM_MULTI_TS_TRACE";
   }
 

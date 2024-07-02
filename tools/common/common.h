@@ -50,7 +50,7 @@ void msg_abort(int err, const char *msg, const char *func, const char *file,
 
 enum class Status { OK, MPIError, Error, InvalidPtr };
 
-enum class NeighborTopology {
+enum class MeshGenMethod {
   Ring,
   AllToAll,
   Dynamic,
@@ -58,7 +58,7 @@ enum class NeighborTopology {
   FromMultiTSTrace
 };
 
-std::string TopologyToStr(NeighborTopology t);
+std::string MeshGenMethodToStr(MeshGenMethod t);
 
 struct CommNeighbor {
   int block_id;
@@ -67,8 +67,7 @@ struct CommNeighbor {
 };
 
 struct DriverOpts {
-  NeighborTopology topology;
-  int topology_nbrcnt; // XXX: Is this used anywhere?
+  MeshGenMethod meshgen_method;
   size_t blocks_per_rank;
   size_t size_per_msg;
   int comm_rounds; // number of rounds to repeat each topo for
@@ -78,7 +77,7 @@ struct DriverOpts {
   const char *job_dir;
 
   DriverOpts()
-      : topology(NeighborTopology::Ring), topology_nbrcnt(-1),
+      : meshgen_method(MeshGenMethod::Ring),
         blocks_per_rank(SIZE_MAX), size_per_msg(SIZE_MAX), comm_rounds(-1),
         comm_nts(-1), trace_root("") {}
 
@@ -96,8 +95,8 @@ struct DriverOpts {
 
 private:
   bool IsValidGeneric() {
-    NA_IF(topology == NeighborTopology::FromSingleTSTrace);
-    NA_IF(topology == NeighborTopology::FromMultiTSTrace);
+    NA_IF(meshgen_method == MeshGenMethod::FromSingleTSTrace);
+    NA_IF(meshgen_method == MeshGenMethod::FromMultiTSTrace);
     INVALID_IF(blocks_per_rank == SIZE_MAX);
     INVALID_IF(size_per_msg == SIZE_MAX);
     INVALID_IF(comm_rounds == -1);
@@ -107,10 +106,9 @@ private:
   }
 
   bool IsValidFromTrace() {
-    NA_IF(topology != NeighborTopology::FromSingleTSTrace
-        and topology != NeighborTopology::FromMultiTSTrace);
+    NA_IF(meshgen_method != MeshGenMethod::FromSingleTSTrace
+        and meshgen_method != MeshGenMethod::FromMultiTSTrace);
     INVALID_IF(trace_root == nullptr);
-    INVALID_IF(comm_nts == -1);
     INVALID_IF(bench_log == nullptr);
     INVALID_IF(job_dir == nullptr);
     IS_VALID();

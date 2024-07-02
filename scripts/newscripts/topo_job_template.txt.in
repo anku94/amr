@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -eu
+
 #######################
 # experiment params
 #######################
@@ -31,6 +35,7 @@ unset LANG
 . @CMAKE_INSTALL_PREFIX@/scripts/common.sh
 
 get_jobdir      # this sets jobdir
+export jobdir=$jobdir
 
 
 #
@@ -41,12 +46,12 @@ while [ $it -lt {iterations} ];
 do
     echo running iteration \$it
     # XXX: should reset logfile name here
-    $prefix/scripts/{script}
+    $dfsu_prefix/scripts/{script} topo_trace_path=$topo_trace_path \
+    topo_trace=$topo_trace nodes=$nodes ppn=$ppn \
+    meshgen_method=$meshgen_method blocks_per_rank=$blocks_per_rank \
+    msgsz_bytes=$msgsz_bytes num_rounds=$num_rounds \
+    num_timesteps=$num_timesteps hostsuffix=$hostsuffix cpubind=$cpubind
 
-    if [ $prun_on != 0 ]; then
-      echo running postrun command
-      $postruncmd
-    fi
     echo saving iteration in $jobdir/I-$it
     mkdir -p $jobdir/I-$it
     mv $jobdir/[a-z]* $jobdir/I-$it
