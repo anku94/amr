@@ -9,30 +9,11 @@
 namespace amr {
 class ConfigParser {
  public:
-  explicit ConfigParser(const std::string& file_path) {
-    // if file does not exist, warn but do nothing
-    if (!std::ifstream(file_path)) {
-      logv(__LOG_ARGS__, LOG_WARN, "Config file %s does not exist\n", file_path.c_str());
-      return;
-    }
+   explicit ConfigParser() {}
 
-    std::ifstream file(file_path);
-    std::string line;
-    while (std::getline(file, line)) {
-      // if line begins with #, continue
-      if (line.empty() || line[0] == '#') {
-        continue;
-      }
-
-      auto delimiter_pos = line.find('=');
-      if (delimiter_pos != std::string::npos) {
-        std::string key = line.substr(0, delimiter_pos);
-        std::string value = line.substr(delimiter_pos + 1);
-        key = Strip(key);
-        value = Strip(value);
-        params_[key] = value;
-      }
-    }
+  explicit ConfigParser(const std::string file_path) {
+    logv(__LOG_ARGS__, LOG_WARN, "Deprecated: need to use Make() instead\n");
+    Initialize(file_path.c_str());
   }
 
   std::string Strip(const std::string& str) const {
@@ -59,6 +40,37 @@ class ConfigParser {
   }
 
  private:
+  void Initialize(const char* file_path) {
+    if (file_path == nullptr) {
+      logv(__LOG_ARGS__, LOG_WARN, "Config file not specified\n");
+      return;
+    }
+
+    if (!std::ifstream(file_path)) {
+      // file path is optional, but do not specify an invalid one
+      logv(__LOG_ARGS__, LOG_ERRO, "Config file %s does not exist\n", file_path);
+      ABORT("Config file does not exist");
+      return;
+    }
+
+    std::ifstream file(file_path);
+    std::string line;
+    while (std::getline(file, line)) {
+      if (line.empty() || line[0] == '#') {
+        continue;
+      }
+
+      auto delimiter_pos = line.find('=');
+      if (delimiter_pos != std::string::npos) {
+        std::string key = line.substr(0, delimiter_pos);
+        std::string value = line.substr(delimiter_pos + 1);
+        key = Strip(key);
+        value = Strip(value);
+        params_[key] = value;
+      }
+    }
+  }
+
   std::unordered_map<std::string, std::string> params_;
 
   template <typename T>

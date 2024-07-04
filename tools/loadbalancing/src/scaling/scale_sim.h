@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "constants.h"
 #include "distrib/distributions.h"
 #include "policy_utils.h"
@@ -11,8 +13,6 @@
 #include "scale_stats.h"
 #include "tabular_data.h"
 #include "trace_utils.h"
-
-#include <utility>
 
 namespace amr {
 struct ScaleSimOpts {
@@ -31,42 +31,50 @@ class ScaleSim {
  public:
   explicit ScaleSim(ScaleSimOpts opts) : options_(std::move(opts)) {}
 
-  void RunSuite(std::vector<RunType>& suite, RunProfile const& rp,
+  void RunSuite(std::vector<std::string>& suite, RunProfile const& rp,
                 std::vector<double>& costs) {
     int nruns = suite.size();
 
     std::vector<int> ranks(rp.nranks, 0);
 
-    for (auto& r : suite) {
-      logv(__LOG_ARGS__, LOG_INFO, "[RUN] %s", r.ToString().c_str());
+    for (auto& policy : suite) {
+      logv(__LOG_ARGS__, LOG_INFO, "[RUN] %s", policy.c_str());
     }
 
-    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s",
+         options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
 
-    for (auto& r : suite) {
+    for (auto& policy : suite) {
+      // begin timing
       uint64_t _ts_beg = options_.env->NowMicros();
+
+      RunType r = {rp.nranks, rp.nblocks, policy};
       for (int iter = 0; iter < Constants::kScaleSimIters; iter++) {
-        int rv = r.AssignBlocks(costs, ranks, r.nranks);
+        int rv = r.AssignBlocks(costs, ranks, rp.nranks);
         if (rv) {
           ABORT("Failed to assign blocks");
         }
       }
+
+      // end timing
       uint64_t _ts_end = options_.env->NowMicros();
 
+      // compute stats and log them
       std::vector<double> rank_times;
       double time_avg = 0, time_max = 0;
-      PolicyUtils::ComputePolicyCosts(r.nranks, costs, ranks, rank_times,
+
+      PolicyUtils::ComputePolicyCosts(rp.nranks, costs, ranks, rank_times,
                                       time_avg, time_max);
       logv(__LOG_ARGS__, LOG_INFO,
            "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
-           r.policy_name.c_str(), time_avg, time_max);
+           r.policy.c_str(), time_avg, time_max);
 
       double iter_time = (_ts_end - _ts_beg) * 1.0 / Constants::kScaleSimIters;
       double loc_cost = PolicyUtils::ComputeLocCost(ranks) * 100;
 
       std::shared_ptr<TableRow> row = std::make_shared<ScaleSimRow>(
-          r.policy_name, rp.nblocks, rp.nranks, iter_time, time_avg, time_max,
+          r.policy, rp.nblocks, rp.nranks, iter_time, time_avg, time_max,
           loc_cost);
 
       table_.addRow(row);
@@ -74,29 +82,28 @@ class ScaleSim {
   }
 
   void Run() {
-    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s",
+         options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
 
-    std::vector<RunProfile> run_profiles;
+    std::vector<RunProfile> run_profiles; // = {{2048, 8192}, {4096, 8192}};
     GenRunProfiles(run_profiles, options_.nblocks_beg, options_.nblocks_end);
     std::vector<double> costs;
 
-    std::vector<RunType> suite = RunSuites::GetCppIterSuite(64, 150);
-    int nruns = suite.size();
+    std::vector<std::string> policy_suite = {"baseline", "cdp", "hybrid25", "hybrid50", "hybrid75", "lpt"};
+    int nruns = policy_suite.size();
 
     for (auto& r : run_profiles) {
       logv(__LOG_ARGS__, LOG_INFO,
            "[Running profile] nranks_: %d, nblocks: %d, iters: %d, nruns: %d",
            r.nranks, r.nblocks, Constants::kScaleSimIters, nruns);
 
-      suite = RunSuites::GetCppIterSuite(r.nblocks, r.nranks);
-
       if (costs.size() != r.nblocks) {
         costs.resize(r.nblocks, 0);
         DistributionUtils::GenDistributionWithDefaults(costs, r.nblocks);
       }
 
-      RunSuite(suite, r, costs);
+      RunSuite(policy_suite, r, costs);
     }
 
     EmitTable(nruns);
@@ -117,7 +124,7 @@ class ScaleSim {
     v.clear();
 
     for (int nblocks = nb_beg; nblocks <= nb_end; nblocks *= 2) {
-      int nranks_init = GetSmallestPowerBiggerThanN(2, nblocks / 10);
+      int nranks_init = GetSmallestPowerBiggerThanN(2, nblocks / 5);
       for (int nranks = nranks_init; nranks <= nblocks; nranks *= 2) {
         v.emplace_back(RunProfile{nranks, nblocks});
       }

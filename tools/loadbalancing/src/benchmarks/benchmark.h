@@ -59,10 +59,7 @@ class Benchmark {
 
     RunType cpp_iter = base;
     cpp_iter.policy = "cdpi50";
-
     int iter = 50;
-    cpp_iter.policy_opts = &iter;
-    cpp_iter.policy_name = "CppIter_50";
 
     // std::vector<RunType> all_runs{base, cpp, cpp_iter, lpt, hybrid, hybrid2};
     std::vector<RunType> all_runs{ hybrid3, lpt};
@@ -116,9 +113,7 @@ class Benchmark {
       std::string policy_id =
           std::string("cdpi") + std::to_string(all_iters[iter_idx]);
       RunType cpp_iter = base;
-      cpp_iter.policy_opts = &all_iters[iter_idx];
       cpp_iter.policy = policy_id;
-      cpp_iter.policy_name = policy_id;
       all_runs.push_back(cpp_iter);
     }
 
@@ -181,7 +176,7 @@ class Benchmark {
                                     time_avg, time_max);
     logv(__LOG_ARGS__, LOG_INFO,
          "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
-         r.policy_name.c_str(), time_avg, time_max);
+         r.policy.c_str(), time_avg, time_max);
 
     utils_.LogVector("Costs", costs);
     utils_.LogVector("Ranks", ranks);
@@ -192,11 +187,11 @@ class Benchmark {
     std::string distrib_name = DistributionUtils::DistributionToString(d);
 
     std::shared_ptr<TableRow> row = std::make_shared<BenchmarkRow>(
-        r.nranks, r.nblocks, distrib_name, r.policy_name, time_avg, time_max);
+        r.nranks, r.nblocks, distrib_name, r.policy, time_avg, time_max);
     table_.addRow(row);
 
     auto pex_fpath =
-        utils_.GetPexFileName(r.policy_name, distrib_name, r.nranks, r.nblocks);
+        utils_.GetPexFileName(r.policy, distrib_name, r.nranks, r.nblocks);
     utils_.WritePexToFile(pex_fpath, costs, ranks, r.nranks);
   }
 

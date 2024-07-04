@@ -2,6 +2,7 @@
 // Created by Ankush J on 7/13/23.
 //
 
+#include "globals.h"
 #include "scale_sim.h"
 
 #include <getopt.h>
@@ -22,8 +23,7 @@ void ParseOptions(int argc, char* argv[]) {
   extern char* optarg;
   extern int optind;
   int c;
-
-  options.nblocks_beg = -1;
+options.nblocks_beg = -1;
   options.nblocks_end = -1;
   options.output_dir = "";
 
@@ -47,23 +47,24 @@ void ParseOptions(int argc, char* argv[]) {
   options.env = pdlfs::Env::Default();
 
   if (options.output_dir.empty()) {
-    logf(LOG_ERRO, "Output directory not specified\n");
+    logv(__LOG_ARGS__, LOG_ERRO, "Output directory not specified\n");
     PrintHelp(argc, argv);
   }
 
   if (!options.env->FileExists(options.output_dir.c_str())) {
-    logf(LOG_ERRO, "Output directory does not exist\n");
+    logv(__LOG_ARGS__, LOG_ERRO, "Output directory does not exist\n");
     PrintHelp(argc, argv);
   }
 
   if (options.nblocks_beg < 0 || options.nblocks_end < 0) {
-    logf(LOG_ERRO, "Block size not specified\n");
+    logv(__LOG_ARGS__, LOG_ERRO, "Block size not specified\n");
     PrintHelp(argc, argv);
   }
 }
 
 int main(int argc, char* argv[]) {
   ParseOptions(argc, argv);
+  amr::Globals.config = std::make_unique<amr::ConfigParser>();
   amr::ScaleSim sim(options);
   sim.Run();
 

@@ -45,6 +45,10 @@ struct DistributionOpts {
 class DistributionUtils {
  public:
   static Distribution GetConfigDistribution() {
+    if (!Globals.config) {
+      ABORT("Globals.config is not set");
+    }
+
     std::string distrib_str = Globals.config->GetParamOrDefault<std::string>(
         "distribution", "powerlaw");
     return StringToDistribution(distrib_str);

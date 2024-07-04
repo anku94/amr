@@ -17,7 +17,7 @@ class Inputs {
     PopulateStdLogNormal(costs);
 
     std::string costs_str = SerializeVector(costs, 25);
-    logf(LOG_INFO, "Costs: %s", costs_str.c_str());
+    logv(__LOG_ARGS__, LOG_INFO, "Costs: %s", costs_str.c_str());
   }
 
  private:
