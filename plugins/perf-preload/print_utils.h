@@ -3,6 +3,7 @@
 #include "metric.h"
 #include "p2p.h"
 
+#include <cinttypes>
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
@@ -32,8 +33,8 @@ class MetricPrintUtils {
     int bufsz = 256;
     char buf[bufsz];
 
-    std::string metric_fmt = "%" + std::to_string(max_len) +
-                             "s: %12d %12.0lf %12.0lf %12.0lf %12.0lf\n";
+    std::string metric_fmt = "%" + std::to_string(max_len) + "s: " +
+                             "%12" PRIu64 " %12.0lf %12.0lf %12.0lf %12.0lf\n";
     snprintf(buf, bufsz, metric_fmt.c_str(), metric_name, invoke_count, avg,
              std, min, max);
 
@@ -164,7 +165,7 @@ class MetricPrintUtils {
                                       int top_k) {
     // sort by largest metric first
     auto comparator = [](const MetricStats& a, const MetricStats& b) {
-      return a.avg > b.avg;
+      return a.avg * (double) a.invoke_count > b.avg * (double) b.invoke_count;
     };
 
     std::sort(all_stats.begin(), all_stats.end(), comparator);
