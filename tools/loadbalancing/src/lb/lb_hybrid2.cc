@@ -223,55 +223,6 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
   }
 
   ranklist = ranklist_best;
-
-  // PartialLPTSolution alt(costlist, ranklist, rank_costs_,
-  //                        solution.lpt_ranks.size() / 2);
-  // ComputePartialLPTSolution(alt);
-  //
-  // logv(__LOG_ARGS__, LOG_DBUG, "Cost main: %.0lf, alt: %.0lf (%d vs %d)",
-  //      solution.cost_max, alt.cost_max, solution.lpt_ranks.size(),
-  //      alt.lpt_ranks.size());
-  //
-  // if (alt.cost_max < solution.cost_max) {
-  //   ranklist = alt.ranklist;
-  // } else {
-  //   ranklist = solution.ranklist;
-  // }
-
-  // auto lpt_ranks =
-  //     GetLPTRanksV3(costlist, ranklist, rank_costs_, lpt_rank_count_);
-  // auto lpt_blocks = GetBlocksForRanks(ranklist, lpt_ranks);
-  // int lpt_nblocks = lpt_blocks.size();
-  // int lpt_nranks = lpt_ranks.size();
-  //
-  // std::vector<double> costlist_lpt;
-  // std::vector<int> ranklist_lpt;
-  //
-  // for (auto bid : lpt_blocks) {
-  //   costlist_lpt.push_back(costlist[bid]);
-  // }
-  //
-  // rv = LoadBalancePolicies::AssignBlocks("lpt", costlist_lpt, ranklist_lpt,
-  //                                        lpt_nranks);
-  //
-  // if (rv) {
-  //   ABORT("[HybridCppFirst] LPT failed");
-  // }
-  //
-  // for (int lpt_bid = 0; lpt_bid < lpt_nblocks; lpt_bid++) {
-  //   int lpt_rid = ranklist_lpt[lpt_bid];
-  //   int real_bid = lpt_blocks[lpt_bid];
-  //   int real_rid = lpt_ranks[lpt_rid];
-  //
-  //   ranklist[real_bid] = real_rid;
-  // }
-
-  // PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
-  //                                 rank_time_avg, rank_time_max);
-  // logv(__LOG_ARGS__, LOG_DBUG,
-  //      "[HybridCppFirstV2] Costs after LPT, avg: %.0lf, max: %.0lf",
-  //      rank_time_avg, rank_time_max);
-
   return rv;
 }
 
@@ -520,20 +471,14 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV3(
 std::vector<int> HybridAssignmentCppFirst::GetBlocksForRanks(
     std::vector<int> const& ranklist, std::vector<int> const& selected_ranks) {
   std::vector<int> selected_bids;  // block ids
-  // std::unordered_map<int, bool> selected_ranks_map;
-  //
-  // for (auto r : selected_ranks) {
-  //   selected_ranks_map[r] = true;
-  // }
-
   int max_rank = *std::max_element(ranklist.begin(), ranklist.end());
   std::vector<bool> selected_ranks_map(max_rank + 1, false);
+
   for (auto r : selected_ranks) {
     selected_ranks_map[r] = true;
   }
 
   for (size_t i = 0; i < ranklist.size(); i++) {
-    // if (selected_ranks_map.find(ranklist[i]) != selected_ranks_map.end()) {
     if (selected_ranks_map[ranklist[i]]) {
       logv(__LOG_ARGS__, LOG_DBG3, "Block %d, rank %d", i, ranklist[i]);
       selected_bids.push_back(i);
