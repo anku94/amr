@@ -12,8 +12,9 @@ struct PolicyOptsCDPI {
 };
 
 struct PolicyOptsHybridCDPFirst {
-  bool v2;
-  double lpt_frac;
+  bool v2; // whether to use v2 or not, always yes
+  double lpt_frac; // frac of ranks to run LPT on
+  int alt_solncnt_max; // max no. of alt solns to explore
 };
 
 struct PolicyOptsILP {

@@ -294,16 +294,29 @@ std::string PolicyUtils::GetLogPath(const char* output_dir,
 const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
   // policy_name = hybridX, where X is to be parsed into lpt_frac
   // parse policy_name, throw error if not in the correct format
+  //
+  std::regex re_oneparam("hybrid([0-9]+)");
+  std::regex re_twoparam("hybrid([0-9]+)alt([0-9]+)");
+  std::smatch match;
 
-  if (policy_str.substr(0, 6) != "hybrid") {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in GenHybrid" << std::endl
-        << "Policy " << policy_str << " not in the correct format" << std::endl;
-    ABORT(msg.str().c_str());
-  }
+  // HybridPolicy
+  PolicyOptsHybridCDPFirst hcf_opts = {
+      .v2 = true,
+      .lpt_frac = 0.5,
+      .alt_solncnt_max = 0,
+  };
 
-  int lpt_frac = std::stoi(policy_str.substr(6));
-  if (lpt_frac < 0 or lpt_frac > 100) {
+  if (std::regex_match(policy_str, match, re_oneparam)) {
+    logv(__LOG_ARGS__, LOG_DBUG, "One param matched: %s", match.str(1).c_str());
+
+    hcf_opts.lpt_frac = std::stoi(match.str(1)) / 100.0;
+  } else if (std::regex_match(policy_str, match, re_twoparam)) {
+    logv(__LOG_ARGS__, LOG_DBUG, "Two params matched: %s, %s",
+         match.str(1).c_str(), match.str(2).c_str());
+
+    hcf_opts.lpt_frac = std::stoi(match.str(1)) / 100.0;
+    hcf_opts.alt_solncnt_max = std::stoi(match.str(2));
+  } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in GenHybrid" << std::endl
         << "Policy " << policy_str << " not in the correct format" << std::endl;
@@ -313,18 +326,18 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
   static bool first_time = true;
   if (first_time) {
     logv(__LOG_ARGS__, LOG_INFO, "[LB] Using Hybrid policy with LPT frac: %d",
-         lpt_frac);
+         hcf_opts.lpt_frac);
     first_time = false;
   }
 
   std::string policy_name_friendly =
-      "Hybrid (" + std::to_string(lpt_frac) + "%)";
+      "Hybrid (" + std::to_string(hcf_opts.lpt_frac) + "%)";
 
   LBPolicyWithOpts policy = {
       .id = policy_str,
       .name = policy_name_friendly,
       .policy = LoadBalancePolicy::kPolicyHybridCppFirstV2,
-      .hcf_opts = {.v2 = true, .lpt_frac = lpt_frac / 100.0}};
+      .hcf_opts = hcf_opts};
 
   logv(__LOG_ARGS__, LOG_DBUG, "Generated policy: %s",
        policy_name_friendly.c_str());

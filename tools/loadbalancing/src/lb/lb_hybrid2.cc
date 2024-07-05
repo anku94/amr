@@ -45,7 +45,6 @@ void PopulateRanklistWithSolution(std::vector<int>& ranklist,
   }
 }
 
-
 static void ComputePartialLPTSolution(PartialLPTSolution& solution) {
   int rv = 0;
   solution.lpt_ranks = amr::HybridAssignmentCppFirst::GetLPTRanksV3(
@@ -61,7 +60,8 @@ static void ComputePartialLPTSolution(PartialLPTSolution& solution) {
   }
 
   rv = amr::LoadBalancePolicies::AssignBlocks(
-      "lpt", costlist_lpt, solution.ranklist_lpt, solution.lpt_ranks.size());
+      amr::HybridAssignmentCppFirst::kLPTPolicyStr, costlist_lpt,
+      solution.ranklist_lpt, solution.lpt_ranks.size());
 
   if (rv) {
     ABORT("[HybridCppFirst] LPT failed");
@@ -76,7 +76,6 @@ static void ComputePartialLPTSolution(PartialLPTSolution& solution) {
 
     solution.ranklist[real_bid] = real_rid;
   }
-
 
   int nranks = solution.rank_costs.size();
   std::vector<double> rank_times(nranks, 0);
@@ -94,11 +93,13 @@ int LoadBalancePolicies::AssignBlocksHybridCppFirst(
   bool v2 = opts.v2;
   double lpt_frac = opts.lpt_frac;
   int lpt_ranks = nranks * lpt_frac;
+  int alt_solncnt_max = opts.alt_solncnt_max;
 
-  logv(__LOG_ARGS__, LOG_DBUG, "[HybridCppFirst] LPT ranks: %d, V2: %s",
-       lpt_ranks, v2 ? "yes" : "no");
+  logv(__LOG_ARGS__, LOG_DBUG,
+       "[HybridCppFirst] LPT ranks: %d, V2: %s, altcnt: %d", lpt_ranks,
+       v2 ? "yes" : "no", alt_solncnt_max);
 
-  auto hacf = HybridAssignmentCppFirst(lpt_ranks);
+  auto hacf = HybridAssignmentCppFirst(lpt_ranks, alt_solncnt_max);
 
   if (v2) {
     rv = hacf.AssignBlocksV2(costlist, ranklist, nranks);
@@ -118,7 +119,8 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
   std::vector<double> rank_times;
   double rank_time_max, rank_time_avg;
 
-  int rv = LoadBalancePolicies::AssignBlocks("cdp", costlist, ranklist, nranks);
+  int rv = LoadBalancePolicies::AssignBlocks(kCDPPolicyStr, costlist, ranklist,
+                                             nranks);
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
@@ -146,8 +148,8 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
     costlist_lpt.push_back(costlist[bid]);
   }
 
-  rv = LoadBalancePolicies::AssignBlocks("lpt", costlist_lpt, ranklist_lpt,
-                                         lpt_nranks);
+  rv = LoadBalancePolicies::AssignBlocks(kLPTPolicyStr, costlist_lpt,
+                                         ranklist_lpt, lpt_nranks);
 
   if (rv) {
     ABORT("[HybridCppFirst] LPT failed");
@@ -179,7 +181,8 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
   std::vector<double> rank_times;
   double rank_time_max, rank_time_avg;
 
-  int rv = LoadBalancePolicies::AssignBlocks("cdp", costlist, ranklist, nranks);
+  int rv = LoadBalancePolicies::AssignBlocks(kCDPPolicyStr, costlist, ranklist,
+                                             nranks);
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
@@ -199,10 +202,12 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
   ComputePartialLPTSolution(solution);
   auto ranklist_best = solution.ranklist;
 
-  int nlpt = solution.lpt_ranks.size();
-  int nlpt_min = std::max(nranks * 0.1, lpt_rank_count_ / 5.0);
-  while (nlpt > nlpt_min) {
-    PartialLPTSolution alt(costlist, ranklist, rank_costs_, nlpt / 2);
+  // Explore alternate solutions with lower locality loss
+  // than the given LPT parameter
+  int nlpt_alt = solution.lpt_ranks.size();
+
+  for (int alt_idx = 0; alt_idx < alt_max_; alt_idx++) {
+    PartialLPTSolution alt(costlist, ranklist, rank_costs_, nlpt_alt / 2);
     ComputePartialLPTSolution(alt);
 
     logv(__LOG_ARGS__, LOG_DBUG, "Cost main: %.0lf, alt: %.0lf (%d vs %d)",
@@ -211,7 +216,7 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
 
     if (alt.cost_max <= solution.cost_max) {
       ranklist_best = alt.ranklist;
-      nlpt = nlpt / 2;
+      nlpt_alt = nlpt_alt / 2;
     } else {
       break;
     }
@@ -473,7 +478,7 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV3(
     logv(__LOG_ARGS__, LOG_DBG2, "Cost front: %.2f, back: %.2f, avg: %.2f",
          cost_front, cost_back, cost_avg);
 
-    double diff_threshold = cost_avg * 0.02;
+    double diff_threshold = cost_avg * kLPTv3DiffThreshold;
 
     logv(__LOG_ARGS__, LOG_DBG2,
          "Diff front: %.2f, back: %.2f, threshold: %.2f", diff_avg_front,
@@ -514,15 +519,22 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV3(
 
 std::vector<int> HybridAssignmentCppFirst::GetBlocksForRanks(
     std::vector<int> const& ranklist, std::vector<int> const& selected_ranks) {
-  std::map<int, bool> selected_ranks_map;
   std::vector<int> selected_bids;  // block ids
+  // std::unordered_map<int, bool> selected_ranks_map;
+  //
+  // for (auto r : selected_ranks) {
+  //   selected_ranks_map[r] = true;
+  // }
 
+  int max_rank = *std::max_element(ranklist.begin(), ranklist.end());
+  std::vector<bool> selected_ranks_map(max_rank + 1, false);
   for (auto r : selected_ranks) {
     selected_ranks_map[r] = true;
   }
 
   for (size_t i = 0; i < ranklist.size(); i++) {
-    if (selected_ranks_map.find(ranklist[i]) != selected_ranks_map.end()) {
+    // if (selected_ranks_map.find(ranklist[i]) != selected_ranks_map.end()) {
+    if (selected_ranks_map[ranklist[i]]) {
       logv(__LOG_ARGS__, LOG_DBG3, "Block %d, rank %d", i, ranklist[i]);
       selected_bids.push_back(i);
     }

@@ -10,17 +10,17 @@
 #include "policy_wopts.h"
 
 namespace amr {
-
-struct PolicyOptsCppIter {
-  int niters;
-};
-
-struct PolicyOpts {
-  LoadBalancePolicy policy;
-  union {
-    PolicyOptsCppIter cpp_iter_opts;
-  };
-};
+//
+// struct PolicyOptsCppIter {
+//   int niters;
+// };
+//
+// struct PolicyOpts {
+//   LoadBalancePolicy policy;
+//   union {
+//     PolicyOptsCppIter cpp_iter_opts;
+//   };
+// };
 
 int LoadBalancePolicies::AssignBlocks(const char* policy_name,
                                       std::vector<double> const& costlist,

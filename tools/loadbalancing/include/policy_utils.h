@@ -7,6 +7,9 @@
 #include "policy_wopts.h"
 
 namespace amr {
+// fwd decl
+class MiscTest;
+
 class PolicyUtils {
  public:
   static const LBPolicyWithOpts GetPolicy(const char* policy_name);
@@ -57,5 +60,7 @@ class PolicyUtils {
   static const LBPolicyWithOpts GenHybrid(const std::string& policy_str);
 
   static const std::map<std::string, LBPolicyWithOpts> kPolicyMap;
+
+  friend class MiscTest;
 };
 }  // namespace amr

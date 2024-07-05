@@ -86,11 +86,13 @@ class ScaleSim {
          options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
 
-    std::vector<RunProfile> run_profiles; // = {{2048, 8192}, {4096, 8192}};
+    std::vector<RunProfile> run_profiles;  // = {{2048, 8192}, {4096, 8192}};
     GenRunProfiles(run_profiles, options_.nblocks_beg, options_.nblocks_end);
     std::vector<double> costs;
 
-    std::vector<std::string> policy_suite = {"baseline", "cdp", "hybrid25", "hybrid50", "hybrid75", "lpt"};
+    std::vector<std::string> policy_suite = {
+        "baseline", "cdp", "hybrid25",     "hybrid50",
+        "hybrid75", "lpt", "hybrid75alt1", "hybrid75alt2"};
     int nruns = policy_suite.size();
 
     for (auto& r : run_profiles) {
