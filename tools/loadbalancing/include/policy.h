@@ -30,7 +30,8 @@ enum class LoadBalancePolicy {
   kPolicyCppIter,
   kPolicyHybrid,
   kPolicyHybridCppFirst,
-  kPolicyHybridCppFirstV2
+  kPolicyHybridCppFirstV2,
+  kPolicyCDPChunked
 };
 
 /** Policy kUnitCost is not really necessary

@@ -2,6 +2,7 @@ find_package(pdlfs-common CONFIG REQUIRED)
 find_package(GUROBI)
 
 set (lb_srcs
+        lb_chunkwise.cc
         lb_contig_improv.cc
         lb_contig_improv2.cc
         lb_ilp.cc

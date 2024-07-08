@@ -38,6 +38,7 @@ int LoadBalancePolicies::AssignBlocks(const char* policy_name,
     case LoadBalancePolicy::kPolicyContigImproved:
       return AssignBlocksContigImproved(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyContigImproved2:
+      throw std::runtime_error("ContigImproved2 policy is deprecated");
       return AssignBlocksContigImproved2(costlist, ranklist, nranks);
     case LoadBalancePolicy::kPolicyCppIter:
       return AssignBlocksCppIter(costlist, ranklist, nranks, policy.cdp_opts);
@@ -48,6 +49,9 @@ int LoadBalancePolicies::AssignBlocks(const char* policy_name,
     case LoadBalancePolicy::kPolicyHybridCppFirstV2:
       return AssignBlocksHybridCppFirst(costlist, ranklist, nranks,
                                         policy.hcf_opts);
+    case LoadBalancePolicy::kPolicyCDPChunked:
+      return AssignBlocksCdpChunked(costlist, ranklist, nranks,
+                                    policy.chunked_opts);
     default:
       ABORT("LoadBalancePolicy not implemented!!");
   }

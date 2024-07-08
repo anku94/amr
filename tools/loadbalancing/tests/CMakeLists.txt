@@ -6,7 +6,7 @@ endif()
 
 find_package(pdlfs-common CONFIG REQUIRED)
 
-set(lb_tests lb_tests.cc policy_tests.cc)
+set(lb_tests lb_tests.cc lb_chunkwise_tests.cc policy_tests.cc)
 
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 set(all_include_dirs ${src_dir} ${src_dir}/blocksim)

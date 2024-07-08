@@ -2,10 +2,10 @@
 // Created by Ankush J on 7/13/23.
 //
 
+#include <getopt.h>
+
 #include "globals.h"
 #include "scale_sim.h"
-
-#include <getopt.h>
 
 amr::ScaleSimOpts options;
 
@@ -13,6 +13,7 @@ void PrintHelp(int argc, char* argv[]) {
   fprintf(stderr, "Usage: %s [options] \n", argv[0]);
   fprintf(stderr, "Options:\n");
   fprintf(stderr, "  -o <output_dir>   Output directory\n");
+  fprintf(stderr, "  -r <nranks>       Number of ranks (opt)\n");
   fprintf(stderr, "  -s <block_beg>    Block size begin\n");
   fprintf(stderr, "  -e <block_end>    Block size end\n");
   fprintf(stderr, "  -h                Print this help message\n");
@@ -23,11 +24,12 @@ void ParseOptions(int argc, char* argv[]) {
   extern char* optarg;
   extern int optind;
   int c;
-options.nblocks_beg = -1;
+  options.nblocks_beg = -1;
   options.nblocks_end = -1;
+  options.nranks = -1;
   options.output_dir = "";
 
-  while ((c = getopt(argc, argv, "e:ho:s:")) != -1) {
+  while ((c = getopt(argc, argv, "e:ho:r:s:")) != -1) {
     switch (c) {
       case 'e':
         options.nblocks_end = atoi(optarg);
@@ -37,6 +39,9 @@ options.nblocks_beg = -1;
         break;
       case 'o':
         options.output_dir = optarg;
+        break;
+      case 'r':
+        options.nranks = atoi(optarg);
         break;
       case 's':
         options.nblocks_beg = atoi(optarg);

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <map>
 #include <numeric>
 #include <string>
 
@@ -40,6 +41,16 @@ const std::map<std::string, LBPolicyWithOpts> PolicyUtils::kPolicyMap = {
       .name = "CDP-I250",
       .policy = LoadBalancePolicy::kPolicyCppIter,
       .cdp_opts = {.niter_frac = 0, .niters = 250}}},
+    {"cdpc256",
+     {.id = "cdpc256",
+      .name = "CDP-Chunked-256",
+      .policy = LoadBalancePolicy::kPolicyCDPChunked,
+      .chunked_opts = {.chunk_size = 256}}},
+    {"cdpc512",
+     {.id = "cdpc512",
+      .name = "CDP-Chunked-512",
+      .policy = LoadBalancePolicy::kPolicyCDPChunked,
+      .chunked_opts = {.chunk_size = 512}}}
 };
 
 const LBPolicyWithOpts PolicyUtils::GetPolicy(const char* policy_name) {

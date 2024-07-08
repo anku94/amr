@@ -52,7 +52,7 @@ class HybridAssignmentCppFirst {
   static std::vector<int> GetBlocksForRanks(
       std::vector<int> const& ranklist, std::vector<int> const& selected_ranks);
 
-  constexpr static const char* kCDPPolicyStr = "cdp";
+  constexpr static const char* kCDPPolicyStr = "cdpc512";
   constexpr static const char* kLPTPolicyStr = "lpt";
   constexpr static double kLPTv3DiffThreshold = 0.02;
 

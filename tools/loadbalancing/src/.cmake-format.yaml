@@ -1,0 +1,7 @@
+# You may want to adjust these settings depending on your exact needs
+line_width: 80
+tab_size: 2
+use_tabchars: false
+
+format:
+  max_pargs_hwrap: 2

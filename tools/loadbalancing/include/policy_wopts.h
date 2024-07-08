@@ -3,8 +3,6 @@
 #include "policy.h"
 
 #include <iomanip>
-#include <unordered_map>
-
 namespace amr {
 struct PolicyOptsCDPI {
   double niter_frac;
@@ -59,6 +57,14 @@ struct PolicyOptsHybrid {
   }
 };
 
+struct PolicyOptsChunked {
+  int chunk_size;
+
+  std::string ToString() const {
+    return std::string("\n\tchunk_size: \t") + std::to_string(chunk_size);
+  }
+};
+
 struct LBPolicyWithOpts {
   std::string id;
   std::string name;
@@ -68,6 +74,7 @@ struct LBPolicyWithOpts {
     PolicyOptsHybridCDPFirst hcf_opts;
     PolicyOptsILP ilp_opts;
     PolicyOptsHybrid hybrid_opts;
+    PolicyOptsChunked chunked_opts;
   };
 };
 }  // namespace amr

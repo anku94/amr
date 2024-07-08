@@ -20,6 +20,7 @@ struct ScaleSimOpts {
   pdlfs::Env* env;
   int nblocks_beg;
   int nblocks_end;
+  int nranks;
 };
 
 struct RunProfile {
@@ -87,12 +88,15 @@ class ScaleSim {
     Utils::EnsureDir(options_.env, options_.output_dir);
 
     std::vector<RunProfile> run_profiles;  // = {{2048, 8192}, {4096, 8192}};
-    GenRunProfiles(run_profiles, options_.nblocks_beg, options_.nblocks_end);
+    GenRunProfiles(run_profiles);
     std::vector<double> costs;
 
     std::vector<std::string> policy_suite = {
         "baseline", "cdp", "hybrid25",     "hybrid50",
         "hybrid75", "lpt", "hybrid75alt1", "hybrid75alt2"};
+
+    policy_suite = {"baseline", "cdp", "cdpc512", "hybrid50", "lpt"};
+
     int nruns = policy_suite.size();
 
     for (auto& r : run_profiles) {
@@ -121,15 +125,28 @@ class ScaleSim {
     Utils::WriteToFile(options_.env, table_out, table_.toCSV());
   }
 
-  static void GenRunProfiles(std::vector<RunProfile>& v, int nb_beg,
-                             int nb_end) {
+  void GenRunProfiles(std::vector<RunProfile>& v) {
     v.clear();
 
-    for (int nblocks = nb_beg; nblocks <= nb_end; nblocks *= 2) {
+    int blcnt_beg = options_.nblocks_beg;
+    int blcnt_end = options_.nblocks_end;
+    int nranks = options_.nranks;
+
+    for (int nblocks = blcnt_beg; nblocks <= blcnt_end; nblocks *= 2) {
+      if (nranks != -1) {
+        v.emplace_back(RunProfile{nranks, nblocks});
+        continue;
+      }
+
       int nranks_init = GetSmallestPowerBiggerThanN(2, nblocks / 5);
       for (int nranks = nranks_init; nranks <= nblocks; nranks *= 2) {
         v.emplace_back(RunProfile{nranks, nblocks});
       }
+    }
+
+    for (auto& rp : v) {
+      logv(__LOG_ARGS__, LOG_INFO, "RunProfile: nranks: %d, nblocks: %d",
+           rp.nranks, rp.nblocks);
     }
   }
 

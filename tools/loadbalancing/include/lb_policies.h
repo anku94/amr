@@ -12,6 +12,7 @@ struct PolicyOptsCDPI;
 struct PolicyOptsHybridCDPFirst;
 struct PolicyOptsHybrid;
 struct PolicyOptsILP;
+struct PolicyOptsChunked;
 
 enum class LoadBalancePolicy;
 
@@ -59,9 +60,16 @@ class LoadBalancePolicies {
                                         std::vector<int>& ranklist, int nranks,
                                         PolicyOptsHybridCDPFirst const& opts);
 
+  static int AssignBlocksCdpChunked(std::vector<double> const& costlist,
+                                   std::vector<int>& ranklist, int nranks,
+                                   PolicyOptsChunked const& opts);
+
   friend class LoadBalancingPoliciesTest;
   friend class PolicyTest;
+  friend class LBChunkwise;
   //  friend class PolicyExecCtx;
   //  friend class ScaleExecCtx;
 };
+
+class LBChunkwise;
 }  // namespace amr
