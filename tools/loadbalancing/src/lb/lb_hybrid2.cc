@@ -95,9 +95,15 @@ int LoadBalancePolicies::AssignBlocksHybridCppFirst(
   int lpt_ranks = nranks * lpt_frac;
   int alt_solncnt_max = opts.alt_solncnt_max;
 
-  logv(__LOG_ARGS__, LOG_DBUG,
-       "[HybridCppFirst] LPT ranks: %d, V2: %s, altcnt: %d", lpt_ranks,
-       v2 ? "yes" : "no", alt_solncnt_max);
+  static bool first_time = true;
+
+  if (first_time) {
+    logv(__LOG_ARGS__, LOG_INFO,
+         "[HybridCppFirst] LPT ranks: %d, V2: %s, altcnt: %d, CDP: %s",
+         lpt_ranks, v2 ? "yes" : "no", alt_solncnt_max,
+         HybridAssignmentCppFirst::kCDPPolicyStr);
+    first_time = false;
+  }
 
   auto hacf = HybridAssignmentCppFirst(lpt_ranks, alt_solncnt_max);
 

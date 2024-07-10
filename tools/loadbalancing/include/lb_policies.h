@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <mpi.h>
+
 #include <vector>
 
 namespace amr {
@@ -21,6 +23,10 @@ class LoadBalancePolicies {
   static int AssignBlocks(const char* policy_name,
                           std::vector<double> const& costlist,
                           std::vector<int>& ranklist, int nranks);
+
+  static int AssignBlocksParallel(const char* policy_name,
+                                  std::vector<double> const& costlist,
+                                  std::vector<int>& ranklist, MPI_Comm comm);
 
  private:
   static int AssignBlocksRoundRobin(std::vector<double> const& costlist,
@@ -46,7 +52,8 @@ class LoadBalancePolicies {
                                         std::vector<int>& ranklist, int nranks);
 
   static int AssignBlocksContigImproved2(std::vector<double> const& costlist,
-                                        std::vector<int>& ranklist, int nranks);
+                                         std::vector<int>& ranklist,
+                                         int nranks);
 
   static int AssignBlocksCppIter(std::vector<double> const& costlist,
                                  std::vector<int>& ranklist, int nranks,
@@ -60,9 +67,15 @@ class LoadBalancePolicies {
                                         std::vector<int>& ranklist, int nranks,
                                         PolicyOptsHybridCDPFirst const& opts);
 
-  static int AssignBlocksCdpChunked(std::vector<double> const& costlist,
-                                   std::vector<int>& ranklist, int nranks,
-                                   PolicyOptsChunked const& opts);
+  static int AssignBlocksCDPChunked(std::vector<double> const& costlist,
+                                    std::vector<int>& ranklist, int nranks,
+                                    PolicyOptsChunked const& opts);
+
+  static int AssignBlocksParallelCDPChunked(std::vector<double> const& costlist,
+                                            std::vector<int>& ranklist,
+                                            MPI_Comm comm, int my_rank,
+                                            int nranks,
+                                            PolicyOptsChunked const& opts);
 
   friend class LoadBalancingPoliciesTest;
   friend class PolicyTest;

@@ -1,3 +1,4 @@
+find_package(MPI REQUIRED)
 find_package(pdlfs-common CONFIG REQUIRED)
 find_package(GUROBI)
 
@@ -39,7 +40,7 @@ target_include_directories(lb PUBLIC
 )
 
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
-target_link_libraries(lb PRIVATE pdlfs-common)
+target_link_libraries(lb PRIVATE pdlfs-common MPI::MPI_CXX)
 
 if (GUROBI_FOUND)
     target_compile_definitions(lb PRIVATE GUROBI_ENABLED)

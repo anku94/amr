@@ -1,9 +1,12 @@
 #pragma once
 
+#include <mpi.h>
+
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "common.h"
 #include "lb_policies.h"
 
 namespace amr {
@@ -25,6 +28,30 @@ struct RunType {
     int rv = LoadBalancePolicies::AssignBlocks(policy.c_str(), costlist,
                                                ranklist, nranks);
     return rv;
+  }
+
+  int AssignBlocksParallel(std::vector<double> const& costlist,
+                           std::vector<int>& ranklist, MPI_Comm comm) {
+    int rv = LoadBalancePolicies::AssignBlocksParallel(policy.c_str(), costlist,
+                                                       ranklist, comm);
+    return rv;
+  }
+
+  static void VerifyAssignment(std::vector<int> const& ranklist, int nranks) {
+    std::vector<int> counts(nranks, 0);
+    for (auto const& rank : ranklist) {
+      if (rank == -1) {
+        ABORT("All blocks must be assigned");
+      }
+
+      counts[rank]++;
+    }
+
+    for (auto const& count : counts) {
+      if (count == 0) {
+        ABORT("All ranks must have some assignment");
+      }
+    }
   }
 };
 }  // namespace amr

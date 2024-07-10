@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <mpi.h>
+
 #include <utility>
 
 #include "constants.h"
@@ -33,7 +35,7 @@ class ScaleSim {
   explicit ScaleSim(ScaleSimOpts opts) : options_(std::move(opts)) {}
 
   void RunSuite(std::vector<std::string>& suite, RunProfile const& rp,
-                std::vector<double>& costs) {
+                std::vector<double>& costs, MPI_Comm comm) {
     int nruns = suite.size();
 
     std::vector<int> ranks(rp.nranks, 0);
@@ -52,7 +54,14 @@ class ScaleSim {
 
       RunType r = {rp.nranks, rp.nblocks, policy};
       for (int iter = 0; iter < Constants::kScaleSimIters; iter++) {
-        int rv = r.AssignBlocks(costs, ranks, rp.nranks);
+        int rv = 0;
+
+        if (comm == MPI_COMM_NULL) {
+          rv = r.AssignBlocks(costs, ranks, rp.nranks);
+        } else {
+          rv = r.AssignBlocksParallel(costs, ranks, comm);
+        }
+
         if (rv) {
           ABORT("Failed to assign blocks");
         }
@@ -60,6 +69,8 @@ class ScaleSim {
 
       // end timing
       uint64_t _ts_end = options_.env->NowMicros();
+
+      RunType::VerifyAssignment(ranks, rp.nranks);
 
       // compute stats and log them
       std::vector<double> rank_times;
@@ -109,10 +120,46 @@ class ScaleSim {
         DistributionUtils::GenDistributionWithDefaults(costs, r.nblocks);
       }
 
-      RunSuite(policy_suite, r, costs);
+      RunSuite(policy_suite, r, costs, MPI_COMM_NULL);
     }
 
     EmitTable(nruns);
+  }
+
+  void RunParallel(MPI_Comm comm) {
+    int my_rank = -1;
+    MPI_Comm_rank(comm, &my_rank);
+
+    if (my_rank == 0) {
+      logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s",
+           options_.output_dir.c_str());
+      Utils::EnsureDir(options_.env, options_.output_dir);
+    }
+
+    std::vector<RunProfile> run_profiles;  // = {{2048, 8192}, {4096, 8192}};
+    GenRunProfiles(run_profiles);
+    std::vector<double> costs;
+
+    std::vector<std::string> policy_suite = {"cdp", "cdpc512"};
+
+    int nruns = policy_suite.size();
+
+    for (auto& r : run_profiles) {
+      logv(__LOG_ARGS__, LOG_INFO,
+           "[Running profile] nranks_: %d, nblocks: %d, iters: %d, nruns: %d",
+           r.nranks, r.nblocks, Constants::kScaleSimIters, nruns);
+
+      if (costs.size() != r.nblocks) {
+        costs.resize(r.nblocks, 0);
+        DistributionUtils::GenDistributionWithDefaults(costs, r.nblocks);
+      }
+
+      RunSuite(policy_suite, r, costs, comm);
+    }
+
+    if (my_rank == 0) {
+      EmitTable(nruns);
+    }
   }
 
  private:

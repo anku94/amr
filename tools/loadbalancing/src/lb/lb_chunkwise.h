@@ -1,3 +1,5 @@
+#include <mpi.h>
+
 #include <vector>
 
 #include "common.h"
@@ -26,10 +28,18 @@ struct WorkloadChunk {
 class LBChunkwise {
  public:
   static int AssignBlocks(std::vector<double> const& costlist,
-                    std::vector<int>& ranklist, int nranks, int nchunks) {
+                          std::vector<int>& ranklist, int nranks, int nchunks) {
     auto chunks = ComputeChunks(costlist, nranks, nchunks);
+    ValidateChunks(chunks);
+
+    logv(__LOG_ARGS__, LOG_DBG2, "Computed %d chunks", chunks.size());
+
+    int chunk_idx = 0;
 
     for (auto const& chunk : chunks) {
+      logv(__LOG_ARGS__, LOG_DBG2, "Chunk %d: %s", chunk_idx++,
+              chunk.ToString().c_str());
+
       std::vector<double> const chunk_costlist = std::vector<double>(
           costlist.begin() + chunk.block_first,
           costlist.begin() + chunk.block_first + chunk.nblocks);
@@ -54,7 +64,90 @@ class LBChunkwise {
     return 0;
   }
 
+  static int AssignBlocksParallel(std::vector<double> const& costlist,
+                                  std::vector<int>& ranklist, MPI_Comm comm,
+                                  int my_rank, int nranks, int nchunks) {
+    if (nchunks > nranks) {
+      logv(__LOG_ARGS__, LOG_ERRO, "nchunks > nranks");
+      ABORT("nchunks > nranks");
+      return -1;
+    }
+
+    auto chunks = ComputeChunks(costlist, nranks, nchunks);
+    ValidateChunks(chunks);
+
+    std::vector<int> chunk_ranklist;
+
+    if (my_rank < nchunks) {
+      auto const& chunk = chunks[my_rank];
+      logv(__LOG_ARGS__, LOG_DBUG, "Rank %d: Executing chunk %s", my_rank,
+              chunk.ToString().c_str());
+
+      std::vector<double> const chunk_costlist = std::vector<double>(
+          costlist.begin() + chunk.block_first,
+          costlist.begin() + chunk.block_first + chunk.nblocks);
+
+      chunk_ranklist.resize(chunk.nblocks, -1);
+      int rv = LoadBalancePolicies::AssignBlocksContigImproved(
+          chunk_costlist, chunk_ranklist, chunk.nranks);
+
+      if (rv != 0) {
+        logv(__LOG_ARGS__, LOG_ERRO,
+             "Failed to assign blocks to chunk %s, rv: %d",
+             chunk.ToString().c_str(), rv);
+
+        return rv;
+      }
+
+      for (int i = 0; i < chunk.nblocks; i++) {
+        chunk_ranklist[i] = chunk.rank_first + chunk_ranklist[i];
+      }
+    }
+
+    // Gather the results
+    // First, prepare recvcnts and displs
+    std::vector<int> recvcnts(nranks, 0);
+    for (int rank = 0; rank < nranks; rank++) {
+      recvcnts[rank] = (rank < nchunks) ? chunks[rank].nblocks : 0;
+    }
+
+    std::vector<int> displs(nranks, 0);
+    for (int i = 1; i < nranks; i++) {
+      displs[i] = displs[i - 1] + recvcnts[i - 1];
+    }
+
+    int sendcnt = (my_rank < nchunks) ? chunks[my_rank].nblocks : 0;
+
+    int rv =
+        MPI_Allgatherv(chunk_ranklist.data(), sendcnt, MPI_INT, ranklist.data(),
+                       recvcnts.data(), displs.data(), MPI_INT, comm);
+
+    if (rv != MPI_SUCCESS) {
+      logv(__LOG_ARGS__, LOG_WARN, "MPI_Allgatherv failed, rv: %d", rv);
+      return rv;
+    }
+
+    return 0;
+  }
+
  private:
+  static std::string SerializeVector(std::vector<int> const& v) {
+    char buf[65536];
+    char* bufptr = buf;
+    int bytes_rem = sizeof(buf);
+
+    for (int i = 0; i < v.size(); i++) {
+      int r = snprintf(bufptr, bytes_rem, "%5d ", v[i]);
+      bufptr += r;
+      bytes_rem -= r;
+      if (i % 16 == 15) {
+        r = snprintf(bufptr, bytes_rem, "\n");
+        bufptr += r;
+        bytes_rem -= r;
+      }
+    }
+    return std::string(buf);
+  }
   static std::vector<WorkloadChunk> ComputeChunks(
       std::vector<double> const& costlist, int nranks, int nchunks) {
     // costlist[]: size is nblocks
@@ -90,10 +183,32 @@ class LBChunkwise {
     int nblocks_beg = 0;
     int nranks_beg = 0;
 
+    // nranks remaining for subsequent chunks
+    int nranks_rem = nranks - nranks_pc;
+    int nblocks_rem = nblocks;
+
+    if (nblocks_rem < nranks_rem) {
+      logv(__LOG_ARGS__, LOG_WARN, "nblocks_rem < nranks_rem!!!");
+    }
+
     for (int bidx = 0; bidx < nblocks; bidx++) {
       cost_cur += costlist[bidx];
 
-      if (cost_cur >= cost_to_target - EPSILON) {
+      // this block is definitely going into this chunk
+      // so will def not be available for the next
+      nblocks_rem -= 1;
+
+      // chunk end conditions, enumerated explicitly
+      bool chunk_has_target_cost = (cost_cur >= cost_to_target - EPSILON);
+      int nblocks_chunk = bidx - nblocks_beg + 1;
+      bool chunk_has_target_nblocks = (nblocks_chunk >= nranks_pc);
+      bool chunk_satisfies_target =
+          (chunk_has_target_cost and chunk_has_target_nblocks);
+      bool low_on_blocks = (nblocks_rem == nranks_rem);
+
+      // the second condition here ensures that
+      // each chunk gets at least nranks_pc blocks
+      if (chunk_satisfies_target or low_on_blocks) {
         chunks.push_back({
             .block_first = nblocks_beg,
             .nblocks = bidx - nblocks_beg + 1,
@@ -109,6 +224,7 @@ class LBChunkwise {
         cost_rem -= cost_cur;
         cost_cur = 0;
         cost_to_target = cost_rem / (nchunks - chunks.size());
+        nranks_rem -= nranks_pc;
       }
     }
 
@@ -121,6 +237,17 @@ class LBChunkwise {
     }
 
     return chunks;
+  }
+
+  static void ValidateChunks(std::vector<WorkloadChunk> const& chunks) {
+    for (const auto& chunk : chunks) {
+      if (chunk.nblocks < chunk.nranks) {
+        logv(__LOG_ARGS__, LOG_WARN, "Chunk %s has fewer blocks than ranks",
+             chunk.ToString().c_str());
+        // A rank with zero blocks is not allowed
+        ABORT("Chunk has fewer blocks than ranks");
+      }
+    }
   }
 
   friend class LBChunkwiseTest;

@@ -63,4 +63,35 @@ TEST_F(LBChunkwiseTest, ValidateChunking2) {
   chunks = ComputeChunks(costs, nranks, nchunks);
   ValidateChunks(chunks, nchunks, nblocks, nranks);
 }
+
+TEST_F(LBChunkwiseTest, ValidateChunking3) {
+  int nblocks = 8;
+  int nranks = 6;
+  int nchunks = 3;
+  std::vector<double> costs(nblocks, 1e-6);
+
+  auto chunks = ComputeChunks(costs, nranks, nchunks);
+  ValidateChunks(chunks, nchunks, nblocks, nranks);
+
+  for (const auto& chunk: chunks) {
+    EXPECT_GE(chunk.nblocks, 2);
+  }
+}
+
+TEST_F(LBChunkwiseTest, ValidateChunking4) {
+  int nblocks = 4195;
+  int nranks = 4096;
+  int nchunks = 8;
+  std::vector<double> costs(nblocks, 1e-6);
+  costs[4095] = 1;
+  costs[4083] = 3;
+  costs[2] = 100;
+
+  auto chunks = ComputeChunks(costs, nranks, nchunks);
+  ValidateChunks(chunks, nchunks, nblocks, nranks);
+
+  for (const auto& chunk: chunks) {
+    EXPECT_GE(chunk.nblocks, 512);
+  }
+}
 }  // namespace amr

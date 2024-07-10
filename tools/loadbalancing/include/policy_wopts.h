@@ -3,6 +3,8 @@
 #include "policy.h"
 
 #include <iomanip>
+#include <string>
+
 namespace amr {
 struct PolicyOptsCDPI {
   double niter_frac;

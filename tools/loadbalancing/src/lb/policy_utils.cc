@@ -314,7 +314,7 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
   PolicyOptsHybridCDPFirst hcf_opts = {
       .v2 = true,
       .lpt_frac = 0.5,
-      .alt_solncnt_max = 0,
+      .alt_solncnt_max = 0
   };
 
   if (std::regex_match(policy_str, match, re_oneparam)) {

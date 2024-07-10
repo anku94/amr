@@ -50,12 +50,36 @@ int LoadBalancePolicies::AssignBlocks(const char* policy_name,
       return AssignBlocksHybridCppFirst(costlist, ranklist, nranks,
                                         policy.hcf_opts);
     case LoadBalancePolicy::kPolicyCDPChunked:
-      return AssignBlocksCdpChunked(costlist, ranklist, nranks,
+      return AssignBlocksCDPChunked(costlist, ranklist, nranks,
                                     policy.chunked_opts);
     default:
       ABORT("LoadBalancePolicy not implemented!!");
   }
   return -1;
+}
+
+int LoadBalancePolicies::AssignBlocksParallel(
+    const char* policy_name, std::vector<double> const& costlist,
+    std::vector<int>& ranklist, MPI_Comm comm) {
+  ranklist.resize(costlist.size());
+
+  static int my_rank = -1;
+  static int nranks = -1;
+
+  if (my_rank == -1) {
+    MPI_Comm_rank(comm, &my_rank);
+    MPI_Comm_size(comm, &nranks);
+  }
+
+  const LBPolicyWithOpts& policy = PolicyUtils::GetPolicy(policy_name);
+
+  switch (policy.policy) {
+    case LoadBalancePolicy::kPolicyCDPChunked:
+      return AssignBlocksParallelCDPChunked(costlist, ranklist, comm, my_rank,
+                                            nranks, policy.chunked_opts);
+    default:
+      return AssignBlocks(policy_name, costlist, ranklist, nranks);
+  }
 }
 
 int LoadBalancePolicies::AssignBlocksRoundRobin(
