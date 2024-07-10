@@ -6,6 +6,7 @@
 
 #include "bvar.h"
 #include "common.h"
+#include "globals.h"
 #include "logger.h"
 
 #include <memory>

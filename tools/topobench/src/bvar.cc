@@ -3,6 +3,7 @@
 //
 
 #include "block.h"
+#include "globals.h"
 
 void BoundaryVariable::InitBoundaryData(BoundaryData<>& bd) {
   for (int n = 0; n < bd.kMaxNeighbor; n++) {

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "globals.h"
 #include "mesh.h"
 #include "single_ts_trace_reader.h"
 #include "trace_reader.h"

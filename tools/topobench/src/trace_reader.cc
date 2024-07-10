@@ -3,12 +3,23 @@
 //
 
 #include "trace_reader.h"
+#include "globals.h"
 
 Status TraceReader::Read(int rank) {
   Status s = Status::OK;
 
-  logvat0(__LOG_ARGS__, LOG_INFO, "[TraceReader] Reading trace file: %s",
-       trace_file_.c_str());
+  if (Globals ::my_rank == 0) {
+    logv(::pdlfs ::Logger ::Default(),
+         "/users/ankushj/repos/parthenon-vibe/amr-umbrella/build/"
+         "amr-tools-prefix/src/amr-tools/tools/topobench/src/trace_reader.cc",
+         10, 3, "[TraceReader] Reading trace file: %s", trace_file_.c_str());
+  } else {
+    logv(::pdlfs ::Logger ::Default(),
+         "/users/ankushj/repos/parthenon-vibe/amr-umbrella/build/"
+         "amr-tools-prefix/src/amr-tools/tools/topobench/src/trace_reader.cc",
+         10, 3 + 1, "[TraceReader] Reading trace file: %s",
+         trace_file_.c_str());
+  };
 
   if (trace_file_ == "") {
     logv(__LOG_ARGS__, LOG_ERRO, "[TraceReader] No trace file provided");

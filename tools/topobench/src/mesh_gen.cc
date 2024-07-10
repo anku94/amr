@@ -1,4 +1,5 @@
 #include "mesh_gen.h"
+#include "globals.h"
 
 namespace {
 static void GatherNeighborCounts(int count_local) {

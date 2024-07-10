@@ -4,6 +4,7 @@ find_package(pdlfs-common CONFIG REQUIRED)
 set(topo_srcs
         bvar.cc
         driver.cc
+        globals.cc
         graph.cc
         logger.cc
         mesh_gen.cc

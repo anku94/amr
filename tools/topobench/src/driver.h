@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common.h"
+#include "globals.h"
 #include "mesh.h"
 #include "mesh_gen.h"
 

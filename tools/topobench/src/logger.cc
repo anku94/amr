@@ -5,6 +5,7 @@
 #include "logger.h"
 
 #include "block.h"
+#include "globals.h"
 
 #include <inttypes.h>
 #include <mpi.h>
