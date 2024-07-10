@@ -71,7 +71,31 @@ int main(int argc, char* argv[]) {
   ParseOptions(argc, argv);
   amr::Globals.config = std::make_unique<amr::ConfigParser>();
   amr::ScaleSim sim(options);
-  sim.Run();
+
+  MPI_Init(&argc, &argv);
+
+  int mympirank = -1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mympirank);
+
+  int nmpiranks = -1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nmpiranks);
+
+  if (nmpiranks == 1) {
+    logv(__LOG_ARGS__, LOG_INFO, "Single rank, running Serial");
+    sim.Run();
+  } else {
+    if (mympirank == 0) {
+      logv(__LOG_ARGS__, LOG_INFO, "Running Parallel with %d ranks", nmpiranks);
+      logv(__LOG_ARGS__, LOG_INFO,
+           "Warning: AssignBlocks can not tell the difference between policy "
+           "nranks and computation nranks, so make sure you have enough.");
+    }
+
+    sim.RunParallel(MPI_COMM_WORLD);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Finalize();
 
   return 0;
 }

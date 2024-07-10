@@ -38,7 +38,7 @@ class LBChunkwise {
 
     for (auto const& chunk : chunks) {
       logv(__LOG_ARGS__, LOG_DBG2, "Chunk %d: %s", chunk_idx++,
-              chunk.ToString().c_str());
+           chunk.ToString().c_str());
 
       std::vector<double> const chunk_costlist = std::vector<double>(
           costlist.begin() + chunk.block_first,
@@ -65,9 +65,10 @@ class LBChunkwise {
   }
 
   static int AssignBlocksParallel(std::vector<double> const& costlist,
-                                  std::vector<int>& ranklist, MPI_Comm comm,
-                                  int my_rank, int nranks, int nchunks) {
-    if (nchunks > nranks) {
+                                  std::vector<int>& ranklist, int nranks,
+                                  MPI_Comm comm, int mympirank, int nmpiranks,
+                                  int nchunks) {
+    if (nchunks > nranks or nchunks > nmpiranks) {
       logv(__LOG_ARGS__, LOG_ERRO, "nchunks > nranks");
       ABORT("nchunks > nranks");
       return -1;
@@ -78,10 +79,10 @@ class LBChunkwise {
 
     std::vector<int> chunk_ranklist;
 
-    if (my_rank < nchunks) {
-      auto const& chunk = chunks[my_rank];
-      logv(__LOG_ARGS__, LOG_DBUG, "Rank %d: Executing chunk %s", my_rank,
-              chunk.ToString().c_str());
+    if (mympirank < nchunks) {
+      auto const& chunk = chunks[mympirank];
+      logv(__LOG_ARGS__, LOG_DBUG, "Rank %d: Executing chunk %s", mympirank,
+           chunk.ToString().c_str());
 
       std::vector<double> const chunk_costlist = std::vector<double>(
           costlist.begin() + chunk.block_first,
@@ -104,19 +105,21 @@ class LBChunkwise {
       }
     }
 
+    logv(__LOG_ARGS__, LOG_DBUG, "Rank %d: Gathering results", mympirank);
+
     // Gather the results
     // First, prepare recvcnts and displs
-    std::vector<int> recvcnts(nranks, 0);
-    for (int rank = 0; rank < nranks; rank++) {
+    std::vector<int> recvcnts(nmpiranks, 0);
+    for (int rank = 0; rank < nmpiranks; rank++) {
       recvcnts[rank] = (rank < nchunks) ? chunks[rank].nblocks : 0;
     }
 
-    std::vector<int> displs(nranks, 0);
-    for (int i = 1; i < nranks; i++) {
+    std::vector<int> displs(nmpiranks, 0);
+    for (int i = 1; i < nmpiranks; i++) {
       displs[i] = displs[i - 1] + recvcnts[i - 1];
     }
 
-    int sendcnt = (my_rank < nchunks) ? chunks[my_rank].nblocks : 0;
+    int sendcnt = (mympirank < nchunks) ? chunks[mympirank].nblocks : 0;
 
     int rv =
         MPI_Allgatherv(chunk_ranklist.data(), sendcnt, MPI_INT, ranklist.data(),

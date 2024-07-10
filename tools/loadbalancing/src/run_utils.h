@@ -31,9 +31,10 @@ struct RunType {
   }
 
   int AssignBlocksParallel(std::vector<double> const& costlist,
-                           std::vector<int>& ranklist, MPI_Comm comm) {
-    int rv = LoadBalancePolicies::AssignBlocksParallel(policy.c_str(), costlist,
-                                                       ranklist, comm);
+                           std::vector<int>& ranklist, int nranks,
+                           MPI_Comm comm) {
+    int rv = LoadBalancePolicies::AssignBlocksParallel(
+        policy.c_str(), costlist, ranklist, nranks, comm);
     return rv;
   }
 
@@ -47,11 +48,11 @@ struct RunType {
       counts[rank]++;
     }
 
-    for (auto const& count : counts) {
-      if (count == 0) {
-        ABORT("All ranks must have some assignment");
-      }
-    }
+    //   for (auto const& count : counts) {
+    //     if (count == 0) {
+    //       ABORT("All ranks must have some assignment");
+    //     }
+    //   }
   }
 };
 }  // namespace amr

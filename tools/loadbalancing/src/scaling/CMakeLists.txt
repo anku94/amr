@@ -1,3 +1,4 @@
+find_package(MPI REQUIRED)
 find_package(pdlfs-common REQUIRED)
 
 set(scalesim_srcs
@@ -9,6 +10,6 @@ set(scalesim_srcs
 )
 
 add_executable(scale-sim ${scalesim_srcs})
-target_link_libraries(scale-sim pdlfs-common lb)
+target_link_libraries(scale-sim pdlfs-common lb MPI::MPI_CXX)
 
 install(TARGETS scale-sim DESTINATION bin)

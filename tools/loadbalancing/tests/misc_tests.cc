@@ -218,6 +218,26 @@ TEST_F(MiscTest, BinProfReaderTest) {
          SerializeVector(times, 10).c_str());
   }
 }
+
+TEST_F(MiscTest, PolicyUtilsTest1) {
+  std::string policy_name = "cdpc512";
+  auto policy = PolicyUtils::GetPolicy(policy_name.c_str());
+  ASSERT_EQ(policy.policy, LoadBalancePolicy::kPolicyCDPChunked);
+  ASSERT_EQ(policy.chunked_opts.chunk_size, 512);
+  ASSERT_EQ(policy.chunked_opts.parallelism, 1);
+
+  policy_name = "cdpc512par1";
+  policy = PolicyUtils::GetPolicy(policy_name.c_str());
+  ASSERT_EQ(policy.policy, LoadBalancePolicy::kPolicyCDPChunked);
+  ASSERT_EQ(policy.chunked_opts.chunk_size, 512);
+  ASSERT_EQ(policy.chunked_opts.parallelism, 1);
+
+  policy_name = "cdpc256par32";
+  policy = PolicyUtils::GetPolicy(policy_name.c_str());
+  ASSERT_EQ(policy.policy, LoadBalancePolicy::kPolicyCDPChunked);
+  ASSERT_EQ(policy.chunked_opts.chunk_size, 256);
+  ASSERT_EQ(policy.chunked_opts.parallelism, 32);
+}
 }  // namespace amr
    //
 int main(int argc, char** argv) {

@@ -3,8 +3,9 @@
 Status SingleTimestepTraceReader::Read(int rank) {
   Status s = Status::OK;
 
-  logvat0(__LOG_ARGS__, LOG_INFO,
-          "[TimelessTraceReader] Reading trace file: %s", trace_file_.c_str());
+  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
+          "[TimelessTraceReader] Reading trace file: %s",
+          trace_file_.c_str());
 
   if (trace_file_ == "") {
     logv(__LOG_ARGS__, LOG_ERRO,
@@ -51,7 +52,7 @@ Status SingleTimestepTraceReader::Read(int rank) {
 }
 
 Status SingleTimestepTraceReader::ParseLine(char *buf, size_t buf_sz,
-                                      const int rank) {
+                                            const int rank) {
   Status s = Status::OK;
 
   logv(__LOG_ARGS__, LOG_DBG3, "[TimelessTraceReader] Parsing line: %s", buf);

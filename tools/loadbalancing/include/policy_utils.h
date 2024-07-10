@@ -59,6 +59,8 @@ class PolicyUtils {
 
   static const LBPolicyWithOpts GenHybrid(const std::string& policy_str);
 
+  static const LBPolicyWithOpts GenCDPC(const std::string& policy_str);
+
   static const std::map<std::string, LBPolicyWithOpts> kPolicyMap;
 
   friend class MiscTest;

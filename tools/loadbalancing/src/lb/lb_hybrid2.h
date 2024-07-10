@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mpi.h>
 #include <vector>
 
 namespace amr {
@@ -12,7 +13,7 @@ class HybridAssignmentCppFirst {
                    std::vector<int>& ranklist, int nranks);
 
   int AssignBlocksV2(std::vector<double> const& costlist,
-                     std::vector<int>& ranklist, int nranks);
+                     std::vector<int>& ranklist, int nranks, MPI_Comm comm);
 
   //
   // Get ranks to run LPT on. This is run after the initial CDP
@@ -53,6 +54,7 @@ class HybridAssignmentCppFirst {
       std::vector<int> const& ranklist, std::vector<int> const& selected_ranks);
 
   constexpr static const char* kCDPPolicyStr = "cdpc512";
+  constexpr static const char* kParCDPPolicyStr = "cdpc512par16";
   constexpr static const char* kLPTPolicyStr = "lpt";
   constexpr static double kLPTv3DiffThreshold = 0.02;
 

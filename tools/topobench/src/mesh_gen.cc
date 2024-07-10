@@ -118,7 +118,8 @@ Status AllToAllMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
 Status SingleTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
   Status s = Status::OK;
 
-  logvat0(__LOG_ARGS__, LOG_INFO, "Generating Mesh: From Trace (ts: %d)", ts);
+  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
+          "Generating Mesh: From Trace (ts: %d)", ts);
 
   s = reader_.Read(Globals::my_rank);
 
@@ -151,7 +152,7 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
 
   MeshGenerator::AddMeshBlock(mesh, mb);
 
-  logvat0(__LOG_ARGS__, LOG_INFO,
+  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
           "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"
           "(full log in neighbor_counts.txt)",
           Globals::my_rank, nbr_idx);
@@ -164,7 +165,8 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
 Status MultiTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
   Status s = Status::OK;
 
-  logvat0(__LOG_ARGS__, LOG_INFO, "Generating Mesh: From Trace (ts: %d)", ts);
+  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
+          "Generating Mesh: From Trace (ts: %d)", ts);
 
   s = reader_.Read(Globals::my_rank);
 
@@ -197,7 +199,7 @@ Status MultiTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
 
   MeshGenerator::AddMeshBlock(mesh, mb);
 
-  logvat0(__LOG_ARGS__, LOG_INFO,
+  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
           "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"
           "(full log in neighbor_counts.txt)",
           Globals::my_rank, nbr_idx);

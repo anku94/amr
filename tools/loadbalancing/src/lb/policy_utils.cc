@@ -41,16 +41,6 @@ const std::map<std::string, LBPolicyWithOpts> PolicyUtils::kPolicyMap = {
       .name = "CDP-I250",
       .policy = LoadBalancePolicy::kPolicyCppIter,
       .cdp_opts = {.niter_frac = 0, .niters = 250}}},
-    {"cdpc256",
-     {.id = "cdpc256",
-      .name = "CDP-Chunked-256",
-      .policy = LoadBalancePolicy::kPolicyCDPChunked,
-      .chunked_opts = {.chunk_size = 256}}},
-    {"cdpc512",
-     {.id = "cdpc512",
-      .name = "CDP-Chunked-512",
-      .policy = LoadBalancePolicy::kPolicyCDPChunked,
-      .chunked_opts = {.chunk_size = 512}}}
 };
 
 const LBPolicyWithOpts PolicyUtils::GetPolicy(const char* policy_name) {
@@ -58,6 +48,10 @@ const LBPolicyWithOpts PolicyUtils::GetPolicy(const char* policy_name) {
 
   if (policy_str.substr(0, 6) == "hybrid") {
     return GenHybrid(policy_str);
+  }
+
+  if (policy_str.substr(0, 4) == "cdpc") {
+    return GenCDPC(policy_str);
   }
 
   if (kPolicyMap.find(policy_name) == kPolicyMap.end()) {
@@ -352,6 +346,44 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
 
   logv(__LOG_ARGS__, LOG_DBUG, "Generated policy: %s",
        policy_name_friendly.c_str());
+
+  return policy;
+}
+
+const LBPolicyWithOpts PolicyUtils::GenCDPC(const std::string& policy_str) {
+  // policy name: cdpcNNN(parN)? (where N: digit)
+  std::regex re("cdpc([0-9]+)(par([0-9]+))?");
+  std::smatch match;
+
+  if (!std::regex_match(policy_str, match, re)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in GenCDPC" << std::endl
+        << "Policy " << policy_str << " not in the correct format" << std::endl;
+    ABORT(msg.str().c_str());
+  }
+
+  logv(__LOG_ARGS__, LOG_DBG2, "Match size: %d", match.size());
+  for (int midx = 0; midx < match.size(); midx++) {
+    logv(__LOG_ARGS__, LOG_DBG2, "Match %d: %s", midx, match.str(midx).c_str());
+  }
+
+  int chunk_size = std::stoi(match.str(1));
+  int parallelism = 1;
+  if (match.size() == 4 and not match.str(3).empty()) {
+    parallelism = std::stoi(match.str(3));
+  }
+
+  PolicyOptsChunked chunked_opts = {
+      .chunk_size = chunk_size,
+      .parallelism = parallelism,
+  };
+
+  LBPolicyWithOpts policy = {
+      .id = policy_str,
+      .name = "CDP-Chunked",
+      .policy = LoadBalancePolicy::kPolicyCDPChunked,
+      .chunked_opts = chunked_opts,
+  };
 
   return policy;
 }

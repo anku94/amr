@@ -60,23 +60,27 @@ int LoadBalancePolicies::AssignBlocks(const char* policy_name,
 
 int LoadBalancePolicies::AssignBlocksParallel(
     const char* policy_name, std::vector<double> const& costlist,
-    std::vector<int>& ranklist, MPI_Comm comm) {
-  ranklist.resize(costlist.size());
+    std::vector<int>& ranklist, int nranks, MPI_Comm comm) {
+  static int mympirank = -1;
+  static int nmpiranks = -1;
 
-  static int my_rank = -1;
-  static int nranks = -1;
-
-  if (my_rank == -1) {
-    MPI_Comm_rank(comm, &my_rank);
-    MPI_Comm_size(comm, &nranks);
+  if (mympirank == -1 or nmpiranks == -1) {
+    MPI_Comm_rank(comm, &mympirank);
+    MPI_Comm_size(comm, &nmpiranks);
   }
 
+  ranklist.resize(costlist.size());
   const LBPolicyWithOpts& policy = PolicyUtils::GetPolicy(policy_name);
 
   switch (policy.policy) {
     case LoadBalancePolicy::kPolicyCDPChunked:
-      return AssignBlocksParallelCDPChunked(costlist, ranklist, comm, my_rank,
-                                            nranks, policy.chunked_opts);
+      return AssignBlocksParallelCDPChunked(costlist, ranklist, nranks,
+                                            policy.chunked_opts, comm,
+                                            mympirank, nmpiranks);
+    case LoadBalancePolicy::kPolicyHybridCppFirstV2:
+      return AssignBlocksParallelHybridCDPFirst(costlist, ranklist, nranks,
+                                                policy.hcf_opts, comm,
+                                                mympirank, nmpiranks);
     default:
       return AssignBlocks(policy_name, costlist, ranklist, nranks);
   }

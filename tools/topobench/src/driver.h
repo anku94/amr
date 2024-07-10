@@ -39,17 +39,20 @@ public:
   void PrintOpts() {
     if (opts_.meshgen_method != MeshGenMethod::FromSingleTSTrace and
         opts_.meshgen_method != MeshGenMethod::FromMultiTSTrace) {
-      logvat0(__LOG_ARGS__, LOG_INFO, "[Blocks Per Rank] %zu\n",
-              opts_.blocks_per_rank);
-      logvat0(__LOG_ARGS__, LOG_INFO, "[Size Per Msg] %zu\n",
+      logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
+              "[Blocks Per Rank] %zu\n", opts_.blocks_per_rank);
+      logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO, "[Size Per Msg] %zu\n",
               opts_.size_per_msg);
     }
 
-    logvat0(__LOG_ARGS__, LOG_INFO, "[Comm Rounds] %d\n", opts_.comm_rounds);
-    logvat0(__LOG_ARGS__, LOG_INFO, "[MeshGenMethod] %s\n",
+    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO, "[Comm Rounds] %d\n",
+            opts_.comm_rounds);
+    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO, "[MeshGenMethod] %s\n",
             MeshGenMethodToStr(opts_.meshgen_method).c_str());
-    logvat0(__LOG_ARGS__, LOG_INFO, "[Job dir] %s\n", opts_.job_dir);
-    logvat0(__LOG_ARGS__, LOG_INFO, "[Log output] %s\n", opts_.bench_log);
+    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO, "[Job dir] %s\n",
+            opts_.job_dir);
+    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO, "[Log output] %s\n",
+            opts_.bench_log);
   }
 
   void Run(int argc, char *argv[]) {
@@ -106,7 +109,7 @@ public:
     // number of times to repeat a timestep
     const int nrounds = opts_.comm_rounds;
 
-    logvat0(__LOG_ARGS__, LOG_INFO,
+    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
             "num_ts found: %d, num_ts to run: %d, rounds per ts: %d\n"
             "(will skip first ts)",
             nts_trace, nts_to_run, nrounds);

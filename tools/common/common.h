@@ -25,6 +25,37 @@ int logv(pdlfs::Logger *info_log, const char *file, int line, int level,
          const char *fmt, ...);
 int loge(const char *op, const char *path);
 
+#define EXPAND_ARGS(...) __VA_ARGS__
+
+#define logv_once_expand(info_log, file, line, level, fmt, ...)                \
+  {                                                                            \
+    static bool __once = false;                                                \
+    if (!__once) {                                                             \
+      logv(info_log, file, line, level, fmt, ##__VA_ARGS__);                   \
+      __once = true;                                                           \
+    }                                                                          \
+  }
+
+#define logvat0_expand(rank, info_log, file, line, level, fmt, ...)            \
+  if (rank == 0) {                                                             \
+    logv(info_log, file, line, level, fmt, ##__VA_ARGS__);                     \
+  } else {                                                                     \
+    logv(info_log, file, line, level + 1, fmt, ##__VA_ARGS__);                 \
+  }
+
+#define logvat0_once_expand(rank, info_log, file, line, level, fmt, ...)       \
+  if (rank == 0) {                                                             \
+    static bool __once = false;                                                \
+    if (!__once) {                                                             \
+      logv(info_log, file, line, level, fmt, ##__VA_ARGS__);                   \
+      __once = true;                                                           \
+    logv_once_expand(info_log, file, line, level, fmt, ##__VA_ARGS__);         \
+  }
+
+#define logv_once(...) EXPAND_ARGS(logv_once_expand(__VA_ARGS__))
+#define logvat0(...) EXPAND_ARGS(logvat0_expand(__VA_ARGS__))
+#define logvat0_once(...) EXPAND_ARGS(logvat0_once_expand(__VA_ARGS__))
+
 /*
  * logging facilities and helpers
  */
@@ -65,9 +96,8 @@ struct DriverOpts {
   const char *job_dir;
 
   DriverOpts()
-      : meshgen_method(MeshGenMethod::Ring),
-        blocks_per_rank(SIZE_MAX), size_per_msg(SIZE_MAX), comm_rounds(-1),
-        comm_nts(-1), trace_root("") {}
+      : meshgen_method(MeshGenMethod::Ring), blocks_per_rank(SIZE_MAX),
+        size_per_msg(SIZE_MAX), comm_rounds(-1), comm_nts(-1), trace_root("") {}
 
 #define NA_IF(x)                                                               \
   if (x)                                                                       \
@@ -94,8 +124,8 @@ private:
   }
 
   bool IsValidFromTrace() {
-    NA_IF(meshgen_method != MeshGenMethod::FromSingleTSTrace
-        and meshgen_method != MeshGenMethod::FromMultiTSTrace);
+    NA_IF(meshgen_method != MeshGenMethod::FromSingleTSTrace and
+          meshgen_method != MeshGenMethod::FromMultiTSTrace);
     INVALID_IF(trace_root == nullptr);
     INVALID_IF(bench_log == nullptr);
     INVALID_IF(job_dir == nullptr);

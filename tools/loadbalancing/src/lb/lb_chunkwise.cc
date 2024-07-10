@@ -29,20 +29,30 @@ int LoadBalancePolicies::AssignBlocksCDPChunked(
 }
 
 int LoadBalancePolicies::AssignBlocksParallelCDPChunked(
-    std::vector<double> const& costlist, std::vector<int>& ranklist,
-    MPI_Comm comm, int my_rank, int nranks, PolicyOptsChunked const& opts) {
+    std::vector<double> const& costlist, std::vector<int>& ranklist, int nranks,
+    PolicyOptsChunked const& opts, MPI_Comm comm, int mympirank,
+    int nmpiranks) {
   int chunksz = opts.chunk_size;
 
-  if (nranks % chunksz != 0) {
+  // we only care about this if we have more ranks than one chunk
+  if (nranks % chunksz != 0 and nranks > chunksz) {
     logv(__LOG_ARGS__, LOG_WARN,
          "Number of ranks %d is not a multiple of chunk size %d", nranks,
          chunksz);
     return -1;
   }
 
-  int nchunks = (nranks > chunksz) ? nranks / chunksz : 1;
-  int rv = LBChunkwise::AssignBlocksParallel(costlist, ranklist, comm, my_rank,
-                                             nranks, nchunks);
+  int parallelism = std::min(opts.parallelism, nmpiranks);
+  int nchunks_max = nranks / chunksz;
+
+  int nchunks = parallelism;
+  if (nchunks_max > 0) {
+    nchunks = std::min(nchunks_max, parallelism);
+  }
+
+  // int nchunks = (nranks > chunksz) ? nranks / chunksz : 1;
+  int rv = LBChunkwise::AssignBlocksParallel(costlist, ranklist, nranks, comm,
+                                             mympirank, nmpiranks, nchunks);
 
   if (rv) {
     logv(__LOG_ARGS__, LOG_WARN, "Failed to assign blocks to chunks, rv: %d",

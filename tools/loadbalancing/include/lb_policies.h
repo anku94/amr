@@ -24,9 +24,20 @@ class LoadBalancePolicies {
                           std::vector<double> const& costlist,
                           std::vector<int>& ranklist, int nranks);
 
+  //
+  // AssignBlocksParallel: Use multiple MPI ranks to compute assignment
+  // This will only use the parallel implementation for certain
+  // policies, currently cdpc512, and defer to AssignBlocks for the rest.
+  //
+  // It does not use nranks for assignment but not for parallelism.
+  // For parallelism, it uses the number of ranks in the communicator.
+  // This allows for different placement sizes to be tested using smaller
+  // communicator sizes.
+  //
   static int AssignBlocksParallel(const char* policy_name,
                                   std::vector<double> const& costlist,
-                                  std::vector<int>& ranklist, MPI_Comm comm);
+                                  std::vector<int>& ranklist, int nranks,
+                                  MPI_Comm comm);
 
  private:
   static int AssignBlocksRoundRobin(std::vector<double> const& costlist,
@@ -73,9 +84,15 @@ class LoadBalancePolicies {
 
   static int AssignBlocksParallelCDPChunked(std::vector<double> const& costlist,
                                             std::vector<int>& ranklist,
-                                            MPI_Comm comm, int my_rank,
                                             int nranks,
-                                            PolicyOptsChunked const& opts);
+                                            PolicyOptsChunked const& opts,
+                                            MPI_Comm comm, int mympirank,
+                                            int nmpiranks);
+
+  static int AssignBlocksParallelHybridCDPFirst(
+      std::vector<double> const& costlist, std::vector<int>& ranklist,
+      int nranks, PolicyOptsHybridCDPFirst const& opts, MPI_Comm comm,
+      int mympirank, int nmpiranks);
 
   friend class LoadBalancingPoliciesTest;
   friend class PolicyTest;

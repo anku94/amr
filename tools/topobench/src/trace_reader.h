@@ -30,16 +30,17 @@ private:
   Status ParseLine(char *buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
-    logvat0(__LOG_ARGS__, LOG_INFO, "Timesteps upto ts %d discovered", max_ts_);
+    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
+            "Timesteps upto ts %d discovered", max_ts_);
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_snd_map_[t];
-      logvat0(__LOG_ARGS__, LOG_DBUG, "[Send] TS %d: %zu msgs", t,
+      logvat0(Globals::my_rank, __LOG_ARGS__, LOG_DBUG, "[Send] TS %d: %zu msgs", t,
               msgs_ts.size());
     }
 
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_rcv_map_[t];
-      logvat0(__LOG_ARGS__, LOG_DBUG, "[Recv] TS %d: %zu msgs", t,
+      logvat0(Globals::my_rank, __LOG_ARGS__, LOG_DBUG, "[Recv] TS %d: %zu msgs", t,
               msgs_ts.size());
     }
   }

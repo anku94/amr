@@ -27,21 +27,9 @@ private:
   Status ParseLine(char *buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
-    if (Globals ::my_rank == 0) {
-      logv(::pdlfs ::Logger ::Default(),
-           "/users/ankushj/repos/parthenon-vibe/amr-umbrella/build/"
-           "amr-tools-prefix/src/amr-tools/tools/topobench/src/"
-           "single_ts_trace_reader.h",
-           29, 3, "Send count: %zu, Recv count: %zu", send_map_.size(),
-           recv_map_.size());
-    } else {
-      logv(::pdlfs ::Logger ::Default(),
-           "/users/ankushj/repos/parthenon-vibe/amr-umbrella/build/"
-           "amr-tools-prefix/src/amr-tools/tools/topobench/src/"
-           "single_ts_trace_reader.h",
-           29, 3 + 1, "Send count: %zu, Recv count: %zu", send_map_.size(),
-           recv_map_.size());
-    };
+    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
+            "Send count: %zu, Recv count: %zu", send_map_.size(),
+            recv_map_.size());
   }
 
   std::string trace_file_;

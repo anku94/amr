@@ -1,9 +1,9 @@
 #pragma once
 
-#include "policy.h"
-
 #include <iomanip>
 #include <string>
+
+#include "policy.h"
 
 namespace amr {
 struct PolicyOptsCDPI {
@@ -12,9 +12,9 @@ struct PolicyOptsCDPI {
 };
 
 struct PolicyOptsHybridCDPFirst {
-  bool v2; // whether to use v2 or not, always yes
-  double lpt_frac; // frac of ranks to run LPT on
-  int alt_solncnt_max; // max no. of alt solns to explore
+  bool v2;              // whether to use v2 or not, always yes
+  double lpt_frac;      // frac of ranks to run LPT on
+  int alt_solncnt_max;  // max no. of alt solns to explore
 };
 
 struct PolicyOptsILP {
@@ -26,11 +26,11 @@ struct PolicyOptsILP {
   float obj_loc_mip_gap;
 
   PolicyOptsILP()
-      : obj_lb_time_limit(10),
-        obj_lb_rel_tol(0.1),
-        obj_lb_mip_gap(0.1),
-        obj_loc_time_limit(10),
-        obj_loc_mip_gap(0.1) {}
+      : obj_lb_time_limit(10)
+      , obj_lb_rel_tol(0.1)
+      , obj_lb_mip_gap(0.1)
+      , obj_loc_time_limit(10)
+      , obj_loc_mip_gap(0.1) {}
 
   std::string ToString() const {
     std::stringstream ss;
@@ -61,9 +61,11 @@ struct PolicyOptsHybrid {
 
 struct PolicyOptsChunked {
   int chunk_size;
+  int parallelism;
 
   std::string ToString() const {
-    return std::string("\n\tchunk_size: \t") + std::to_string(chunk_size);
+    return std::string("\n\tchunk_size: \t") + std::to_string(chunk_size) +
+           std::string("\n\tparallelism: \t") + std::to_string(parallelism);
   }
 };
 

@@ -108,7 +108,39 @@ int LoadBalancePolicies::AssignBlocksHybridCppFirst(
   auto hacf = HybridAssignmentCppFirst(lpt_ranks, alt_solncnt_max);
 
   if (v2) {
-    rv = hacf.AssignBlocksV2(costlist, ranklist, nranks);
+    rv = hacf.AssignBlocksV2(costlist, ranklist, nranks, MPI_COMM_NULL);
+  } else {
+    rv = hacf.AssignBlocks(costlist, ranklist, nranks);
+  }
+
+  return rv;
+}
+
+int LoadBalancePolicies::AssignBlocksParallelHybridCDPFirst(
+    std::vector<double> const& costlist, std::vector<int>& ranklist, int nranks,
+    PolicyOptsHybridCDPFirst const& opts, MPI_Comm comm, int mympirank,
+    int nmpiranks) {
+  int rv = 0;
+
+  bool v2 = opts.v2;
+  double lpt_frac = opts.lpt_frac;
+  int lpt_ranks = nranks * lpt_frac;
+  int alt_solncnt_max = opts.alt_solncnt_max;
+
+  static bool first_time = true;
+
+  if (first_time) {
+    logv(__LOG_ARGS__, LOG_INFO,
+         "[HybridCppFirst] LPT ranks: %d, V2: %s, altcnt: %d, CDP: %s",
+         lpt_ranks, v2 ? "yes" : "no", alt_solncnt_max,
+         HybridAssignmentCppFirst::kCDPPolicyStr);
+    first_time = false;
+  }
+
+  auto hacf = HybridAssignmentCppFirst(lpt_ranks, alt_solncnt_max);
+
+  if (v2) {
+    rv = hacf.AssignBlocksV2(costlist, ranklist, nranks, comm);
   } else {
     rv = hacf.AssignBlocks(costlist, ranklist, nranks);
   }
@@ -179,16 +211,23 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
 }
 
 int HybridAssignmentCppFirst::AssignBlocksV2(
-    std::vector<double> const& costlist, std::vector<int>& ranklist,
-    int nranks) {
+    std::vector<double> const& costlist, std::vector<int>& ranklist, int nranks,
+    MPI_Comm comm) {
+  int rv = 0;
+
   nblocks_ = costlist.size();
   nranks_ = nranks;
 
   std::vector<double> rank_times;
   double rank_time_max, rank_time_avg;
 
-  int rv = LoadBalancePolicies::AssignBlocks(kCDPPolicyStr, costlist, ranklist,
-                                             nranks);
+  if (comm == MPI_COMM_NULL) {
+    rv = LoadBalancePolicies::AssignBlocks(kCDPPolicyStr, costlist, ranklist,
+                                           nranks);
+  } else {
+    rv = LoadBalancePolicies::AssignBlocksParallel(kParCDPPolicyStr, costlist,
+                                                   ranklist, nranks, comm);
+  }
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
@@ -448,8 +487,7 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV3(
     }
   }
 
-  assert(incl_ranks_front + incl_ranks_back <= lpt_rank_count_);
-  assert(incl_ranks_front + incl_ranks_back <= nranks_);
+  assert(incl_ranks_front + incl_ranks_back <= nmax);
 
   std::vector<int> lpt_ranks;  // ranks that would benefit from LPT
   for (int i = 0; i < incl_ranks_front; i++) {
@@ -460,7 +498,7 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV3(
     lpt_ranks.push_back(cost_ranks[i].second);
   }
 
-  assert(lpt_ranks.size() <= nranks_);
+  assert(lpt_ranks.size() <= nranks);
 
   logv(__LOG_ARGS__, LOG_DBUG,
        "[HybridCppFirstV2] Selected for LPT: %d initial, %d rest"

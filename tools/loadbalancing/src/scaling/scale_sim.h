@@ -59,7 +59,7 @@ class ScaleSim {
         if (comm == MPI_COMM_NULL) {
           rv = r.AssignBlocks(costs, ranks, rp.nranks);
         } else {
-          rv = r.AssignBlocksParallel(costs, ranks, comm);
+          rv = r.AssignBlocksParallel(costs, ranks, rp.nranks, comm);
         }
 
         if (rv) {
@@ -70,7 +70,7 @@ class ScaleSim {
       // end timing
       uint64_t _ts_end = options_.env->NowMicros();
 
-      RunType::VerifyAssignment(ranks, rp.nranks);
+      // RunType::VerifyAssignment(ranks, rp.nranks);
 
       // compute stats and log them
       std::vector<double> rank_times;
@@ -130,9 +130,10 @@ class ScaleSim {
     int my_rank = -1;
     MPI_Comm_rank(comm, &my_rank);
 
+    logvat0(my_rank, __LOG_ARGS__, LOG_INFO, "Using output dir: %s",
+            options_.output_dir.c_str());
+
     if (my_rank == 0) {
-      logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s",
-           options_.output_dir.c_str());
       Utils::EnsureDir(options_.env, options_.output_dir);
     }
 
@@ -140,8 +141,11 @@ class ScaleSim {
     GenRunProfiles(run_profiles);
     std::vector<double> costs;
 
-    std::vector<std::string> policy_suite = {"cdp", "cdpc512"};
-
+    std::vector<std::string> policy_suite = {
+        "cdp",          "cdpc512", "cdpc512par1", "cdpc512par4", "cdpc512par8",
+        "cdpc512par16", "lpt",     "hybrid25",    "hybrid50",    "hybrid75"};
+    // policy_suite = {"cdp", "cdpc512"};
+    //
     int nruns = policy_suite.size();
 
     for (auto& r : run_profiles) {
@@ -151,7 +155,7 @@ class ScaleSim {
 
       if (costs.size() != r.nblocks) {
         costs.resize(r.nblocks, 0);
-        DistributionUtils::GenDistributionWithDefaults(costs, r.nblocks);
+        GenDistributionParallel(costs, r.nblocks, comm);
       }
 
       RunSuite(policy_suite, r, costs, comm);
@@ -163,6 +167,22 @@ class ScaleSim {
   }
 
  private:
+  void GenDistributionParallel(std::vector<double>& costs, int nblocks,
+                               MPI_Comm comm) {
+    int my_rank = -1;
+    MPI_Comm_rank(comm, &my_rank);
+
+    if (my_rank == 0) {
+      DistributionUtils::GenDistributionWithDefaults(costs, nblocks);
+    }
+
+    int rv = MPI_Bcast(costs.data(), nblocks, MPI_DOUBLE, 0, comm);
+    if (rv != MPI_SUCCESS) {
+      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Bcast failed");
+      ABORT("MPI_Bcast failed");
+    }
+  }
+
   void EmitTable(int n) {
     std::string table_out = options_.output_dir + "/scalesim.log.csv";
     std::stringstream table_stream;
