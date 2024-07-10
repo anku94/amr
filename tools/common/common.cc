@@ -10,11 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-namespace Globals {
-int my_rank, nranks;
-DriverOpts driver_opts;
-} // namespace Globals
-
 std::string MeshGenMethodToStr(MeshGenMethod t) {
   switch (t) {
   case MeshGenMethod::Ring:

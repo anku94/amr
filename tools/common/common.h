@@ -1,7 +1,6 @@
 //
 // Created by Ankush J on 4/11/22.
 //
-
 #pragma once
 
 #include <iomanip>
@@ -25,17 +24,6 @@
 int logv(pdlfs::Logger *info_log, const char *file, int line, int level,
          const char *fmt, ...);
 int loge(const char *op, const char *path);
-
-#define EXPAND_ARGS(...) __VA_ARGS__
-
-#define logvat0_expand(info_log, file, line, level, fmt, ...)                  \
-  if (Globals::my_rank == 0) {                                                 \
-    logv(info_log, file, line, level, fmt, ##__VA_ARGS__);                     \
-  } else {                                                                     \
-    logv(info_log, file, line, level + 1, fmt, ##__VA_ARGS__);                 \
-  }
-
-#define logvat0(...) EXPAND_ARGS(logvat0_expand(__VA_ARGS__))
 
 /*
  * logging facilities and helpers
@@ -118,11 +106,6 @@ private:
 #undef INVALID_IF
 #undef IS_VALID
 };
-
-namespace Globals {
-extern int my_rank, nranks;
-extern DriverOpts driver_opts;
-}; // namespace Globals
 
 class NormalGenerator {
 public:
