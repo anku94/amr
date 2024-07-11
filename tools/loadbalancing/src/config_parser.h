@@ -1,77 +1,39 @@
 #pragma once
 
-#include "common.h"
-#include <algorithm>
-#include <fstream>
+#include <sys/stat.h>
+
 #include <string>
 #include <unordered_map>
 
+#include "globals.h"
+
 namespace amr {
+// fwd decl
+class ConfigUtils;
+
 class ConfigParser {
- public:
-   explicit ConfigParser() {}
+ private:
+  explicit ConfigParser(const char* file_path) { Initialize(file_path); }
 
-  explicit ConfigParser(const std::string file_path) {
-    logv(__LOG_ARGS__, LOG_WARN, "Deprecated: need to use Make() instead\n");
-    Initialize(file_path.c_str());
-  }
-
-  std::string Strip(const std::string& str) const {
-    auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char ch) {
-        return std::isspace(ch);
-    });
-
-    auto end = std::find_if_not(str.rbegin(), str.rend(), [](unsigned char ch) {
-        return std::isspace(ch);
-    }).base();
-
-    return (start < end) ? std::string(start, end) : "";
-  }
+  std::unordered_map<std::string, std::string> params_;
+  friend class ConfigUtils;
 
   template <typename T>
   T GetParamOrDefault(const std::string& key, const T& default_val) {
     auto it = params_.find(key);
     if (it == params_.end()) {
-      logv(__LOG_ARGS__, LOG_DBG2, "Key %s not found in config file, using default value\n",
+      logv(__LOG_ARGS__, LOG_DBG2,
+           "Key %s not found in config file, using default value\n",
            key.c_str());
       return default_val;
     }
+
     return Convert<T>(it->second);
   }
 
- private:
-  void Initialize(const char* file_path) {
-    if (file_path == nullptr) {
-      logv(__LOG_ARGS__, LOG_WARN, "Config file not specified\n");
-      return;
-    }
+  static std::string Strip(const std::string& str);
 
-    if (!std::ifstream(file_path)) {
-      // file path is optional, but do not specify an invalid one
-      logv(__LOG_ARGS__, LOG_ERRO, "Config file %s does not exist\n", file_path);
-      ABORT("Config file does not exist");
-      return;
-    }
-
-    std::ifstream file(file_path);
-    std::string line;
-    while (std::getline(file, line)) {
-      if (line.empty() || line[0] == '#') {
-        continue;
-      }
-
-      auto delimiter_pos = line.find('=');
-      if (delimiter_pos != std::string::npos) {
-        std::string key = line.substr(0, delimiter_pos);
-        std::string value = line.substr(delimiter_pos + 1);
-        key = Strip(key);
-        value = Strip(value);
-        params_[key] = value;
-      }
-    }
-  }
-
-  std::unordered_map<std::string, std::string> params_;
+  void Initialize(const char* file_path);
 
   template <typename T>
   T Convert(const std::string& s) {
@@ -79,13 +41,59 @@ class ConfigParser {
   }
 };
 
-template<>
-double ConfigParser::Convert<double>(const std::string& s);
+class ConfigUtils {
+ public:
+  template <typename T>
+  static T GetParamOrDefault(const std::string& key, const T& default_val) {
+    Initialize();
 
-template<>
-int ConfigParser::Convert<int>(const std::string& s);
+    if (!Globals::config) {
+      logv(__LOG_ARGS__, LOG_DBUG, "Globals.config is not set\n");
+      return default_val;
+    }
 
-template<>
-std::string ConfigParser::Convert<std::string>(const std::string& s);
+    return Globals::config->GetParamOrDefault<T>(key, default_val);
+  }
 
+ private:
+  static void Initialize() {
+    if (Globals::config != nullptr) {
+      logv(__LOG_ARGS__, LOG_DBUG, "Globals.config already set\n");
+      return;
+    }
+
+    // Check if env var LB_CONFIG_PATH is set
+    const char* env_var = std::getenv("DISTRIB_CONFIG_FPATH");
+    if (env_var == nullptr) {
+      logv(__LOG_ARGS__, LOG_DBUG, "DISTRIB_CONFIG_FPATH not set\n");
+      return;
+    }
+
+    // Check if a file exists at the path
+    struct stat statbuf;
+    if (stat(env_var, &statbuf) != 0) {
+      logv(__LOG_ARGS__, LOG_DBUG, "Config file %s does not exist\n", env_var);
+      return;
+    }
+
+    if (S_ISREG(statbuf.st_mode)) {
+      // make_unique does not work with private constructors
+      Globals::config =
+          std::unique_ptr<ConfigParser>(new ConfigParser(env_var));
+    } else {
+      logv(__LOG_ARGS__, LOG_DBUG, "Config file %s is not a regular file\n",
+           env_var);
+    }
+  }
+};
+
+// specialization of templated functions
+template <>
+int ConfigParser::Convert(const std::string& s);
+
+template <>
+double ConfigParser::Convert(const std::string& s);
+
+template <>
+std::string ConfigParser::Convert(const std::string& s);
 }  // namespace amr

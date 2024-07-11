@@ -4,7 +4,6 @@
 
 #include <getopt.h>
 
-#include "globals.h"
 #include "scale_sim.h"
 
 amr::ScaleSimOpts options;
@@ -69,7 +68,6 @@ void ParseOptions(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
   ParseOptions(argc, argv);
-  amr::Globals.config = std::make_unique<amr::ConfigParser>();
   amr::ScaleSim sim(options);
 
   MPI_Init(&argc, &argv);

@@ -1,17 +1,15 @@
 #pragma once
 
 #include <memory>
-#include "config_parser.h"
+
+#include "common.h"
 
 namespace amr {
-  struct GlobalConfig {
-    std::unique_ptr<ConfigParser> config;
-  };
-
-  extern GlobalConfig Globals;
+class ConfigParser;
 }
 
 namespace Globals {
 extern int my_rank, nranks;
 extern DriverOpts driver_opts;
-}; // namespace Globals
+extern std::unique_ptr<amr::ConfigParser> config;
+}  // namespace Globals

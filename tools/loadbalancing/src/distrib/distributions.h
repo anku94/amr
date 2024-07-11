@@ -1,8 +1,9 @@
+#include <algorithm>
 #include <string>
 
 #include "alias_method.h"
 #include "common.h"
-#include "globals.h"
+#include "config_parser.h"
 //
 // Created by Ankush J on 11/9/23.
 //
@@ -44,33 +45,22 @@ struct DistributionOpts {
 
 class DistributionUtils {
  public:
-  static Distribution GetConfigDistribution() {
-    if (!Globals.config) {
-      ABORT("Globals.config is not set");
-    }
-
-    std::string distrib_str = Globals.config->GetParamOrDefault<std::string>(
-        "distribution", "powerlaw");
-    return StringToDistribution(distrib_str);
-  }
-
   static void GenDistributionWithDefaults(std::vector<double>& costs,
                                           int nblocks) {
-    Distribution d = GetConfigDistribution();
+#define DEFINE_PARAM(name, type, default_val) \
+  type name = ConfigUtils::GetParamOrDefault<type>(#name, default_val)
 
-    double N_min = Globals.config->GetParamOrDefault<int>("N_min", 50);
-    double N_max = Globals.config->GetParamOrDefault<int>("N_max", 100);
+    DEFINE_PARAM(distribution, std::string, "powerlaw");
+    DEFINE_PARAM(N_min, double, 50);
+    DEFINE_PARAM(N_max, double, 100);
+    DEFINE_PARAM(gaussian_mean, double, 10.0);
+    DEFINE_PARAM(gaussian_std, double, 0.5);
+    DEFINE_PARAM(exp_lambda, double, 0.1);
+    DEFINE_PARAM(powerlaw_alpha, double, -3.0);
 
-    double gaussian_mean =
-        Globals.config->GetParamOrDefault<double>("gaussian_mean", 10.0);
-    double gaussian_std =
-        Globals.config->GetParamOrDefault<double>("gaussian_std", 0.5);
+#undef DEFINE_PARAM
 
-    double exp_lambda =
-        Globals.config->GetParamOrDefault<double>("exp_lambda", 0.1);
-
-    double powerlaw_alpha =
-        Globals.config->GetParamOrDefault<double>("powerlaw_alpha", -3.0);
+    Distribution d = StringToDistribution(distribution);
 
     DistributionOpts opts;
     opts.N_min = N_min;

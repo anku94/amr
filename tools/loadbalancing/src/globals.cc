@@ -1,10 +1,9 @@
 #include "globals.h"
 
-namespace amr {
-  GlobalConfig Globals;
-}
+#include "config_parser.h"
 
 namespace Globals {
 int my_rank, nranks;
 DriverOpts driver_opts;
-} // namespace Globals
+std::unique_ptr<amr::ConfigParser> config;
+}  // namespace Globals
