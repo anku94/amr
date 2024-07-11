@@ -70,7 +70,7 @@ class ScaleSim {
       // end timing
       uint64_t _ts_end = options_.env->NowMicros();
 
-      // RunType::VerifyAssignment(ranks, rp.nranks);
+      RunType::VerifyAssignment(ranks, rp.nranks);
 
       // compute stats and log them
       std::vector<double> rank_times;
@@ -107,6 +107,7 @@ class ScaleSim {
         "hybrid75", "lpt", "hybrid75alt1", "hybrid75alt2"};
 
     policy_suite = {"baseline", "cdp", "cdpc512", "hybrid50", "lpt"};
+    policy_suite = {"cdpc512"};
 
     int nruns = policy_suite.size();
 
@@ -144,7 +145,7 @@ class ScaleSim {
     std::vector<std::string> policy_suite = {
         "cdp",          "cdpc512", "cdpc512par1", "cdpc512par4", "cdpc512par8",
         "cdpc512par16", "lpt",     "hybrid25",    "hybrid50",    "hybrid75"};
-    // policy_suite = {"cdp", "cdpc512"};
+    policy_suite = {"cdp"};
     //
     int nruns = policy_suite.size();
 
@@ -158,7 +159,7 @@ class ScaleSim {
         GenDistributionParallel(costs, r.nblocks, comm);
       }
 
-      RunSuite(policy_suite, r, costs, comm);
+      // RunSuite(policy_suite, r, costs, comm);
     }
 
     if (my_rank == 0) {

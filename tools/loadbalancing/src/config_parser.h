@@ -18,6 +18,7 @@ class ConfigParser {
   std::unordered_map<std::string, std::string> params_;
   friend class ConfigUtils;
 
+  // Not to be used for const char*, as it may return temporary pointers
   template <typename T>
   T GetParamOrDefault(const std::string& key, const T& default_val) {
     auto it = params_.find(key);
@@ -29,6 +30,22 @@ class ConfigParser {
     }
 
     return Convert<T>(it->second);
+  }
+
+  // Specialization for const char*
+  // It may return pointers to param_ values, which are never
+  // cleared, so should be safe if nothing fancy is done
+  const char* GetParamOrDefault(const std::string& key,
+                                const char* default_val) {
+    auto it = params_.find(key);
+    if (it == params_.end()) {
+      logv(__LOG_ARGS__, LOG_DBG2,
+           "Key %s not found in config file, using default value\n",
+           key.c_str());
+      return default_val;
+    }
+
+    return it->second.c_str();
   }
 
   static std::string Strip(const std::string& str);
@@ -53,6 +70,18 @@ class ConfigUtils {
     }
 
     return Globals::config->GetParamOrDefault<T>(key, default_val);
+  }
+
+  static const char* GetParamOrDefault(const std::string& key,
+                                       const char* default_val) {
+    Initialize();
+
+    if (!Globals::config) {
+      logv(__LOG_ARGS__, LOG_DBUG, "Globals.config is not set\n");
+      return default_val;
+    }
+
+    return Globals::config->GetParamOrDefault(key, default_val);
   }
 
  private:

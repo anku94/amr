@@ -17,6 +17,7 @@ enum class Distribution {
   kGaussian,
   kExponential,
   kPowerLaw,
+  kFromFile  // read from file for debugging
 };
 
 struct GaussianOpts {
@@ -32,6 +33,10 @@ struct PowerLawOpts {
   double alpha;
 };
 
+struct FileOpts {
+  const char* fname;
+};
+
 struct DistributionOpts {
   Distribution d;
   int N_min;
@@ -40,6 +45,7 @@ struct DistributionOpts {
     GaussianOpts gaussian;
     ExpOpts exp;
     PowerLawOpts powerlaw;
+    FileOpts file;
   };
 };
 
@@ -47,10 +53,17 @@ class DistributionUtils {
  public:
   static void GenDistributionWithDefaults(std::vector<double>& costs,
                                           int nblocks) {
+    // string literals have a different implementation that does not
+    // used std::string.
+#define DEFINE_STRLIT_PARAM(name, default_val) \
+  const char* name = ConfigUtils::GetParamOrDefault(#name, default_val)
+
 #define DEFINE_PARAM(name, type, default_val) \
   type name = ConfigUtils::GetParamOrDefault<type>(#name, default_val)
 
-    DEFINE_PARAM(distribution, std::string, "powerlaw");
+    DEFINE_STRLIT_PARAM(distribution, "powerlaw");
+    DEFINE_STRLIT_PARAM(file_path, "/some/val");
+
     DEFINE_PARAM(N_min, double, 50);
     DEFINE_PARAM(N_max, double, 100);
     DEFINE_PARAM(gaussian_mean, double, 10.0);
@@ -76,6 +89,9 @@ class DistributionUtils {
     } else if (d == Distribution::kPowerLaw) {
       opts.d = Distribution::kPowerLaw;
       opts.powerlaw.alpha = powerlaw_alpha;
+    } else if (d == Distribution::kFromFile) {
+      opts.d = Distribution::kFromFile;
+      opts.file.fname = file_path;
     } else {
       ABORT("Unknown distribution");
     }
@@ -91,6 +107,8 @@ class DistributionUtils {
         return "Exponential";
       case Distribution::kPowerLaw:
         return "PowerLaw";
+      case Distribution::kFromFile:
+        return "FromFile";
       default:
         return "Uniform";
     }
@@ -107,6 +125,8 @@ class DistributionUtils {
       return Distribution::kExponential;
     } else if (s_lower == "powerlaw") {
       return Distribution::kPowerLaw;
+    } else if (s_lower == "fromfile") {
+      return Distribution::kFromFile;
     } else {
       ABORT("Unknown distribution");
     }
@@ -123,6 +143,8 @@ class DistributionUtils {
       ret = "Exponential: lambda=" + std::to_string(opts.exp.lambda);
     } else if (opts.d == Distribution::kPowerLaw) {
       ret = "PowerLaw: alpha=" + std::to_string(opts.powerlaw.alpha);
+    } else if (opts.d == Distribution::kFromFile) {
+      ret = "FromFile: " + std::string(opts.file.fname);
     } else {
       ret = "unknown";
     }
@@ -153,6 +175,9 @@ class DistributionUtils {
         break;
       case Distribution::kPowerLaw:
         GenPowerLaw(costs, nblocks, d.powerlaw.alpha, d.N_min, d.N_max);
+        break;
+      case Distribution::kFromFile:
+        GenFromFile(costs, nblocks, d.file.fname);
         break;
       default:
         GenUniform(costs, nblocks);
@@ -269,6 +294,28 @@ class DistributionUtils {
       alias_sample += N_min;
       costs[i] = alias_sample;
     }
+  }
+
+  static void GenFromFile(std::vector<double>& costs, int nblocks,
+                          const char* fname) {
+    // file is a space-separated list of unknown number of doubles, read them
+    // into costs
+    costs.resize(nblocks, 0);
+
+    FILE* f = fopen(fname, "r");
+    if (!f) {
+      logv(__LOG_ARGS__, LOG_ERRO, "Could not open file: %s", fname);
+    }
+
+    for (int i = 0; i < nblocks; i++) {
+      int rv = fscanf(f, "%lf", &costs[i]);
+      if (rv == EOF) {
+        logv(__LOG_ARGS__, LOG_WARN, "EOF reached at %d blocks", i);
+        break;
+      }
+    }
+
+    fclose(f);
   }
 
   static std::string PlotHistogram(std::vector<double> const& costs, int N_min,

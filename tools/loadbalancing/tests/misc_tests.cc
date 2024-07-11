@@ -8,7 +8,7 @@
 
 #include "bin_readers.h"
 #include "block_alloc_sim.h"
-#include "policy_exec_ctx.h"
+#include "distrib/distributions.h"
 #include "prof_set_reader.h"
 
 namespace amr {
@@ -237,6 +237,24 @@ TEST_F(MiscTest, PolicyUtilsTest1) {
   ASSERT_EQ(policy.policy, LoadBalancePolicy::kPolicyCDPChunked);
   ASSERT_EQ(policy.chunked_opts.chunk_size, 256);
   ASSERT_EQ(policy.chunked_opts.parallelism, 32);
+}
+
+TEST_F(MiscTest, DistribGenTest) {
+  const char* fname = "/tmp/test.txt";
+  const char* fdata = "1.0 2.0 3.0 44.0";
+  FILE* f = fopen(fname, "w");
+  fprintf(f, "%s", fdata);
+  fclose(f);
+
+  std::vector<double> costs;
+  int nblocks = 4;
+  DistributionUtils::GenFromFile(costs, nblocks, fname);
+
+  EXPECT_EQ(costs.size(), nblocks);
+  EXPECT_NEAR(costs[0], 1.0, 0.0001);
+  EXPECT_NEAR(costs[1], 2.0, 0.0001);
+  EXPECT_NEAR(costs[2], 3.0, 0.0001);
+  EXPECT_NEAR(costs[3], 44.0, 0.0001);
 }
 }  // namespace amr
    //
