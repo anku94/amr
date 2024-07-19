@@ -51,8 +51,7 @@ struct DistributionOpts {
 
 class DistributionUtils {
  public:
-  static void GenDistributionWithDefaults(std::vector<double>& costs,
-                                          int nblocks) {
+  static DistributionOpts GetConfigOpts() {
     // string literals have a different implementation that does not
     // used std::string.
 #define DEFINE_STRLIT_PARAM(name, default_val) \
@@ -96,7 +95,7 @@ class DistributionUtils {
       ABORT("Unknown distribution");
     }
 
-    GenDistribution(opts, costs, nblocks);
+    return opts;
   }
 
   static std::string DistributionToString(Distribution d) {

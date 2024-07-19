@@ -1,5 +1,7 @@
 #pragma once
 
+#include <pdlfs-common/env.h>
+
 #include "bench_util.h"
 #include "benchmark_stats.h"
 #include "common.h"
@@ -12,21 +14,16 @@
 #include "tabular_data.h"
 #include "trace_utils.h"
 
-#include <pdlfs-common/env.h>
-
 namespace amr {
 struct BenchmarkOpts {
   pdlfs::Env* const env;
-  std::string config_file;
   std::string output_dir;
 };
 
 class Benchmark {
  public:
   explicit Benchmark(BenchmarkOpts& opts)
-      : opts_(opts), utils_(opts_.output_dir, pdlfs::Env::Default()) {
-    Globals.config = std::make_unique<ConfigParser>(opts_.config_file);
-  }
+      : opts_(opts), utils_(opts_.output_dir, pdlfs::Env::Default()) {}
 
   void Run() {
     // int nruns = RunSuiteMini();
@@ -62,14 +59,14 @@ class Benchmark {
     int iter = 50;
 
     // std::vector<RunType> all_runs{base, cpp, cpp_iter, lpt, hybrid, hybrid2};
-    std::vector<RunType> all_runs{ hybrid3, lpt};
+    std::vector<RunType> all_runs{hybrid3, lpt};
 
     for (auto& r : all_runs) {
       logv(__LOG_ARGS__, LOG_INFO, "[RUN] %s", r.ToString().c_str());
-    //   if (r.policy_opts && r.policy == LoadBalancePolicy::kPolicyHybrid) {
-    //     auto* opts = reinterpret_cast<PolicyOptsHybrid*>(r.policy_opts);
-    //     logv(__LOG_ARGS__, LOG_INFO, "%s", opts->ToString().c_str());
-    //   }
+      //   if (r.policy_opts && r.policy == LoadBalancePolicy::kPolicyHybrid) {
+      //     auto* opts = reinterpret_cast<PolicyOptsHybrid*>(r.policy_opts);
+      //     logv(__LOG_ARGS__, LOG_INFO, "%s", opts->ToString().c_str());
+      //   }
     }
 
     DoRuns(all_runs);
@@ -95,7 +92,8 @@ class Benchmark {
   }
 
   int RunCppIterSuite(int nranks, int nblocks) {
-    logv(__LOG_ARGS__, LOG_INFO, "[CppIterSuite] nranks: %d, nblocks: %d", nranks, nblocks);
+    logv(__LOG_ARGS__, LOG_INFO, "[CppIterSuite] nranks: %d, nblocks: %d",
+         nranks, nblocks);
 
     // std::vector<int> all_iters = {1,   10,  50,   100,  250,
     //                               500, 750, 1000, 1250, 1500};
@@ -151,8 +149,11 @@ class Benchmark {
 
     std::vector<double> costs;
     auto& r0 = rvec[0];
-    DistributionUtils::GenDistributionWithDefaults(costs, r0.nblocks);
-    logv(__LOG_ARGS__, LOG_INFO, "Times: %s", SerializeVector(costs, 10).c_str());
+    auto distrib_opts = DistributionUtils::GetConfigOpts();
+    DistributionUtils::GenDistribution(distrib_opts, costs, r0.nblocks);
+
+    logv(__LOG_ARGS__, LOG_INFO, "Times: %s",
+         SerializeVector(costs, 10).c_str());
 
     for (auto& r : rvec) {
       DoRun(r, costs);
@@ -183,8 +184,9 @@ class Benchmark {
     utils_.LogVector("Rank times", rank_times);
     utils_.LogAllocation(r.nblocks, r.nranks, costs, ranks);
 
-    Distribution d = DistributionUtils::GetConfigDistribution();
-    std::string distrib_name = DistributionUtils::DistributionToString(d);
+    auto distrib_opts = DistributionUtils::GetConfigOpts();
+    std::string distrib_name =
+        DistributionUtils::DistributionOptsToString(distrib_opts);
 
     std::shared_ptr<TableRow> row = std::make_shared<BenchmarkRow>(
         r.nranks, r.nblocks, distrib_name, r.policy, time_avg, time_max);

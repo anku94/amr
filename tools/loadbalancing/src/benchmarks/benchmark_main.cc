@@ -1,5 +1,4 @@
 #include "benchmark.h"
-#include "policy_utils.h"
 
 #include <unistd.h>
 
@@ -38,7 +37,7 @@ void GetConfig(int argc, char* argv[]) {
 }
 
 void Run() {
-  amr::BenchmarkOpts opts{pdlfs::Env::Default(), config_file, output_dir};
+  amr::BenchmarkOpts opts{pdlfs::Env::Default(), output_dir};
   amr::Benchmark benchmark(opts);
   benchmark.Run();
 }
