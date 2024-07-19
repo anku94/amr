@@ -174,7 +174,8 @@ class ScaleSim {
     MPI_Comm_rank(comm, &my_rank);
 
     if (my_rank == 0) {
-      DistributionUtils::GenDistributionWithDefaults(costs, nblocks);
+      auto opts = DistributionUtils::GetConfigOpts();
+      DistributionUtils::GenDistribution(opts, costs, nblocks);
     }
 
     int rv = MPI_Bcast(costs.data(), nblocks, MPI_DOUBLE, 0, comm);
