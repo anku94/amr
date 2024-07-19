@@ -42,18 +42,23 @@ int LoadBalancePolicies::AssignBlocksParallelCDPChunked(
     return -1;
   }
 
-  int parallelism = std::min(opts.parallelism, nmpiranks);
-  int nchunks_max = nranks / chunksz;
-
-  int nchunks = parallelism;
-  if (nchunks_max > 0) {
-    nchunks = std::min(nchunks_max, parallelism);
+  if (mympirank == 0) {
+    logv(__LOG_ARGS__, LOG_DBUG, "CDPChunkedOpts: %s", opts.ToString().c_str());
   }
 
-  // int nchunks = (nranks > chunksz) ? nranks / chunksz : 1;
-  int rv = LBChunkwise::AssignBlocksParallel(costlist, ranklist, nranks, comm,
-                                             mympirank, nmpiranks, nchunks);
+  int parallelism = std::min(opts.parallelism, nmpiranks);
+  int rv = 0;
 
+  if (parallelism == 1) {
+    int nchunks = (nranks > chunksz) ? nranks / chunksz : 1;
+    rv = LBChunkwise::AssignBlocks(costlist, ranklist, nranks, nchunks);
+  } else {
+    int nchunks = std::min(nranks / chunksz, parallelism);
+    nchunks = std::max(nchunks, 1);
+
+    int rv = LBChunkwise::AssignBlocksParallel(costlist, ranklist, nranks, comm,
+                                               mympirank, nmpiranks, nchunks);
+  }
   if (rv) {
     logv(__LOG_ARGS__, LOG_WARN, "Failed to assign blocks to chunks, rv: %d",
          rv);

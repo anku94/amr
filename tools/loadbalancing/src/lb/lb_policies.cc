@@ -132,6 +132,15 @@ int LoadBalancePolicies::AssignBlocksSkewed(const std::vector<double>& costlist,
 int LoadBalancePolicies::AssignBlocksContiguous(
     const std::vector<double>& costlist, std::vector<int>& ranklist,
     int nranks) {
+  int nblocks = costlist.size();
+  if (nblocks < nranks) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in AssignBlocksContiguous" << std::endl
+        << "nblocks < nranks" << "(" << nblocks << ", " << nranks << ")"
+        << std::endl;
+    ABORT(msg.str().c_str());
+  }
+
   double const total_cost =
       std::accumulate(costlist.begin(), costlist.end(), 0.0);
 
@@ -140,7 +149,7 @@ int LoadBalancePolicies::AssignBlocksContiguous(
   double my_cost = 0.0;
   double remaining_cost = total_cost;
   // create rank list from the end: the master MPI rank should have less load
-  for (int block_id = costlist.size() - 1; block_id >= 0; block_id--) {
+  for (int block_id = nblocks - 1; block_id >= 0; block_id--) {
     if (target_cost == 0.0) {
       std::stringstream msg;
       msg << "### FATAL ERROR in CalculateLoadBalance" << std::endl
@@ -148,13 +157,18 @@ int LoadBalancePolicies::AssignBlocksContiguous(
           << "Decrease the number of processes or use smaller MeshBlocks."
           << std::endl;
       logv(__LOG_ARGS__, LOG_WARN, "%s", msg.str().c_str());
-      //      ABORT(msg.str().c_str());
-      logv(__LOG_ARGS__, LOG_WARN, "Thugs don't abort on fatal errors.");
+           ABORT(msg.str().c_str());
+      // logv(__LOG_ARGS__, LOG_WARN, "Thugs don't abort on fatal errors.");
       return -1;
     }
     my_cost += costlist[block_id];
     ranklist[block_id] = rank;
-    if (my_cost >= target_cost && rank > 0) {
+
+    // all conditions
+    bool filled_enough = (my_cost >= target_cost);
+    // remaining blocks == remaining ranks
+    bool low_on_blocks = (block_id == rank);
+    if ((filled_enough or low_on_blocks) && (rank > 0)) {
       rank--;
       remaining_cost -= my_cost;
       my_cost = 0.0;
