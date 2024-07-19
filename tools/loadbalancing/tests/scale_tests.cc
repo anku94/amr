@@ -16,6 +16,7 @@ class ScaleTest : public ::testing::Test {
 TEST_F(ScaleTest, HelloWorld) {
   EXPECT_EQ(1, 1);
   std::vector<double> costs(512, 0.0);
-  DistributionUtils::GenDistributionWithDefaults(costs, 512);
+  auto opts = DistributionUtils::GetConfigOpts();
+  DistributionUtils::GenDistribution(opts, costs, 512);
 }
 }  // namespace amr

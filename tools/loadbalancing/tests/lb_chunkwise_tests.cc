@@ -17,17 +17,21 @@ class LBChunkwiseTest : public ::testing::Test {
     int nchunks_v = chunks.size();
     EXPECT_EQ(nchunks_v, nchunks);
 
-    for (int cidx = 1; cidx < nchunks; cidx++) {
+    EXPECT_EQ(chunks[0].block_first, 0);
+    EXPECT_EQ(chunks[nchunks - 1].block_last, nblocks);
+
+    int nranks_pc = nranks / nchunks;
+
+    for (int cidx = 0; cidx < nchunks; cidx++) {
       auto const& chunk = chunks[cidx];
-      auto const& prev_chunk = chunks[cidx - 1];
+      EXPECT_EQ(chunk.rank_first, cidx * nranks_pc);
+      EXPECT_EQ(chunk.rank_last, (cidx + 1) * nranks_pc);
+      EXPECT_GE(chunk.NumBlocks(), nranks_pc);
 
-      EXPECT_EQ(chunk.block_first, prev_chunk.block_first + prev_chunk.nblocks);
-      EXPECT_EQ(chunk.rank_first, prev_chunk.rank_first + prev_chunk.nranks);
+      if (cidx < nchunks - 1) {
+        EXPECT_EQ(chunk.block_last, chunks[cidx + 1].block_first);
+      }
     }
-
-    auto const& last_chunk = chunks[nchunks - 1];
-    EXPECT_EQ(last_chunk.block_first + last_chunk.nblocks, nblocks);
-    EXPECT_EQ(last_chunk.rank_first + last_chunk.nranks, nranks);
   }
 };
 
@@ -74,7 +78,7 @@ TEST_F(LBChunkwiseTest, ValidateChunking3) {
   ValidateChunks(chunks, nchunks, nblocks, nranks);
 
   for (const auto& chunk: chunks) {
-    EXPECT_GE(chunk.nblocks, 2);
+    EXPECT_GE(chunk.NumBlocks(), 2);
   }
 }
 
@@ -91,7 +95,25 @@ TEST_F(LBChunkwiseTest, ValidateChunking4) {
   ValidateChunks(chunks, nchunks, nblocks, nranks);
 
   for (const auto& chunk: chunks) {
-    EXPECT_GE(chunk.nblocks, 512);
+    EXPECT_GE(chunk.NumBlocks(), 512);
   }
+}
+
+TEST_F(LBChunkwiseTest, ValidateChunking5) {
+  int nblocks = 9150;
+  int nranks = 4096;
+  int nchunks = 4;
+  std::vector<double> costs(nblocks, 1e-6);
+  costs[4095] = 1;
+  costs[4083] = 3;
+  costs[2] = 100;
+
+  auto chunks = ComputeChunks(costs, nranks, nchunks);
+
+  for (const auto& chunk: chunks) {
+    EXPECT_GE(chunk.NumBlocks(), 1024);
+  }
+
+  ValidateChunks(chunks, nchunks, nblocks, nranks);
 }
 }  // namespace amr
