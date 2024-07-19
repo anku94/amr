@@ -34,8 +34,9 @@ class ScaleSim {
  public:
   explicit ScaleSim(ScaleSimOpts opts) : options_(std::move(opts)) {}
 
+  // fake_rank - only used to control logging - don't use for MPI purposes
   void RunSuite(std::vector<std::string>& suite, RunProfile const& rp,
-                std::vector<double>& costs, MPI_Comm comm) {
+                std::vector<double>& costs, MPI_Comm comm, int fake_rank) {
     int nruns = suite.size();
 
     std::vector<int> ranks(rp.nranks, 0);
@@ -78,9 +79,11 @@ class ScaleSim {
 
       PolicyUtils::ComputePolicyCosts(rp.nranks, costs, ranks, rank_times,
                                       time_avg, time_max);
-      logv(__LOG_ARGS__, LOG_INFO,
-           "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
-           r.policy.c_str(), time_avg, time_max);
+      if (fake_rank == 0) {
+        logv(__LOG_ARGS__, LOG_INFO,
+             "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
+             r.policy.c_str(), time_avg, time_max);
+      }
 
       double iter_time = (_ts_end - _ts_beg) * 1.0 / Constants::kScaleSimIters;
       double loc_cost = PolicyUtils::ComputeLocCost(ranks) * 100;
@@ -107,7 +110,7 @@ class ScaleSim {
         "hybrid75", "lpt", "hybrid75alt1", "hybrid75alt2"};
 
     policy_suite = {"baseline", "cdp", "cdpc512", "hybrid50", "lpt"};
-    policy_suite = {"cdpc512"};
+    policy_suite = {"cdp", "cdpc512", "lpt"};
 
     int nruns = policy_suite.size();
 
@@ -118,10 +121,11 @@ class ScaleSim {
 
       if (costs.size() != r.nblocks) {
         costs.resize(r.nblocks, 0);
-        DistributionUtils::GenDistributionWithDefaults(costs, r.nblocks);
+        auto opts = DistributionUtils::GetConfigOpts();
+        DistributionUtils::GenDistribution(opts, costs, r.nblocks);
       }
 
-      RunSuite(policy_suite, r, costs, MPI_COMM_NULL);
+      RunSuite(policy_suite, r, costs, MPI_COMM_NULL, 0);
     }
 
     EmitTable(nruns);
@@ -145,8 +149,10 @@ class ScaleSim {
     std::vector<std::string> policy_suite = {
         "cdp",          "cdpc512", "cdpc512par1", "cdpc512par4", "cdpc512par8",
         "cdpc512par16", "lpt",     "hybrid25",    "hybrid50",    "hybrid75"};
-    policy_suite = {"cdp"};
-    //
+    policy_suite = {"cdp", "cdpc512", "cdpc512par8" }; //, "hybrid25", "hybrid50", "hybrid75", "lpt"};
+    policy_suite = { "cdp", "cdpc512", "cdpc512par8", "hybrid25" };
+    // policy_suite = { "cdpc512par8" };
+
     int nruns = policy_suite.size();
 
     for (auto& r : run_profiles) {
@@ -159,7 +165,8 @@ class ScaleSim {
         GenDistributionParallel(costs, r.nblocks, comm);
       }
 
-      // RunSuite(policy_suite, r, costs, comm);
+      MPI_Barrier(comm);
+      RunSuite(policy_suite, r, costs, comm, my_rank);
     }
 
     if (my_rank == 0) {
