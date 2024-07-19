@@ -11,6 +11,7 @@ set (install-programs
   newscripts/amr_suite.csv
   newscripts/gen_amr_jobs.py
   newscripts/gen_topo_jobs.py
+  perffd_wrapper.sh
   )
 
 foreach (lcv ${install-programs-in})
