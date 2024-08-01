@@ -35,7 +35,7 @@ setup_ctlfds() {
   export PERF_ACK_FD=${perf_ack_fd}
 }
 
-cleanup_ctlfd() {
+cleanup_ctlfds() {
   local -i FDRANK=$1
 
   # clean up fd's and delete the fifo's
@@ -56,7 +56,7 @@ run_cmd() {
 
 run_on_mvapich() {
   setup_paths $PMI_RANK
-  setup_ctlfd $PMI_RANK
+  setup_ctlfds $PMI_RANK
   run_cmd "$@"
   cleanup_ctlfds $PMI_RANK
 }
