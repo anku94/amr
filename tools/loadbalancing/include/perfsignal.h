@@ -29,10 +29,21 @@ class PerfManager {
 
   // send command to perf via fifo and confirm ack
   void send_command(const char *command) {
+    int rv = 0;
     if (enable_) {
-      write(ctl_fd_, command, strlen(command));
+      rv = write(ctl_fd_, command, strlen(command));
+      if (rv == -1) {
+        perror("write");
+        return;
+      }
+
       char ack[5];
-      read(ack_fd_, ack, 5);
+      rv = read(ack_fd_, ack, 5);
+      if (rv == -1) {
+        perror("read");
+        return;
+      }
+
       assert(strcmp(ack, ack_cmd) == 0);
     }
   }

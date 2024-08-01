@@ -17,6 +17,9 @@ set_target_properties(prof_preload PROPERTIES
     LINK_FLAGS "-Wl,--no-as-needed")
 
 add_executable(prof_example example_prog.cc)
+
+target_include_directories(prof_example PRIVATE 
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tools/loadbalancing/include>)
 target_link_libraries(prof_example PRIVATE MPI::MPI_CXX Kokkos::kokkos)
 
 INSTALL(TARGETS prof_preload DESTINATION lib)

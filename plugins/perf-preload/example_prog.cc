@@ -2,7 +2,13 @@
 #include <iostream>
 #include <mpi.h>
 
+#include "perfsignal.h"
+
+PerfManager perf;
+
 void basic_communication(MPI_Comm comm, int my_rank, int nranks) {
+  perf.Resume();
+
   int msg[2] = {my_rank, nranks};
   int recv_msg[2];
   MPI_Request send_request, recv_request;
@@ -27,6 +33,49 @@ void basic_communication(MPI_Comm comm, int my_rank, int nranks) {
   // Optional: Print the received message for debugging
   printf("Rank %d received from rank %d: my_rank=%d, nranks=%d\n", my_rank,
          partner_rank, recv_msg[0], recv_msg[1]);
+
+  perf.Pause();
+}
+
+void SmallWorkRegion(double& num) {
+  Kokkos::Profiling::pushRegion("SmallWorkRegion");
+
+  for (int i = 0; i < 1000; i++) {
+    num += (1.0 / num) * (1.0 / num);
+  }
+
+  Kokkos::Profiling::popRegion();
+}
+
+void BigWorkRegion(double& num) {
+  Kokkos::Profiling::pushRegion("BigWorkRegion");
+
+  for (int i = 0; i < 10000; i++) {
+    num += (1.0 / num) * (1.0 / num);
+  }
+
+  Kokkos::Profiling::popRegion();
+}
+
+void Timestep(int rank, int size, double& num) {
+  Kokkos::Profiling::pushRegion("Timestep");
+
+  basic_communication(MPI_COMM_WORLD, rank, size);
+  SmallWorkRegion(num);
+  BigWorkRegion(num);
+
+  Kokkos::Profiling::popRegion();
+}
+
+void Init(int rank, int size) {
+  // Kokkos parallel region (replace this with actual computation)
+  Kokkos::Profiling::pushRegion("HelloWorldRegion");
+
+  // Print from each process
+  std::cout << "Hello from MPI process " << rank << " out of " << size
+            << std::endl;
+
+  Kokkos::Profiling::popRegion();
 }
 
 int main(int argc, char* argv[]) {
@@ -40,21 +89,18 @@ int main(int argc, char* argv[]) {
   // Initialize Kokkos
   Kokkos::initialize(argc, argv);
 
-  {
-    // Kokkos parallel region (replace this with actual computation)
-    Kokkos::Profiling::pushRegion("HelloWorldRegion");
+  Init(rank, size);
+  double num = 1.0;
+  for (int t = 0; t < 3; t++) {
+    Timestep(rank, size, num);
+  }
 
-    // Print from each process
-    std::cout << "Hello from MPI process " << rank << " out of " << size
-              << std::endl;
-
-    Kokkos::Profiling::popRegion();
+  if (rank == 0) {
+    std::cout << "Final num (ignore): " << num << std::endl;
   }
 
   // Finalize Kokkos
   Kokkos::finalize();
-
-  basic_communication(MPI_COMM_WORLD, rank, size);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
