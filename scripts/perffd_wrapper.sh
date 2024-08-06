@@ -48,7 +48,7 @@ cleanup_ctlfds() {
 
 run_cmd() {
   perf record -o $PERF_OUTPUT_FILE \
-    --call-graph dwarf \
+    --call-graph fp -q \
     --control fd:${perf_ctl_fd},${perf_ack_fd} \
     --delay=-1 \
     "$@"
