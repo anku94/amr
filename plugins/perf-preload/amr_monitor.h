@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "detailed_logger.h"
 #include "logging.h"
 #include "metric.h"
 #include "metric_util.h"
@@ -17,12 +18,22 @@ namespace amr {
 class AMRMonitor {
  public:
   AMRMonitor(pdlfs::Env* env, int rank, int nranks)
-      : env_(env), rank_(rank), nranks_(nranks) {
+      : env_(env),
+        rank_(rank),
+        nranks_(nranks),
+        tswise_logger_(
+            AMROptUtils::GetTswiseOutputFile(amr_opts, env_, rank_)) {
     google::InitGoogleLogging("amrmon");
 
     if (rank == 0) {
       logv(__LOG_ARGS__, LOG_INFO, "AMRMonitor initializing.");
       AMROptUtils::LogOpts(amr_opts);
+
+      if (amr_opts.tswise_enabled) {
+        logv(__LOG_ARGS__, LOG_WARN,
+             "Timestep-wise logging is enabled! This may produce lots of "
+             "data!!");
+      }
     }
   }
 
@@ -107,6 +118,8 @@ class AMRMonitor {
     }
 
     it->second.LogInstance(val);
+
+    tswise_logger_.LogKey(key, val);
   }
 
   StringVec GetCommonMetrics() {
@@ -199,5 +212,6 @@ class AMRMonitor {
   pdlfs::Env* const env_;
   const int rank_;
   const int nranks_;
+  TimestepwiseLogger tswise_logger_;
 };
 }  // namespace amr
