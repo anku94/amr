@@ -3,17 +3,17 @@ find_package(pdlfs-common CONFIG REQUIRED)
 find_package(GUROBI)
 
 set (lb_srcs
-        lb_chunkwise.cc
-        lb_contig_improv.cc
-        lb_contig_improv2.cc
-        lb_ilp.cc
-        lb_lspt.cc
-        lb_cpp_iter.cc
-        lb_hybrid.cc
-        lb_hybrid2.cc
-        lb_policies.cc
-        policy_utils.cc
-        ${CMAKE_SOURCE_DIR}/tools/common/common.cc
+    lb_chunkwise.cc
+    lb_contig_improv.cc
+    lb_contig_improv2.cc
+    lb_ilp.cc
+    lb_lspt.cc
+    lb_cpp_iter.cc
+    lb_hybrid.cc
+    lb_hybrid2.cc
+    lb_policies.cc
+    policy_utils.cc
+    ${CMAKE_SOURCE_DIR}/tools/common/common.cc
         )
 
 add_library(lb SHARED ${lb_srcs} ${common_srcs})

@@ -54,6 +54,10 @@ class PolicyUtils {
   static std::string GetLogPath(const char* output_dir, const char* policy_name,
                                 const char* suffix);
 
+  static void LogAssignmentStats(std::vector<double> const& costlist,
+                                 std::vector<int> const& ranklist, int nranks,
+                                 int my_rank = 0);
+
  private:
   static LoadBalancePolicy StringToPolicy(std::string const& policy_str);
 

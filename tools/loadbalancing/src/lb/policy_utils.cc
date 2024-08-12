@@ -296,6 +296,42 @@ std::string PolicyUtils::GetLogPath(const char* output_dir,
   return result;
 }
 
+void PolicyUtils::LogAssignmentStats(std::vector<double> const& costlist,
+                                     std::vector<int> const& ranklist,
+                                     int nranks, int my_rank) {
+  if (my_rank != 0) {
+    return;
+  }
+
+  int nblocks = costlist.size();
+  std::vector<double> rank_costs(nranks, 0.0);
+  std::vector<double> rank_counts(nranks, 0.0);
+
+  for (int bidx = 0; bidx < nblocks; bidx++) {
+    int rank = ranklist[bidx];
+    rank_costs[rank] += costlist[bidx];
+    rank_counts[rank] += 1.0;
+  }
+
+  // compute max, med, min of costs
+  std::sort(rank_costs.begin(), rank_costs.end());
+  double min_cost = rank_costs.front();
+  double max_cost = rank_costs.back();
+  double med_cost = rank_costs[nranks / 2];
+
+  // compute max, med, min of counts
+  std::sort(rank_counts.begin(), rank_counts.end());
+  double min_count = rank_counts.front();
+  double max_count = rank_counts.back();
+  double med_count = rank_counts[nranks / 2];
+
+  logv(__LOG_ARGS__, LOG_INFO, "Rank statistics (nblocks=%d):", nblocks);
+  logv(__LOG_ARGS__, LOG_INFO, "  Costs: min=%.0lf med=%.0lf max=%.0lf",
+       min_cost / 1e3, med_cost / 1e3, max_cost / 1e3);
+  logv(__LOG_ARGS__, LOG_INFO, "  Counts: min=%.0lf med=%.0lf max=%.0lf",
+       min_count, med_count, max_count);
+}
+
 const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
   // policy_name = hybridX, where X is to be parsed into lpt_frac
   // parse policy_name, throw error if not in the correct format
@@ -306,10 +342,7 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
 
   // HybridPolicy
   PolicyOptsHybridCDPFirst hcf_opts = {
-      .v2 = true,
-      .lpt_frac = 0.5,
-      .alt_solncnt_max = 0
-  };
+      .v2 = true, .lpt_frac = 0.5, .alt_solncnt_max = 0};
 
   if (std::regex_match(policy_str, match, re_oneparam)) {
     logv(__LOG_ARGS__, LOG_DBUG, "One param matched: %s", match.str(1).c_str());
@@ -330,7 +363,8 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
 
   static bool first_time = true;
   if (first_time) {
-    logv(__LOG_ARGS__, LOG_INFO, "[LB] Using Hybrid policy with LPT frac: %.2lf%%",
+    logv(__LOG_ARGS__, LOG_INFO,
+         "[LB] Using Hybrid policy with LPT frac: %.2lf%%",
          hcf_opts.lpt_frac * 100);
     first_time = false;
   }

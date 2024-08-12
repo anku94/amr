@@ -20,6 +20,21 @@ enum class LoadBalancePolicy;
 
 class LoadBalancePolicies {
  public:
+   //
+   // Top-level function over AssignBlocks and AssignBlocksParallel.
+   // Both AssignBlocks and AssignBlocksParallel follow their own rules for
+   // calling each other for hybrid policies, but
+   // AssignBlocksCached will only call one of those functions.
+   //
+   // There exists no callpath in which AssignBlocksCached ends up calling
+   // itself
+   //
+  static int AssignBlocksCached(const char* policy_name,
+                                std::vector<double> const& costlist,
+                                std::vector<int>& ranklist, int nranks,
+                                int my_rank = 0,
+                                MPI_Comm comm = MPI_COMM_NULL);
+
   static int AssignBlocks(const char* policy_name,
                           std::vector<double> const& costlist,
                           std::vector<int>& ranklist, int nranks);

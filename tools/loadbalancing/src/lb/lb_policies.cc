@@ -4,12 +4,41 @@
 
 #include "lb_policies.h"
 
+#include "assignment_cache.h"
 #include "common.h"
+#include "constants.h"
 #include "policy.h"
 #include "policy_utils.h"
 #include "policy_wopts.h"
 
 namespace amr {
+int LoadBalancePolicies::AssignBlocksCached(const char* policy_name,
+                                            std::vector<double> const& costlist,
+                                            std::vector<int>& ranklist,
+                                            int nranks, int my_rank,
+                                            MPI_Comm comm) {
+  static AssignmentCache cache(Constants::kMaxAssignmentCacheReuse);
+  int rv = 0;
+
+  bool cache_ret = cache.Get(costlist.size(), ranklist);
+  if (cache_ret) {
+    logv(__LOG_ARGS__, LOG_DBUG, "Cache hit");
+    return 0;
+  }
+
+  if (comm == MPI_COMM_NULL) {
+    rv = AssignBlocks(policy_name, costlist, ranklist, nranks);
+  } else {
+    rv = AssignBlocksParallel(policy_name, costlist, ranklist, nranks, comm);
+  }
+
+  PolicyUtils::LogAssignmentStats(costlist, ranklist, nranks, my_rank);
+
+  cache.Put(costlist.size(), ranklist);
+
+  return rv;
+}
+
 int LoadBalancePolicies::AssignBlocks(const char* policy_name,
                                       std::vector<double> const& costlist,
                                       std::vector<int>& ranklist, int nranks) {
@@ -157,7 +186,7 @@ int LoadBalancePolicies::AssignBlocksContiguous(
           << "Decrease the number of processes or use smaller MeshBlocks."
           << std::endl;
       logv(__LOG_ARGS__, LOG_WARN, "%s", msg.str().c_str());
-           ABORT(msg.str().c_str());
+      ABORT(msg.str().c_str());
       // logv(__LOG_ARGS__, LOG_WARN, "Thugs don't abort on fatal errors.");
       return -1;
     }
