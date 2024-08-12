@@ -171,7 +171,7 @@ class Benchmark {
     logv(__LOG_ARGS__, LOG_INFO, "%s", r.ToString().c_str());
 
     std::vector<int> ranks(costs.size());
-    LoadBalancePolicies::AssignBlocks(r.policy.c_str(), costs, ranks, r.nranks);
+    LoadBalancePolicies::AssignBlocksCached(r.policy.c_str(), costs, ranks, r.nranks);
     std::vector<double> rank_times;
     PolicyUtils::ComputePolicyCosts(r.nranks, costs, ranks, rank_times,
                                     time_avg, time_max);

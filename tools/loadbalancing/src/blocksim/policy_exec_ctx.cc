@@ -90,8 +90,8 @@ int PolicyExecCtx::TriggerLB(const std::vector<double>& costlist,
   ts_lb_invoked_++;
 
   uint64_t lb_beg = pdlfs::Env::NowMicros();
-  rv = LoadBalancePolicies::AssignBlocks(opts_.policy_id, costlist, ranklist_lb,
-                                         opts_.nranks);
+  rv = LoadBalancePolicies::AssignBlocksCached(opts_.policy_id, costlist,
+                                               ranklist_lb, opts_.nranks);
   uint64_t lb_end = pdlfs::Env::NowMicros();
 
   if (rv) return rv;

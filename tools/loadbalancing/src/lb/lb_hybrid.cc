@@ -6,6 +6,7 @@
 #include "iterative/solver.h"
 #include "lb_policies.h"
 #include "lb_util.h"
+#include "policy_utils.h"
 #include "policy_wopts.h"
 
 typedef std::pair<int, double> BlockCostPair;
@@ -42,8 +43,9 @@ class HybridAssignment {
 
   double GetLPTMax(std::vector<double> const& costlist, int nranks) {
     std::vector<int> ranklist(nranks, -1);
-    int rv = amr::LoadBalancePolicies::AssignBlocks("lpt", costlist, ranklist,
-                                                    nranks);
+    auto& lpt_policy = amr::PolicyUtils::GetPolicy("lpt");
+    int rv = amr::LoadBalancePolicies::AssignBlocks(lpt_policy, costlist,
+                                                    ranklist, nranks);
     if (rv) {
       ABORT("AssignBlocks LPT failed");
     }
@@ -149,7 +151,9 @@ int HybridAssignment::AssignBlocksRest(int nranks_rest) {
   }
 
   std::vector<int> ranklist_rest(nblocks_rest, -1);
-  rv = amr::LoadBalancePolicies::AssignBlocks("cdp", costlist_rest,
+
+  auto& cdp_policy = amr::PolicyUtils::GetPolicy("cdp");
+  rv = amr::LoadBalancePolicies::AssignBlocks(cdp_policy, costlist_rest,
                                               ranklist_rest, nranks_rest);
 
   // for each bidx, ridx in ranklist_rest

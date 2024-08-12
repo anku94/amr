@@ -1,5 +1,6 @@
 #pragma once
 
+#include <regex>
 #include <vector>
 
 #include "lb_policies.h"

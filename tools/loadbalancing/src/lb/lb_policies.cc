@@ -20,16 +20,24 @@ int LoadBalancePolicies::AssignBlocksCached(const char* policy_name,
   static AssignmentCache cache(Constants::kMaxAssignmentCacheReuse);
   int rv = 0;
 
-  bool cache_ret = cache.Get(costlist.size(), ranklist);
-  if (cache_ret) {
-    logv(__LOG_ARGS__, LOG_DBUG, "Cache hit");
-    return 0;
+  auto& policy = PolicyUtils::GetPolicy(policy_name);
+
+  if (policy.skip_cache) {
+    if (my_rank == 0) {
+      logv(__LOG_ARGS__, LOG_INFO, "Skipping cache");
+    }
+
+    bool cache_ret = cache.Get(costlist.size(), ranklist);
+    if (cache_ret) {
+      logv(__LOG_ARGS__, LOG_DBUG, "Cache hit");
+      return 0;
+    }
   }
 
   if (comm == MPI_COMM_NULL) {
-    rv = AssignBlocks(policy_name, costlist, ranklist, nranks);
+    rv = AssignBlocks(policy, costlist, ranklist, nranks);
   } else {
-    rv = AssignBlocksParallel(policy_name, costlist, ranklist, nranks, comm);
+    rv = AssignBlocksParallel(policy, costlist, ranklist, nranks, comm);
   }
 
   PolicyUtils::LogAssignmentStats(costlist, ranklist, nranks, my_rank);
@@ -39,12 +47,12 @@ int LoadBalancePolicies::AssignBlocksCached(const char* policy_name,
   return rv;
 }
 
-int LoadBalancePolicies::AssignBlocks(const char* policy_name,
+int LoadBalancePolicies::AssignBlocks(const LBPolicyWithOpts& policy,
                                       std::vector<double> const& costlist,
                                       std::vector<int>& ranklist, int nranks) {
   ranklist.resize(costlist.size());
 
-  const LBPolicyWithOpts& policy = PolicyUtils::GetPolicy(policy_name);
+  // const LBPolicyWithOpts& policy = PolicyUtils::GetPolicy(policy_name);
 
   switch (policy.policy) {
     case LoadBalancePolicy::kPolicyActual:
@@ -88,7 +96,7 @@ int LoadBalancePolicies::AssignBlocks(const char* policy_name,
 }
 
 int LoadBalancePolicies::AssignBlocksParallel(
-    const char* policy_name, std::vector<double> const& costlist,
+    const LBPolicyWithOpts& policy, std::vector<double> const& costlist,
     std::vector<int>& ranklist, int nranks, MPI_Comm comm) {
   static int mympirank = -1;
   static int nmpiranks = -1;
@@ -99,7 +107,7 @@ int LoadBalancePolicies::AssignBlocksParallel(
   }
 
   ranklist.resize(costlist.size());
-  const LBPolicyWithOpts& policy = PolicyUtils::GetPolicy(policy_name);
+  // const LBPolicyWithOpts& policy = PolicyUtils::GetPolicy(policy_name);
 
   switch (policy.policy) {
     case LoadBalancePolicy::kPolicyCDPChunked:
@@ -111,7 +119,7 @@ int LoadBalancePolicies::AssignBlocksParallel(
                                                 policy.hcf_opts, comm,
                                                 mympirank, nmpiranks);
     default:
-      return AssignBlocks(policy_name, costlist, ranklist, nranks);
+      return AssignBlocks(policy, costlist, ranklist, nranks);
   }
 }
 

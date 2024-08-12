@@ -117,7 +117,7 @@ class PolicyExecCtx {
   int TriggerLB(const std::vector<double>& costlist, double& exec_time);
 
   const PolicyExecOpts opts_;
-  const LBPolicyWithOpts& policy_;
+  const LBPolicyWithOpts policy_;
   bool use_cost_cache_;
 
   LoadBalanceState lb_state_;

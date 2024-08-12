@@ -59,9 +59,12 @@ static void ComputePartialLPTSolution(PartialLPTSolution& solution) {
     costlist_lpt.push_back(solution.costlist[bid]);
   }
 
-  rv = amr::LoadBalancePolicies::AssignBlocks(
-      amr::HybridAssignmentCppFirst::kLPTPolicyStr, costlist_lpt,
-      solution.ranklist_lpt, solution.lpt_ranks.size());
+  auto& lpt_policy =
+      amr::PolicyUtils::GetPolicy(amr::HybridAssignmentCppFirst::kLPTPolicyStr);
+
+  rv = amr::LoadBalancePolicies::AssignBlocks(lpt_policy, costlist_lpt,
+                                              solution.ranklist_lpt,
+                                              solution.lpt_ranks.size());
 
   if (rv) {
     ABORT("[HybridCppFirst] LPT failed");
@@ -157,8 +160,9 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
   std::vector<double> rank_times;
   double rank_time_max, rank_time_avg;
 
-  int rv = LoadBalancePolicies::AssignBlocks(kCDPPolicyStr, costlist, ranklist,
-                                             nranks);
+  static auto cdp_policy = amr::PolicyUtils::GetPolicy(kCDPPolicyStr);
+  int rv =
+      LoadBalancePolicies::AssignBlocks(cdp_policy, costlist, ranklist, nranks);
 
   PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                   rank_time_avg, rank_time_max);
@@ -186,8 +190,9 @@ int HybridAssignmentCppFirst::AssignBlocks(std::vector<double> const& costlist,
     costlist_lpt.push_back(costlist[bid]);
   }
 
-  rv = LoadBalancePolicies::AssignBlocks(kLPTPolicyStr, costlist_lpt,
-                                         ranklist_lpt, lpt_nranks);
+  static auto lpt_policy = amr::PolicyUtils::GetPolicy(kLPTPolicyStr);
+  rv = LoadBalancePolicies::AssignBlocks(lpt_policy, costlist_lpt, ranklist_lpt,
+                                         lpt_nranks);
 
   if (rv) {
     ABORT("[HybridCppFirst] LPT failed");
@@ -222,10 +227,12 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
   double rank_time_max, rank_time_avg;
 
   if (comm == MPI_COMM_NULL) {
-    rv = LoadBalancePolicies::AssignBlocks(kCDPPolicyStr, costlist, ranklist,
+    static auto cdp_policy = amr::PolicyUtils::GetPolicy(kCDPPolicyStr);
+    rv = LoadBalancePolicies::AssignBlocks(cdp_policy, costlist, ranklist,
                                            nranks);
   } else {
-    rv = LoadBalancePolicies::AssignBlocksParallel(kParCDPPolicyStr, costlist,
+    static auto cdp_par_policy = amr::PolicyUtils::GetPolicy(kParCDPPolicyStr);
+    rv = LoadBalancePolicies::AssignBlocksParallel(cdp_par_policy, costlist,
                                                    ranklist, nranks, comm);
   }
 

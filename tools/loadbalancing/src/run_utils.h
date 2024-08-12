@@ -25,16 +25,16 @@ struct RunType {
 
   int AssignBlocks(std::vector<double> const& costlist,
                    std::vector<int>& ranklist, int nranks) {
-    int rv = LoadBalancePolicies::AssignBlocks(policy.c_str(), costlist,
-                                               ranklist, nranks);
+    int rv = LoadBalancePolicies::AssignBlocksCached(policy.c_str(), costlist,
+                                                     ranklist, nranks);
     return rv;
   }
 
   int AssignBlocksParallel(std::vector<double> const& costlist,
                            std::vector<int>& ranklist, int nranks,
                            MPI_Comm comm) {
-    int rv = LoadBalancePolicies::AssignBlocksParallel(policy.c_str(), costlist,
-                                                       ranklist, nranks, comm);
+    int rv = LoadBalancePolicies::AssignBlocksCached(policy.c_str(), costlist,
+                                                     ranklist, nranks, comm);
     return rv;
   }
 

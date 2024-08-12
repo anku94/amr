@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <regex>
-#include <string>
-#include <vector>
-
-#include "lb_policies.h"
-
 namespace pdlfs {
 class Env;
 }

@@ -14,7 +14,7 @@ void RunPolicy(const char* policy_name, std::vector<double> const& costlist,
   std::vector<double> rank_times(nranks, 0);
   double rtavg, rtmax;
 
-  int rv = amr::LoadBalancePolicies::AssignBlocks(policy_name, costlist,
+  int rv = amr::LoadBalancePolicies::AssignBlocksCached(policy_name, costlist,
                                                   ranklist, nranks);
   if (rv) {
     ABORT("LB failed");

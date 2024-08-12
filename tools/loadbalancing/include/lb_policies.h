@@ -8,6 +8,8 @@
 
 #include <vector>
 
+#include "policy_wopts.h"
+
 namespace amr {
 
 struct PolicyOptsCDPI;
@@ -20,22 +22,24 @@ enum class LoadBalancePolicy;
 
 class LoadBalancePolicies {
  public:
-   //
-   // Top-level function over AssignBlocks and AssignBlocksParallel.
-   // Both AssignBlocks and AssignBlocksParallel follow their own rules for
-   // calling each other for hybrid policies, but
-   // AssignBlocksCached will only call one of those functions.
-   //
-   // There exists no callpath in which AssignBlocksCached ends up calling
-   // itself
-   //
+  //
+  // Top-level function over AssignBlocks and AssignBlocksParallel.
+  // Both AssignBlocks and AssignBlocksParallel follow their own rules for
+  // calling each other for hybrid policies, but
+  // AssignBlocksCached will only call one of those functions.
+  //
+  // There exists no callpath in which AssignBlocksCached ends up calling
+  // itself.
+  //
+  // If a policy is configured with the parameter skip_cache,
+  // the cache will be bypassed.
+  //
   static int AssignBlocksCached(const char* policy_name,
                                 std::vector<double> const& costlist,
                                 std::vector<int>& ranklist, int nranks,
-                                int my_rank = 0,
-                                MPI_Comm comm = MPI_COMM_NULL);
+                                int my_rank = 0, MPI_Comm comm = MPI_COMM_NULL);
 
-  static int AssignBlocks(const char* policy_name,
+  static int AssignBlocks(const LBPolicyWithOpts& policy,
                           std::vector<double> const& costlist,
                           std::vector<int>& ranklist, int nranks);
 
@@ -49,7 +53,7 @@ class LoadBalancePolicies {
   // This allows for different placement sizes to be tested using smaller
   // communicator sizes.
   //
-  static int AssignBlocksParallel(const char* policy_name,
+  static int AssignBlocksParallel(const LBPolicyWithOpts& policy,
                                   std::vector<double> const& costlist,
                                   std::vector<int>& ranklist, int nranks,
                                   MPI_Comm comm);

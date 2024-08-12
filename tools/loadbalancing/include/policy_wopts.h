@@ -73,6 +73,8 @@ struct LBPolicyWithOpts {
   std::string id;
   std::string name;
   LoadBalancePolicy policy;
+  bool skip_cache;
+
   union {
     PolicyOptsCDPI cdp_opts;
     PolicyOptsHybridCDPFirst hcf_opts;
