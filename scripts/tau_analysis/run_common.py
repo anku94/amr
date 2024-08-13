@@ -1,7 +1,17 @@
-from trace_common import all_trace_sets, TraceSet
-
 import glob
 import yaml
+
+from typing import TypedDict
+
+RunTuple = tuple[str, str | None, str]
+
+
+class TraceSet(TypedDict):
+    prefix: str
+    nranks: int
+    run_ids: dict[str, str]
+    run_tuples: list[RunTuple]
+    desc: str
 
 
 class NoAliasDumper(yaml.SafeDumper):
