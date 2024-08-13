@@ -29,7 +29,7 @@ def read_traceset(fin: str) -> dict[str, TraceSet]:
 
 
 def read_all_tracesets() -> dict[str, TraceSet]:
-    yaml_root = "/users/ankushj/repos/amr-new/scripts/tau_analysis/all_runs"
+    yaml_root = "/users/ankushj/repos/amr-new/scripts/tau_analysis/all_tracesets"
     yaml_files = glob.glob(f"{yaml_root}/*.yaml")
     all_dicts: list[dict[str, TraceSet]] = [read_traceset(f) for f in yaml_files]
 
