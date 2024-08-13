@@ -1,0 +1,103 @@
+cdppar2048:
+  desc: "Evaluating cdpc512par8 on 20240715 with 2048 ranks,\n        as previous\
+    \ run did not make much sense\n        "
+  nranks: 2048
+  prefix: /mnt/ltio/parthenon-topo/mpiallreddbg
+  run_ids:
+    a: blastw2048.02.preload
+  run_tuples:
+  - - baseline
+    - null
+    - a
+  - - cdpc512par8
+    - null
+    - a
+  - - hybrid25
+    - null
+    - a
+  - - hybrid50
+    - null
+    - a
+  - - hybrid75
+    - null
+    - a
+  - - lpt
+    - null
+    - a
+cdppar4096.first:
+  desc: Evaluating cdpc512par8 on 20240715 with 4096 ranks
+  nranks: 4096
+  prefix: /mnt/ltio/parthenon-topo
+  run_ids:
+    a: blastw4096.03
+    b: blastw4096.04
+  run_tuples:
+  - - baseline
+    - null
+    - a
+  - - cdpc512par8
+    - null
+    - b
+  - - hybrid25
+    - null
+    - b
+  - - hybrid50
+    - null
+    - b
+  - - hybrid75
+    - null
+    - b
+  - - lpt
+    - null
+    - a
+mpidbg2048ub22:
+  desc: 2048 ranks, 10k ts, barriers, on Ubuntu 22.04, with tauexec
+  nranks: 2048
+  prefix: /proj/TableFS/ankushj/amr-jobs
+  run_ids:
+    a: blastw2048.perfdbg.01
+  run_tuples:
+  - - cdpc512par8
+    - null
+    - a
+  - - hybrid25
+    - null
+    - a
+  - - hybrid75
+    - null
+    - a
+mpidbg4096on2048ub22:
+  desc: 2048 ranks, 4096 deck, 10k ts, barriers, on Ubuntu 22.04, with tauexec
+  nranks: 2048
+  prefix: /proj/TableFS/ankushj/amr-jobs
+  run_ids:
+    a: blastw2048.02.4096deck
+  run_tuples:
+  - - cdpc512par8
+    - null
+    - a
+  - - hybrid25
+    - null
+    - a
+  - - hybrid50
+    - null
+    - a
+  - - hybrid75
+    - null
+    - a
+  - - lpt
+    - null
+    - a
+mpidbgwbar:
+  desc: 4096 ranks, 10k ts, added MPI_Barrier at the end of R&RMB
+  nranks: 4096
+  prefix: /mnt/ltio/parthenon-topo/mpiallreddbg
+  run_ids:
+    a: blastw4096.03.preload
+  run_tuples:
+  - - cdpc512par8
+    - null
+    - a
+  - - hybrid25
+    - null
+    - a
