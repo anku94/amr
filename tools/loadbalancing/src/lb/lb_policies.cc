@@ -17,6 +17,10 @@ int LoadBalancePolicies::AssignBlocksCached(const char* policy_name,
                                             std::vector<int>& ranklist,
                                             int nranks, int my_rank,
                                             MPI_Comm comm) {
+  if (my_rank != 0) {
+    decrement_log_level_once();
+  }
+
   static AssignmentCache cache(Constants::kMaxAssignmentCacheReuse);
   int rv = 0;
 

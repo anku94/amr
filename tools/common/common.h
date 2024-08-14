@@ -49,8 +49,8 @@ int loge(const char *op, const char *path);
     if (!__once) {                                                             \
       logv(info_log, file, line, level, fmt, ##__VA_ARGS__);                   \
       __once = true;                                                           \
-    logv_once_expand(info_log, file, line, level, fmt, ##__VA_ARGS__);         \
-  }
+      logv_once_expand(info_log, file, line, level, fmt, ##__VA_ARGS__);       \
+    }
 
 #define logv_once(...) EXPAND_ARGS(logv_once_expand(__VA_ARGS__))
 #define logvat0(...) EXPAND_ARGS(logvat0_expand(__VA_ARGS__))
@@ -66,6 +66,8 @@ int loge(const char *op, const char *path);
 /* abort with an error message */
 void msg_abort(int err, const char *msg, const char *func, const char *file,
                int line);
+
+void decrement_log_level_once();
 
 enum class Status { OK, MPIError, Error, InvalidPtr };
 

@@ -5,6 +5,7 @@
 #include "common.h"
 
 #include <errno.h>
+#include <glog/logging.h>
 #include <pdlfs-common/env.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -62,4 +63,18 @@ void msg_abort(int err, const char *msg, const char *func, const char *file,
     fprintf(stderr, ": %s (errno=%d)", strerror(err), err);
   fputc('\n', stderr);
   abort();
+}
+
+void decrement_log_level_once() {
+  static bool _first = true;
+  if (!_first)
+    return;
+  _first = false;
+
+  if (FLAGS_v > 0) {
+    FLAGS_v--;
+  } else if (FLAGS_minloglevel < 3) {
+    FLAGS_v = 0;
+    FLAGS_minloglevel++;
+  }
 }
