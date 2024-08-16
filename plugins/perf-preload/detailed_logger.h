@@ -6,7 +6,8 @@
 
 class TimestepwiseLogger {
  public:
-  TimestepwiseLogger(pdlfs::WritableFile* fout) : fout_(fout), metric_ids_(0) {
+  TimestepwiseLogger(pdlfs::WritableFile* fout)
+      : fout_(fout), metric_ids_(0), coalesce_(true) {
     lines_.reserve(kFlushLimit);
   }
 
@@ -18,7 +19,11 @@ class TimestepwiseLogger {
       metrics_[key] = metric_ids_++;
     }
 
-    lines_.push_back(Line(metrics_[key], val));
+    if (coalesce_ && !lines_.empty() && lines_.back().first == metrics_[key]) {
+      lines_.back().second += val;
+    } else {
+      lines_.push_back(Line(metrics_[key], val));
+    }
 
     if (lines_.size() >= kFlushLimit) {
       HandleFlushing(fout_);
@@ -38,6 +43,9 @@ class TimestepwiseLogger {
   int metric_ids_;
   std::unordered_map<std::string, int> metrics_;
   std::vector<Line> lines_;
+  // if true, coalesce multiple consecutive writes to a key
+  // mostly used for polling functions to reduce output size
+  const bool coalesce_;
 
   static const int kFlushLimit = 65536;
 
