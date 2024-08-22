@@ -19,7 +19,7 @@ class TimestepwiseLogger {
       metrics_[key] = metric_ids_++;
     }
 
-    if (coalesce_ && !lines_.empty() && lines_.back().first == metrics_[key]) {
+    if (CoalesceKey(key)) {
       lines_.back().second += val;
     } else {
       lines_.push_back(Line(metrics_[key], val));
@@ -84,5 +84,13 @@ class TimestepwiseLogger {
           snprintf(buf, sizeof(buf), "%d %s\n", m.second, m.first.c_str());
       f->Append(pdlfs::Slice(buf, bufsz));
     }
+  }
+
+  inline bool CoalesceKey(const char* key) {
+    if (!coalesce_) return false;
+    if (lines_.empty() or lines_.back().first != metrics_[key]) return false;
+    if (strncmp(key, "MPI_All", 7) == 0) return false;
+
+    return true;
   }
 };
