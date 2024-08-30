@@ -7,7 +7,7 @@
 namespace amr {
 class Constants {
  public:
-  static constexpr int kMaxAssignmentCacheReuse = 5;
+  static constexpr int kMaxAssignmentCacheReuse = 0;
   static constexpr int kRanksPerNode = 16;
   static constexpr int kScaleSimIters = 1;
 };

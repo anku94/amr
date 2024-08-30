@@ -90,6 +90,7 @@ class TimestepwiseLogger {
     if (!coalesce_) return false;
     if (lines_.empty() or lines_.back().first != metrics_[key]) return false;
     if (strncmp(key, "MPI_All", 7) == 0) return false;
+    if (strncmp(key, "MPI_Bar", 7) == 0) return false;
 
     return true;
   }
