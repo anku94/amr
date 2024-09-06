@@ -1,34 +1,18 @@
+#include "common.h"
+#include "logging.h"
+
 #include <pdlfs-common/env.h>
 #include <pdlfs-common/slice.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+namespace amr {
 class TimestepwiseLogger {
  public:
-  TimestepwiseLogger(pdlfs::WritableFile* fout)
-      : fout_(fout), metric_ids_(0), coalesce_(true) {
-    lines_.reserve(kFlushLimit);
-  }
+  TimestepwiseLogger(pdlfs::WritableFile* fout, int rank);
 
-  void LogKey(const char* key, uint64_t val) {
-    if (fout_ == nullptr) return;
-
-    auto it = metrics_.find(key);
-    if (it == metrics_.end()) {
-      metrics_[key] = metric_ids_++;
-    }
-
-    if (CoalesceKey(key)) {
-      lines_.back().second += val;
-    } else {
-      lines_.push_back(Line(metrics_[key], val));
-    }
-
-    if (lines_.size() >= kFlushLimit) {
-      HandleFlushing(fout_);
-    }
-  }
+  void LogKey(const char* key, uint64_t val);
 
   ~TimestepwiseLogger() {
     if (fout_ == nullptr) return;
@@ -39,21 +23,44 @@ class TimestepwiseLogger {
 
  private:
   pdlfs::WritableFile* fout_;
-  typedef std::pair<int, uint64_t> Line;
+  const int rank_;
+
   int metric_ids_;
   std::unordered_map<std::string, int> metrics_;
+
+  typedef std::pair<int, uint64_t> Line;
   std::vector<Line> lines_;
+
   // if true, coalesce multiple consecutive writes to a key
   // mostly used for polling functions to reduce output size
   const bool coalesce_;
 
+  // initialized to false, but automatically set to true if some
+  // events are configured. events are currently hardcoded in an
+  // array in the .cc file
+  bool log_outliers_to_stderr_;
+  std::unordered_map<int, uint64_t> outlier_thresholds_;
+
   static const int kFlushLimit = 65536;
 
-  void HandleFlushing(pdlfs::WritableFile* f) {
-    if (lines_.size() >= kFlushLimit) {
-      FlushDataToFile(f);
-      lines_.clear();
+  void SetupOutliers();
+
+  int GetMetricId(const char* key) {
+    auto it = metrics_.find(key);
+    if (it == metrics_.end()) {
+      metrics_[key] = metric_ids_++;
+      return metric_ids_ - 1;
     }
+
+    return it->second;
+  }
+
+  // all int-space ops on metric
+  void LogKeyInner(int metric_id, uint64_t val, bool coalesce);
+
+  void HandleFlushing(pdlfs::WritableFile* f) {
+    FlushDataToFile(f);
+    lines_.clear();
   }
 
   void HandleFinalFlushing(pdlfs::WritableFile* f) {
@@ -95,3 +102,4 @@ class TimestepwiseLogger {
     return true;
   }
 };
+}  // namespace amr

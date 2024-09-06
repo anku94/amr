@@ -21,8 +21,8 @@ class AMRMonitor {
       : env_(env),
         rank_(rank),
         nranks_(nranks),
-        tswise_logger_(
-            AMROptUtils::GetTswiseOutputFile(amr_opts, env_, rank_)) {
+        tswise_logger_(AMROptUtils::GetTswiseOutputFile(amr_opts, env_, rank_),
+                       rank) {
     google::InitGoogleLogging("amrmon");
 
     if (rank == 0) {
@@ -68,15 +68,16 @@ class AMRMonitor {
 
     auto& s = stack_map_[type];
     if (s.empty()) {
-      logv(__LOG_ARGS__, LOG_WARN, "stack %s is empty.", type);
+      logv(__LOG_ARGS__, LOG_WARN, "Rank %d: stack %s is empty.", rank_, type);
+      sleep(1000);
       return;
     }
 
+    auto key = s.top().first;
     auto end_time = Now();
     auto begin_time = s.top().second;
     auto elapsed_time = end_time - begin_time;
 
-    auto key = s.top().first;
     LogKey(times_us_, key.c_str(), elapsed_time);
 
     s.pop();

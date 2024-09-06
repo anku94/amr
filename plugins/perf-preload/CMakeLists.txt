@@ -5,6 +5,7 @@ find_package(pdlfs-common REQUIRED)
 set(PRELOAD_SRCS
     amr_monitor.cc
     common.cc
+    detailed_logger.cc
     kokkos_hooks.cc
     logging.cc
     mpi_hooks.cc
