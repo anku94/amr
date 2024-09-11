@@ -76,20 +76,26 @@ int MPI_Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag,
 
 int MPI_Barrier(MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
-  int rv = PMPI_Barrier(comm);
-  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Barrier");
 
-  amr::monitor->LogMPICollective("MPI_Barrier", ts_end - ts_beg);
+  int rv = PMPI_Barrier(comm);
+
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Barrier", ts_end - ts_beg);
+
   return rv;
 }
 
 int MPI_Bcast(void* buffer, int count, MPI_Datatype datatype, int root,
               MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
-  int rv = PMPI_Bcast(buffer, count, datatype, root, comm);
-  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Bcast");
 
-  amr::monitor->LogMPICollective("MPI_Bcast", ts_end - ts_beg);
+  int rv = PMPI_Bcast(buffer, count, datatype, root, comm);
+
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Bcast", ts_end - ts_beg);
+
   return rv;
 }
 
@@ -97,11 +103,13 @@ int MPI_Gather(const void* sendbuf, int sendcount, MPI_Datatype sendtype,
                void* recvbuf, int recvcount, MPI_Datatype recvtype, int root,
                MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Gather");
+
   int rv = PMPI_Gather(sendbuf, sendcount, sendtype, recvbuf, recvcount,
                        recvtype, root, comm);
   auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Gather", ts_end - ts_beg);
 
-  amr::monitor->LogMPICollective("MPI_Gather", ts_end - ts_beg);
   return rv;
 }
 
@@ -109,11 +117,13 @@ int MPI_Gatherv(const void* sendbuf, int sendcount, MPI_Datatype sendtype,
                 void* recvbuf, const int* recvcounts, const int* displs,
                 MPI_Datatype recvtype, int root, MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Gatherv");
+
   int rv = PMPI_Gatherv(sendbuf, sendcount, sendtype, recvbuf, recvcounts,
                         displs, recvtype, root, comm);
   auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Gatherv", ts_end - ts_beg);
 
-  amr::monitor->LogMPICollective("MPI_Gatherv", ts_end - ts_beg);
   return rv;
 }
 
@@ -121,11 +131,13 @@ int MPI_Scatter(const void* sendbuf, int sendcount, MPI_Datatype sendtype,
                 void* recvbuf, int recvcount, MPI_Datatype recvtype, int root,
                 MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Scatter");
+
   int rv = PMPI_Scatter(sendbuf, sendcount, sendtype, recvbuf, recvcount,
                         recvtype, root, comm);
   auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Scatter", ts_end - ts_beg);
 
-  amr::monitor->LogMPICollective("MPI_Scatter", ts_end - ts_beg);
   return rv;
 }
 
@@ -133,11 +145,13 @@ int MPI_Scatterv(const void* sendbuf, const int* sendcounts, const int* displs,
                  MPI_Datatype sendtype, void* recvbuf, int recvcount,
                  MPI_Datatype recvtype, int root, MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Scatterv");
+
   int rv = PMPI_Scatterv(sendbuf, sendcounts, displs, sendtype, recvbuf,
                          recvcount, recvtype, root, comm);
   auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Scatterv", ts_end - ts_beg);
 
-  amr::monitor->LogMPICollective("MPI_Scatterv", ts_end - ts_beg);
   return rv;
 }
 
@@ -145,11 +159,13 @@ int MPI_Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype,
                   void* recvbuf, int recvcount, MPI_Datatype recvtype,
                   MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Allgather");
+
   int rv = PMPI_Allgather(sendbuf, sendcount, sendtype, recvbuf, recvcount,
                           recvtype, comm);
   auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Allgather", ts_end - ts_beg);
 
-  amr::monitor->LogMPICollective("MPI_Allgather", ts_end - ts_beg);
   return rv;
 }
 
@@ -157,11 +173,14 @@ int MPI_Allgatherv(const void* sendbuf, int sendcount, MPI_Datatype sendtype,
                    void* recvbuf, const int* recvcounts, const int* displs,
                    MPI_Datatype recvtype, MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Allgatherv");
+
   int rv = PMPI_Allgatherv(sendbuf, sendcount, sendtype, recvbuf, recvcounts,
                            displs, recvtype, comm);
-  auto ts_end = amr::monitor->Now();
 
-  amr::monitor->LogMPICollective("MPI_Allgatherv", ts_end - ts_beg);
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Allgatherv", ts_end - ts_beg);
+
   return rv;
 }
 
@@ -169,11 +188,14 @@ int MPI_Alltoall(const void* sendbuf, int sendcount, MPI_Datatype sendtype,
                  void* recvbuf, int recvcount, MPI_Datatype recvtype,
                  MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Alltoall");
+
   int rv = PMPI_Alltoall(sendbuf, sendcount, sendtype, recvbuf, recvcount,
                          recvtype, comm);
-  auto ts_end = amr::monitor->Now();
 
-  amr::monitor->LogMPICollective("MPI_Alltoall", ts_end - ts_beg);
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Alltoall", ts_end - ts_beg);
+
   return rv;
 }
 
@@ -182,31 +204,40 @@ int MPI_Alltoallv(const void* sendbuf, const int* sendcounts,
                   const int* recvcounts, const int* rdispls,
                   MPI_Datatype recvtype, MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Alltoallv");
+
   int rv = PMPI_Alltoallv(sendbuf, sendcounts, sdispls, sendtype, recvbuf,
                           recvcounts, rdispls, recvtype, comm);
-  auto ts_end = amr::monitor->Now();
 
-  amr::monitor->LogMPICollective("MPI_Alltoallv", ts_end - ts_beg);
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Alltoallv", ts_end - ts_beg);
+
   return rv;
 }
 
 int MPI_Reduce(const void* sendbuf, void* recvbuf, int count,
                MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
-  int rv = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
-  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Reduce");
 
-  amr::monitor->LogMPICollective("MPI_Reduce", ts_end - ts_beg);
+  int rv = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
+
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Reduce", ts_end - ts_beg);
+
   return rv;
 }
 
 int MPI_Allreduce(const void* sendbuf, void* recvbuf, int count,
                   MPI_Datatype datatype, MPI_Op op, MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
-  int rv = PMPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
-  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Allreduce");
 
-  amr::monitor->LogMPICollective("MPI_Allreduce", ts_end - ts_beg);
+  int rv = PMPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
+
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Allreduce", ts_end - ts_beg);
+
   return rv;
 }
 

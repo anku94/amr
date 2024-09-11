@@ -35,11 +35,35 @@ class AMRMonitor {
              "data!!");
       }
     }
+
+    LogInitInfo();
   }
 
   ~AMRMonitor() {
+    if (amr_opts.tswise_enabled) {
+      tswise_logger_.FinalFlush();
+    }
+
     LogMetrics();
     logvat0(__LOG_ARGS__, LOG_INFO, "AMRMonitor destroyed on rank %d", rank_);
+  }
+
+  void LogInitInfo() {
+    std::stringstream ss;
+    ss << "rank:" << rank_;
+
+    pid_t pid = getpid();
+    ss << "|pid:" << pid;
+
+    char hostname[1024];
+    gethostname(hostname, 1024);
+    ss << "|host:" << hostname;
+
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ss << "|inittime:" << ts.tv_sec;
+
+    logv(__LOG_ARGS__, LOG_INFO, "amrmonitor|%s", ss.str().c_str());
   }
 
   uint64_t Now() const {
@@ -47,8 +71,13 @@ class AMRMonitor {
     return now;
   }
 
-  void LogMPICollective(const char* type, uint64_t time_us) {
-    LogKey(times_us_, type, time_us);
+  void LogMPICollectiveBegin(const char* type) {
+    tswise_logger_.LogBegin(type);
+  }
+
+  void LogMPICollectiveEnd(const char* type, uint64_t time) {
+    tswise_logger_.LogEnd(type, time);
+    LogKey(times_us_, type, time);
   }
 
   void LogStackBegin(const char* type, const char* key) {
@@ -58,6 +87,7 @@ class AMRMonitor {
 
     auto& s = stack_map_[type];
     s.push(StackOpenPair(key, Now()));
+    tswise_logger_.LogBegin(key);
   }
 
   void LogStackEnd(const char* type) {
@@ -79,6 +109,7 @@ class AMRMonitor {
     auto elapsed_time = end_time - begin_time;
 
     LogKey(times_us_, key.c_str(), elapsed_time);
+    tswise_logger_.LogEnd(key.c_str(), elapsed_time);
 
     s.pop();
   }
@@ -119,8 +150,6 @@ class AMRMonitor {
     }
 
     it->second.LogInstance(val);
-
-    tswise_logger_.LogKey(key, val);
   }
 
   StringVec GetCommonMetrics() {
