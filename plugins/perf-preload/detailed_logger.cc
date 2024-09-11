@@ -14,7 +14,7 @@ TimestepwiseLogger::TimestepwiseLogger(pdlfs::WritableFile* fout, int rank)
       metric_ids_(0),
       coalesce_(true),
       log_outliers_to_stderr_(false) {
-  lines_.reserve(kFlushLimit);
+  metric_lines_.reserve(kFlushLimit);
   SetupOutliers();
 };
 
@@ -48,16 +48,27 @@ void TimestepwiseLogger::SetupOutliers() {
   }
 }
 
-void TimestepwiseLogger::LogKey(const char* key, uint64_t val) {
+void TimestepwiseLogger::LogBegin(const char* key) {
   if (fout_ == nullptr) return;
 
   int metric_id = GetMetricId(key);
-  bool coalesce = CoalesceKey(key);
+  bool coalesce = CoalesceStackKey(key);
 
-  if (CoalesceKey(key)) {
-    lines_.back().second += val;
+  if (!coalesce) {
+    metric_lines_.push_back(MetricWithTimestamp(metric_id, true, 0));
+  }
+}
+
+void TimestepwiseLogger::LogEnd(const char* key, uint64_t duration) {
+  if (fout_ == nullptr) return;
+
+  int metric_id = GetMetricId(key);
+  bool coalesce = CoalesceStackKey(key);
+
+  if (coalesce) {
+    metric_lines_.back().UpdateDuration(duration);
   } else {
-    lines_.push_back(Line(metric_id, val));
+    metric_lines_.push_back(MetricWithTimestamp(metric_id, false, duration));
   }
 
   bool isFlushKey = false;
@@ -65,22 +76,10 @@ void TimestepwiseLogger::LogKey(const char* key, uint64_t val) {
     isFlushKey = true;
   }
 
-  // flush if necessary
-  if ((lines_.size() >= kFlushLimit) and isFlushKey) {
-    logvat0(__LOG_ARGS__, LOG_INFO, "Flushing %d data lines", lines_.size());
+  if ((metric_lines_.size() >= kFlushLimit) and isFlushKey) {
+    logvat0(__LOG_ARGS__, LOG_INFO, "Flushing %d metric lines",
+            metric_lines_.size());
     HandleFlushing(fout_);
   }
-
-  // outlier_handling
-  if (!log_outliers_to_stderr_) return;
-
-  auto it = outlier_thresholds_.find(metric_id);
-  if (it == outlier_thresholds_.end()) return;
-
-  if (val > it->second) {
-    logv(__LOG_ARGS__, LOG_WARN, "[rank %d] outlier detected: %s %lu", rank_,
-         key, val);
-  }
 }
-
 }  // namespace amr
