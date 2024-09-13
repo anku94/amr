@@ -92,6 +92,7 @@ int main(int argc, char* argv[]) {
   Init(rank, size);
   double num = 1.0;
   for (int t = 0; t < 3; t++) {
+    sleep(1);
     Timestep(rank, size, num);
   }
 

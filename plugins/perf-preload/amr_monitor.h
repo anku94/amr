@@ -60,8 +60,9 @@ class AMRMonitor {
     ss << "|host:" << hostname;
 
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    ss << "|inittime:" << ts.tv_sec;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    uint64_t init_time = ts.tv_sec * 1000000000 + ts.tv_nsec;
+    ss << "|inittime:" << init_time;
 
     logv(__LOG_ARGS__, LOG_INFO, "amrmonitor|%s", ss.str().c_str());
   }

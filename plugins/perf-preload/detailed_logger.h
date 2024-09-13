@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-static const uint64_t kInitTimestamp = pdlfs::CurrentMicros();
+// static const uint64_t kInitTimestamp = pdlfs::CurrentMicros();
 
 namespace amr {
 struct MetricWithTimestamp {
@@ -16,8 +16,14 @@ struct MetricWithTimestamp {
   bool is_open;
   uint64_t duration;
 
+  static uint64_t CurrentNs() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000000 + ts.tv_nsec;
+  }
+
   MetricWithTimestamp(int metric_id, bool is_open, uint64_t duration)
-      : ts_micros(pdlfs::CurrentMicros() - kInitTimestamp),
+      : ts_micros(CurrentNs()),
         metric_id(metric_id),
         is_open(is_open),
         duration(duration) {}
@@ -32,7 +38,7 @@ struct MetricWithTimestamp {
 
   void UpdateDuration(uint64_t d) {
     duration += d;
-    ts_micros = pdlfs::CurrentMicros() - kInitTimestamp;
+    ts_micros = CurrentNs();
   }
 };
 
