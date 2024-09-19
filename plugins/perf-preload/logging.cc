@@ -15,9 +15,16 @@
  * found at https://github.com/google/leveldb.
  */
 #include "logging.h"
+#include <glog/logging.h>
 
 int logv(pdlfs::Logger *info_log, const char *file, int line, int level,
          const char *fmt, ...) {
+  static bool first_time = true;
+  if (first_time) {
+    google::InitGoogleLogging("amrmon");
+    first_time = false;
+  }
+
   va_list ap;
   va_start(ap, fmt);
   if (info_log != NULL) {

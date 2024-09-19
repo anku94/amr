@@ -33,6 +33,7 @@ void kokkosp_end_parallel_reduce(const uint64_t uniqueid) {}
 
 void kokkosp_push_profile_region(const char* name) {
   amr::monitor->LogStackBegin("profreg", name);
+  amr::monitor->tracer_.LogFuncBegin(name);
 }
 
 void kokkosp_pop_profile_region() { amr::monitor->LogStackEnd("profreg"); }

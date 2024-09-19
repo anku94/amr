@@ -45,6 +45,8 @@ int MPI_Send(const void* buf, int count, MPI_Datatype datatype, int dest,
              int tag, MPI_Comm comm) {
   int rv = PMPI_Send(buf, count, datatype, dest, tag, comm);
   amr::monitor->LogMPISend(dest, datatype, count);
+
+  amr::monitor->tracer_.LogMPIIsend(nullptr, count, dest, tag);
   return rv;
 }
 
@@ -52,6 +54,8 @@ int MPI_Isend(const void* buf, int count, MPI_Datatype datatype, int dest,
               int tag, MPI_Comm comm, MPI_Request* request) {
   int rv = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
   amr::monitor->LogMPISend(dest, datatype, count);
+
+  amr::monitor->tracer_.LogMPIIsend(request, count, dest, tag);
   return rv;
 }
 
@@ -59,6 +63,8 @@ int MPI_Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag,
              MPI_Comm comm, MPI_Status* status) {
   int rv = PMPI_Recv(buf, count, datatype, source, tag, comm, status);
   amr::monitor->LogMPIRecv(source, datatype, count);
+
+  amr::monitor->tracer_.MPIIrecv(nullptr, count, source, tag);
   return rv;
 }
 
@@ -66,6 +72,26 @@ int MPI_Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag,
               MPI_Comm comm, MPI_Request* request) {
   int rv = PMPI_Irecv(buf, count, datatype, source, tag, comm, request);
   amr::monitor->LogMPIRecv(source, datatype, count);
+
+  amr::monitor->tracer_.MPIIrecv(request, count, source, tag);
+  return rv;
+}
+
+int MPI_Test(MPI_Request* request, int* flag, MPI_Status* status) {
+  int rv = PMPI_Test(request, flag, status);
+  amr::monitor->tracer_.LogMPITestEnd(request, *flag);
+  return rv;
+}
+
+int MPI_Wait(MPI_Request* request, MPI_Status* status) {
+  int rv = PMPI_Wait(request, status);
+  amr::monitor->tracer_.LogMPIWait(request);
+  return rv;
+}
+
+int MPI_Waitall(int count, MPI_Request* requests, MPI_Status* statuses) {
+  int rv = PMPI_Waitall(count, requests, statuses);
+  amr::monitor->tracer_.LogMPIWaitall(requests, count);
   return rv;
 }
 

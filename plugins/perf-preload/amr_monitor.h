@@ -7,6 +7,7 @@
 #include "metric_util.h"
 #include "p2p.h"
 #include "print_utils.h"
+#include "tracer.h"
 #include "types.h"
 
 #include <cinttypes>
@@ -15,16 +16,17 @@
 
 namespace amr {
 
+#define TSWISE_FILE_ARG AMROptUtils::GetTswiseOutputFile(amr_opts, env_, rank_)
+#define TRACER_FILE_ARG AMROptUtils::GetTracerOutputFile(amr_opts, env_, rank_)
+
 class AMRMonitor {
  public:
   AMRMonitor(pdlfs::Env* env, int rank, int nranks)
       : env_(env),
         rank_(rank),
         nranks_(nranks),
-        tswise_logger_(AMROptUtils::GetTswiseOutputFile(amr_opts, env_, rank_),
-                       rank) {
-    google::InitGoogleLogging("amrmon");
-
+        tswise_logger_(TSWISE_FILE_ARG, rank),
+        tracer_(TRACER_FILE_ARG, rank) {
     if (rank == 0) {
       logv(__LOG_ARGS__, LOG_INFO, "AMRMonitor initializing.");
       AMROptUtils::LogOpts(amr_opts);
@@ -33,6 +35,11 @@ class AMRMonitor {
         logv(__LOG_ARGS__, LOG_WARN,
              "Timestep-wise logging is enabled! This may produce lots of "
              "data!!");
+      }
+
+      if (amr_opts.tracing_enabled) {
+        logv(__LOG_ARGS__, LOG_WARN,
+             "Tracing is enabled! This may produce lots of data!!");
       }
     }
 
@@ -244,5 +251,8 @@ class AMRMonitor {
   const int rank_;
   const int nranks_;
   TimestepwiseLogger tswise_logger_;
+
+ public:
+  Tracer tracer_;
 };
 }  // namespace amr
