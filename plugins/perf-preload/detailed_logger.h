@@ -80,15 +80,7 @@ class TimestepwiseLogger {
   // mostly used for polling functions to reduce output size
   const bool coalesce_;
 
-  // initialized to false, but automatically set to true if some
-  // events are configured. events are currently hardcoded in an
-  // array in the .cc file
-  bool log_outliers_to_stderr_;
-  std::unordered_map<int, uint64_t> outlier_thresholds_;
-
   static const int kFlushLimit = 65536;
-
-  void SetupOutliers();
 
   int GetMetricId(const char* key) {
     auto it = metrics_.find(key);
