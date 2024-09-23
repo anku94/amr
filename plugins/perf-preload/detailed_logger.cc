@@ -36,7 +36,14 @@ void TimestepwiseLogger::LogEnd(const char* key, uint64_t duration) {
 
   bool isFlushKey = false;
   if (strncmp(key, "MakeOutputs", 11) == 0) {
-    isFlushKey = true;
+    flush_key_count_++;
+
+    // 100 is an arbitrarily chosen interval.
+    // The idea is to only flush at the end of timesteps that are
+    // multiples of 100, to avoid jitter.
+    if (flush_key_count_ % 100 == 0) {
+      isFlushKey = true;
+    }
   }
 
   if ((metric_lines_.size() >= kFlushLimit) and isFlushKey) {

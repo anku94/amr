@@ -82,6 +82,8 @@ class TimestepwiseLogger {
 
   static const int kFlushLimit = 65536;
 
+  int flush_key_count_ = 0;
+
   int GetMetricId(const char* key) {
     auto it = metrics_.find(key);
     if (it == metrics_.end()) {
