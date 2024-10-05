@@ -100,6 +100,18 @@ int MPI_Waitall(int count, MPI_Request* requests, MPI_Status* statuses) {
 // This has not been validated yet to be exhaustive.
 //
 
+int MPI_Comm_dup(MPI_Comm comm, MPI_Comm* newcomm) {
+  auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Comm_dup");
+
+  int rv = PMPI_Comm_dup(comm, newcomm);
+
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Comm_dup", ts_end - ts_beg);
+
+  return rv;
+}
+
 int MPI_Barrier(MPI_Comm comm) {
   auto ts_beg = amr::monitor->Now();
   amr::monitor->LogMPICollectiveBegin("MPI_Barrier");
