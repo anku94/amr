@@ -5,6 +5,7 @@
 #include "logging.h"
 #include "metric.h"
 #include "metric_util.h"
+#include "mpi_async.h"
 #include "p2p.h"
 #include "print_utils.h"
 #include "tracer.h"
@@ -81,11 +82,13 @@ class AMRMonitor {
 
   void LogMPICollectiveBegin(const char* type) {
     tswise_logger_.LogBegin(type);
+    tracer_.LogFuncBeginCoalesced(type);
   }
 
   void LogMPICollectiveEnd(const char* type, uint64_t time) {
     tswise_logger_.LogEnd(type, time);
     LogKey(times_us_, type, time);
+    tracer_.LogFuncEndCoalesced(type);
   }
 
   void LogStackBegin(const char* type, const char* key) {
@@ -96,6 +99,7 @@ class AMRMonitor {
     auto& s = stack_map_[type];
     s.push(StackOpenPair(key, Now()));
     tswise_logger_.LogBegin(key);
+    tracer_.LogFuncBeginCoalesced(key);
   }
 
   void LogStackEnd(const char* type) {
@@ -120,6 +124,10 @@ class AMRMonitor {
     tswise_logger_.LogEnd(key.c_str(), elapsed_time);
 
     s.pop();
+
+    tracer_.LogFuncEndCoalesced(key.c_str());
+
+    return;
   }
 
   inline int GetMPITypeSizeCached(MPI_Datatype datatype) {
@@ -237,6 +245,27 @@ class AMRMonitor {
     }
   }
 
+  void LogAsyncMPIRequest(const char* key, MPI_Request* request) {
+    async_assist_.LogAsyncBegin(key, request);
+  }
+
+
+  //
+  // elapsed is used as a signalling mechanism for the MPI_Async tracker
+  // currently we track only MPI_Test as that's what Phoebus/Parthenon use
+  // for async collectives. This logic is incorrect if they change to also
+  // using MPI_Wait, or if we start tracking collectives other than MPI
+  // IAllgather for the "MPI_Async" bucket
+  // 
+  void LogMPITestEnd(int flag, MPI_Request* request) {
+    double elapsed_ms = 0;
+    int rv = async_assist_.LogMPITestEnd(flag, request, &elapsed_ms);
+
+    if (rv) {
+      LogKey(times_us_, "MPI_Iallgather_Async", elapsed_ms * 1000);
+    }
+  }
+
  private:
   MetricMap times_us_;
   StackMap stack_map_;
@@ -251,6 +280,8 @@ class AMRMonitor {
   const int rank_;
   const int nranks_;
   TimestepwiseLogger tswise_logger_;
+
+  MPIAsync async_assist_;
 
  public:
   Tracer tracer_;

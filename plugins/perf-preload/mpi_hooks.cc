@@ -19,7 +19,8 @@ int MPI_Init(int* argc, char*** argv) {
   int nranks;
   PMPI_Comm_size(MPI_COMM_WORLD, &nranks);
 
-  amr::monitor = std::make_unique<amr::AMRMonitor>(pdlfs::Env::Default(), rank, nranks);
+  amr::monitor =
+      std::make_unique<amr::AMRMonitor>(pdlfs::Env::Default(), rank, nranks);
 
   if (rank == 0) {
     logv(__LOG_ARGS__, LOG_INFO, "AMRMonitor initialized on rank %d", rank);
@@ -80,6 +81,7 @@ int MPI_Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag,
 int MPI_Test(MPI_Request* request, int* flag, MPI_Status* status) {
   int rv = PMPI_Test(request, flag, status);
   amr::monitor->tracer_.LogMPITestEnd(request, *flag);
+  amr::monitor->LogMPITestEnd(*flag, request);
   return rv;
 }
 
@@ -275,6 +277,32 @@ int MPI_Allreduce(const void* sendbuf, void* recvbuf, int count,
 
   auto ts_end = amr::monitor->Now();
   amr::monitor->LogMPICollectiveEnd("MPI_Allreduce", ts_end - ts_beg);
+
+  return rv;
+}
+
+int MPI_Ireduce(const void* sendbuf, void* recvbuf, int count,
+                MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm,
+                MPI_Request* request) {
+  auto ts_beg = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveBegin("MPI_Ireduce");
+
+  int rv =
+      PMPI_Ireduce(sendbuf, recvbuf, count, datatype, op, root, comm, request);
+
+  auto ts_end = amr::monitor->Now();
+  amr::monitor->LogMPICollectiveEnd("MPI_Ireduce", ts_end - ts_beg);
+
+  return rv;
+}
+
+int MPI_Iallreduce(const void* sendbuf, void* recvbuf, int count,
+                   MPI_Datatype datatype, MPI_Op op, MPI_Comm comm,
+                   MPI_Request* request) {
+  amr::monitor->LogAsyncMPIRequest("MPI_Iallreduce", request);
+
+  int rv =
+      PMPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, comm, request);
 
   return rv;
 }
