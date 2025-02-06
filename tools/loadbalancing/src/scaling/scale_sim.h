@@ -10,6 +10,7 @@
 
 #include "constants.h"
 #include "distrib/distributions.h"
+#include "distrib/plot_utils.h"
 #include "policy_utils.h"
 #include "run_utils.h"
 #include "scale_stats.h"
@@ -111,6 +112,7 @@ class ScaleSim {
 
     policy_suite = {"baseline", "cdp", "cdpc512", "hybrid50", "lpt"};
     policy_suite = {"cdp", "cdpc512", "lpt"};
+    policy_suite = {"cdp", "lpt"};
 
     int nruns = policy_suite.size();
 
@@ -149,8 +151,11 @@ class ScaleSim {
     std::vector<std::string> policy_suite = {
         "cdp",          "cdpc512", "cdpc512par1", "cdpc512par4", "cdpc512par8",
         "cdpc512par16", "lpt",     "hybrid25",    "hybrid50",    "hybrid75"};
-    policy_suite = {"cdp", "cdpc512", "cdpc512par8" }; //, "hybrid25", "hybrid50", "hybrid75", "lpt"};
-    policy_suite = { "cdp", "cdpc512", "cdpc512par8", "hybrid25" };
+    policy_suite = {
+        "cdp", "cdpc512",
+        "cdpc512par8"};  //, "hybrid25", "hybrid50", "hybrid75", "lpt"};
+    policy_suite = {"baseline", "cdp",      "cdpc512",  "cdpc512par8",
+                    "hybrid25", "hybrid50", "hybrid75", "lpt"};
     // policy_suite = { "cdpc512par8" };
 
     int nruns = policy_suite.size();
@@ -163,6 +168,11 @@ class ScaleSim {
       if (costs.size() != r.nblocks) {
         costs.resize(r.nblocks, 0);
         GenDistributionParallel(costs, r.nblocks, comm);
+
+        auto hist = Histogram::Plot(costs);
+        if (my_rank == 0) {
+          logv(__LOG_ARGS__, LOG_INFO, "Histogram: \n%s", hist.c_str());
+        }
       }
 
       MPI_Barrier(comm);
