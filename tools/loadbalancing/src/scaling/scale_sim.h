@@ -52,6 +52,15 @@ class ScaleSim {
 
     for (auto& policy : suite) {
       // begin timing
+      if (rp.nranks > 32768) {
+        logvat0(fake_rank, __LOG_ARGS__, LOG_INFO,
+                "Using smaller policy suite - skipping CDP because of "
+                "scale/malloc issues");
+        if (policy == "cdp") {
+          continue;
+        }
+      }
+
       uint64_t _ts_beg = options_.env->NowMicros();
 
       RunType r = {rp.nranks, rp.nblocks, policy};
@@ -135,7 +144,10 @@ class ScaleSim {
 
   void RunParallel(MPI_Comm comm) {
     int my_rank = -1;
+    int nranks = -1;
+
     MPI_Comm_rank(comm, &my_rank);
+    MPI_Comm_size(comm, &nranks);
 
     logvat0(my_rank, __LOG_ARGS__, LOG_INFO, "Using output dir: %s",
             options_.output_dir.c_str());
@@ -154,9 +166,17 @@ class ScaleSim {
     policy_suite = {
         "cdp", "cdpc512",
         "cdpc512par8"};  //, "hybrid25", "hybrid50", "hybrid75", "lpt"};
-    policy_suite = {"baseline", "cdp",      "cdpc512",  "cdpc512par8",
-                    "hybrid25", "hybrid50", "hybrid75", "lpt"};
-    // policy_suite = { "cdpc512par8" };
+                         //
+    if (nranks < 32768) {
+      policy_suite = {"baseline", "cdp",      "cdpc512",  "cdpc512par8",
+                      "hybrid25", "hybrid50", "hybrid75", "lpt"};
+    } else {
+      logvat0(my_rank, __LOG_ARGS__, LOG_INFO,
+              "Using smaller policy suite - skipping CDP because of "
+              "scale/malloc issues");
+      policy_suite = {"baseline", "cdpc512",  "cdpc512par8", "hybrid25",
+                      "hybrid50", "hybrid75", "lpt"};
+    }
 
     int nruns = policy_suite.size();
 

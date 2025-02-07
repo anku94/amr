@@ -45,21 +45,22 @@ class Benchmark {
     // RunType hybrid2 = base;
     // hybrid2.policy = LoadBalancePolicy::kPolicyHybridCppFirst;
 
-    RunType hybrid3 = base;
-    hybrid3.policy = "hybrid";
-
-    RunType lpt = base;
-    lpt.policy = "lpt";
-
-    RunType cpp = base;
-    cpp.policy = "cdp";
-
-    RunType cpp_iter = base;
-    cpp_iter.policy = "cdpi50";
-    int iter = 50;
+    // RunType hybrid3 = base;
+    // hybrid3.policy = "hybrid";
+    //
+    // RunType lpt = base;
+    // lpt.policy = "lpt";
+    //
+    // RunType cpp = base;
+    // cpp.policy = "cdp";
+    //
+    // RunType cpp_iter = base;
+    // cpp_iter.policy = "cdpi50";
+    // int iter = 50;
 
     // std::vector<RunType> all_runs{base, cpp, cpp_iter, lpt, hybrid, hybrid2};
-    std::vector<RunType> all_runs{hybrid3, lpt};
+    // std::vector<RunType> all_runs{hybrid3, lpt};
+    std::vector<RunType> all_runs{base};
 
     for (auto& r : all_runs) {
       logv(__LOG_ARGS__, LOG_INFO, "[RUN] %s", r.ToString().c_str());

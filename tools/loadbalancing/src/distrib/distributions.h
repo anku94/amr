@@ -243,8 +243,8 @@ class DistributionUtils {
     }
   }
 
-  static void GenExponential(std::vector<double>& costs, int nblocks,
-                             double lambda, int N_min, int N_max) {
+  static void GenExponentialBuggy(std::vector<double>& costs, int nblocks,
+                                  double lambda, int N_min, int N_max) {
     costs.resize(nblocks);
 
     std::random_device rd;
@@ -252,9 +252,17 @@ class DistributionUtils {
     std::uniform_real_distribution<double> d(0, 1);
 
     int N = N_max - N_min + 1;
+    double norm_factor = 0.0;
+
     std::vector<double> prob(N);
     for (int i = 0; i < N; i++) {
-      prob[i] = lambda * exp(-lambda * (i + N_min));
+      double lambda_exp = exp(-lambda * i);
+      prob[i] = lambda * lambda_exp;
+      norm_factor += prob[i];
+    }
+
+    for (int i = 0; i < N; i++) {
+      prob[i] /= norm_factor;
     }
 
     amr::AliasMethod alias(prob);
@@ -264,6 +272,21 @@ class DistributionUtils {
       int alias_sample = alias.Sample(a, b);
       alias_sample += N_min;
       costs[i] = alias_sample;
+    }
+  }
+
+  static void GenExponential(std::vector<double>& costs, int nblocks,
+                             double lambda, int N_min, int N_max) {
+    costs.resize(nblocks);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> d(1e-10, 1.0);  // Avoid log(0)
+
+    for (int i = 0; i < nblocks; i++) {
+      double S = -std::log(d(gen)) / lambda;   // Exponential sample
+      int cost = N_min + static_cast<int>(S);  // Shift by N_min
+      costs[i] = std::min(cost, N_max);        // Clamp to N_max
     }
   }
 

@@ -30,16 +30,17 @@ void GetConfig(int argc, char* argv[]) {
   }
 
   // assert config_file exists and is a file
-  if (access(config_file.c_str(), F_OK) == -1) {
-    fprintf(stderr, "Config file %s does not exist\n", config_file.c_str());
-    exit(1);
-  }
+  // if (access(config_file.c_str(), F_OK) == -1) {
+  //   fprintf(stderr, "Config file %s does not exist\n", config_file.c_str());
+  //   exit(1);
+  // }
 }
 
 void Run() {
   amr::BenchmarkOpts opts{pdlfs::Env::Default(), output_dir};
   amr::Benchmark benchmark(opts);
-  benchmark.Run();
+  // benchmark.Run();
+  benchmark.RunSuiteMini();
 }
 
 int main(int argc, char* argv[]) {
