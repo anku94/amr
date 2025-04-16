@@ -6,5 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(bench_srcs
+ src/mesh.cc 
+ src/main.cc)
+
 # Add executable
-add_executable(${PROJECT_NAME} main.cc)
+add_executable(${PROJECT_NAME} ${bench_srcs})
