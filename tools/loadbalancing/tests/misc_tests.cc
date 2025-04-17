@@ -257,10 +257,3 @@ TEST_F(MiscTest, DistribGenTest) {
   EXPECT_NEAR(costs[3], 44.0, 0.0001);
 }
 }  // namespace amr
-   //
-int main(int argc, char** argv) {
-  google::InitGoogleLogging(argv[0]);
-
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

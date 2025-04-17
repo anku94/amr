@@ -2,6 +2,7 @@
 
 #include <regex>
 #include <vector>
+#include <map>
 
 #include "lb_policies.h"
 #include "policy.h"

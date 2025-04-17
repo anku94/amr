@@ -2,7 +2,7 @@
 
 #include <iomanip>
 #include <string>
-
+#include <sstream>
 #include "policy.h"
 
 namespace amr {
