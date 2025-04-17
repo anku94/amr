@@ -51,10 +51,10 @@ struct Loc {
   Loc(int level, Vec3ll loc) : level(level), locv(loc) {}
 
   std::string ToString() const {
-    std::ostringstream oss;
-    oss << "Loc(" << level << ", " << locv.x << ", " << locv.y << ", " << locv.z
-        << ")";
-    return oss.str();
+    char buf[128];
+    snprintf(buf, sizeof(buf), "Loc[L%d]: %lld, %lld, %lld", level, locv.x,
+             locv.y, locv.z);
+    return std::string(buf);
   }
 
   bool operator==(const Loc& o) const {
@@ -67,6 +67,11 @@ struct Loc {
 
   Loc Parent() const { return (level > 0) ? Loc{level - 1, locv >> 1} : Loc(); }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Loc& loc) {
+  os << loc.ToString();
+  return os;
+}
 
 // Hash for Loc in unordered containers
 struct LocHash {
