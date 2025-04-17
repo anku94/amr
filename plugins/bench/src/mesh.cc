@@ -1,5 +1,6 @@
 #include "mesh.h"
 
+#include "mesh_utils.h"
 #include "print_utils.h"
 
 namespace amr {
@@ -33,19 +34,18 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
                          OrderedBlockVec& nbrs, const Vec3ll& off,
                          NeighborType ntype) const {
   Loc tgt{loc.level, loc.locv + off};
-  std::vector<Loc> covering_leaves;
+  std::vector<Loc> covering_leaves = GetCoveringLeaves(tgt);
 
   for (auto& nl : covering_leaves) {
     auto it = idmap.find(nl);
     if (it != idmap.end() && it->second != id) {
-      bool is_neighbor = AreNeighbors(loc, nl);
       bool is_neighbor_by_type = AreNeighborsByType(loc, nl) == ntype;
 
       LOG(LOG_DBUG, "Loc: %s, nbrloc: %s, isntype:%s?::%s\n",
           loc.ToString().c_str(), nl.ToString().c_str(),
           NeighborTypeToString(ntype), is_neighbor_by_type ? "true" : "false");
 
-      if (is_neighbor && is_neighbor_by_type) {
+      if (is_neighbor_by_type) {
         nbrs.push_back(it->second);
       }
     }
@@ -64,16 +64,9 @@ Mesh::OrderedMesh Mesh::GetOrderedMesh() const {
   idmap.reserve(leaves_.size());
   int next_id = 0;
 
-  int64_t root_extent = (1LL << root_level_);
-  for (int64_t z = 0; z < root_extent; ++z) {
-    for (int64_t y = 0; y < root_extent; ++y) {
-      for (int64_t x = 0; x < root_extent; ++x) {
-        Loc root_loc{root_level_, {x, y, z}};
-        // Only traverse active roots
-        if (active_.count(root_loc)) {
-          DFSAssign(root_loc, idmap, next_id);
-        }
-      }
+  for (auto& l : active_) {
+    if (l.level == root_level_) {
+      DFSAssign(l, idmap, next_id);
     }
   }
 
@@ -136,120 +129,6 @@ void Mesh::DFSAssign(const Loc& loc, LocToIdMap& idmap, int& next_id) const {
   }
 }
 
-void Mesh::GatherLeaves(const Loc& tgt, std::vector<Loc>& out) const {
-  out.clear();
-  Loc relevant_node = FindRelevantNode(tgt);
-  if (!relevant_node.IsValid()) {
-    return;
-  }
-
-  if (IsLeaf(relevant_node)) {
-    out.push_back(relevant_node);
-  } else {
-    CollectDescendants(relevant_node, out);
-  }
-}
-
-Loc Mesh::FindRelevantNode(const Loc& target_in) const {
-  Loc target = target_in;
-  int64_t max_coord_at_lvl = (1LL << target.level);
-
-  // 1. Handle boundaries
-  if (target.locv.AnyLT(0) || target.locv.AnyGT(max_coord_at_lvl)) {
-    return Loc();
-  }
-
-  Loc current_node;
-  if (target.level < root_level_) {  // target above root level
-    return Loc();
-  }
-
-  // Find the root-level node that covers the target
-  current_node.level = root_level_;
-  current_node.locv = target.locv >> (target.level - root_level_);
-
-  // Check if this root-level block exists
-  if (!active_.count(current_node)) {
-    // This part of the domain wasn't initialized or has been fully derefined
-    // Search upwards from target's parent to find the coarse block covering
-    // it.
-    Loc parent = target.Parent();
-    while (parent.IsValid() && !active_.count(parent)) {
-      parent = parent.Parent();
-    }
-    if (parent.IsValid() && IsLeaf(parent))
-      return parent;  // Found coarse ancestor leaf
-    return Loc();     // No covering block found
-  }
-
-  // 3. --- Traverse Downwards ---
-  for (int lvl = root_level_; lvl < target.level; ++lvl) {
-    if (IsLeaf(current_node)) {
-      return current_node;  // Hit a leaf before target level (coarser nbr)
-    }
-
-    // Determine child index for the *next* level (lvl+1) based on target
-    // coords
-    int shift = target.level - (lvl + 1);
-    int child_idx = (((target.locv.x >> shift) & 1LL)) |
-                    (((target.locv.y >> shift) & 1LL) << 1) |
-                    (((target.locv.z >> shift) & 1LL) << 2);
-
-    // Calculate the location of the next node in the path
-    Loc next_node = {
-        lvl + 1, (current_node.locv << 1)};  // Level up, shift parent coords
-    next_node.locv.x |= (child_idx & 1);
-    next_node.locv.y |= ((child_idx >> 1) & 1);
-    next_node.locv.z |= ((child_idx >> 2) & 1);
-
-    if (!active_.count(next_node)) {
-      // Path terminates here, the block covering the target must be
-      // current_node Since the loop condition passed, current_node cannot be
-      // a leaf here. This implies an inconsistency OR the target is in an
-      // empty region *below* a leaf. Safest return is the last known valid
-      // covering node.
-      assert(IsLeaf(current_node.Parent()) ||
-             current_node.level ==
-                 root_level_);  // Parent should exist or be root
-      // If traversal failed, the coarser node `current_node` should cover it,
-      // but we already checked `IsLeaf(current_node)` at the start of the
-      // loop. This suggests the target path leads to an inactive region below
-      // an internal node. The technically correct covering block might be the
-      // *parent* leaf if one exists upwards. However, returning current_node
-      // might be acceptable depending on definition. Let's return the last
-      // known *active* node.
-      return current_node;  // Return the node before the inactive step.
-    }
-    current_node = next_node;  // Move to the next level
-  }
-
-  // 4. --- Reached Target Level ---
-  // The loop finished, current_node is at the target level.
-  assert(current_node.level == target.level);
-  assert(active_.count(current_node) &&
-         "Node at target level must be active if loop completed");
-  return current_node;  // Return the node foun
-}
-
-bool Mesh::AreNeighbors(const Loc& loc1, const Loc& loc2) const {
-  int max_level = std::max(loc1.level, loc2.level);
-  int diff1 = max_level - loc1.level;
-  int diff2 = max_level - loc2.level;
-
-  auto min1 = loc1.locv << diff1;
-  auto min2 = loc2.locv << diff2;
-
-  Vec3ll unit_vec{1, 1, 1};
-  Vec3ll size1 = unit_vec << diff1;
-  Vec3ll size2 = unit_vec << diff2;
-
-  bool x_touch = (min1.x <= min2.x + size2.x) && (min2.x <= min1.x + size1.x);
-  bool y_touch = (min1.y <= min2.y + size2.y) && (min2.y <= min1.y + size1.y);
-  bool z_touch = (min1.z <= min2.z + size2.z) && (min2.z <= min1.z + size1.z);
-
-  return x_touch && y_touch && z_touch;
-}
-
 NeighborType Mesh::AreNeighborsByType(const Loc &l1, const Loc &l2) const {
   // 1) Scale both blocks up to the same finest level
   int L  = std::max(l1.level, l2.level);
@@ -289,6 +168,33 @@ NeighborType Mesh::AreNeighborsByType(const Loc &l1, const Loc &l2) const {
       // nTouch==0 means all three axes overlap => same block or containment
       return NeighborType::kNone;
   }
+}
+
+std::vector<Loc> Mesh::GetCoveringLeaves(const Loc &t) const {
+  // 1) find the minimal active ancestor of ‘t’
+  Loc node = t;
+  while (node.level > root_level_ && !active_.count(node)) {
+    node = node.Parent();
+  }
+
+  if (!active_.count(node)) {
+    return {};
+  }
+
+  // 2) collect all leaves under that ancestor
+  std::vector<Loc> leaves;
+  std::function<void(const Loc&)> recurse = [&](auto const &n) {
+    if (IsLeaf(n)) {
+      leaves.push_back(n);
+    } else {
+      for (auto &c : GetChildLocs(n)) {
+        recurse(c);
+      }
+    }
+  };
+
+  recurse(node);
+  return leaves;
 }
 
 }  // namespace amr

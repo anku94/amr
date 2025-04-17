@@ -88,9 +88,6 @@ class Mesh {
   // Depth-first assign IDs to leaves
   void DFSAssign(const Loc& loc, LocToIdMap& idmap, int& next_id) const;
 
-  // Collect all leaf Locs covering target
-  void GatherLeaves(const Loc& tgt, std::vector<Loc>& out) const;
-
   // Predefined neighbor offset sets
   static const std::array<Vec3ll, 6> kFaceOffsets_;
   static const std::array<Vec3ll, 12> kEdgeOffsets_;
@@ -122,24 +119,6 @@ class Mesh {
   void ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
                      OrderedBlockVec& nbrs, const Vec3ll& off, NeighborType ntype) const;
 
-  void CollectDescendants(const Loc& loc, std::vector<Loc>& out) const {
-    if (!active_.count(loc)) {
-      return;
-    }
-
-    if (IsLeaf(loc)) {
-      out.push_back(loc);
-    } else {
-      for (const auto& c : GetChildLocs(loc)) {
-        CollectDescendants(c, out);
-      }
-    }
-  }
-
-  Loc FindRelevantNode(const Loc& target_in) const;
-
-  bool AreNeighbors(const Loc& loc1, const Loc& loc2) const;
-
   NeighborType AreNeighborsByType(const Loc& loc1, const Loc& loc2) const;
 
   const char* NeighborTypeToString(NeighborType ntype) const {
@@ -156,5 +135,7 @@ class Mesh {
         return "Unknown";
     }
   }
+
+  std::vector<Loc> GetCoveringLeaves(const Loc& t) const;
 };
 }  // namespace amr
