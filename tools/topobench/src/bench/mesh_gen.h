@@ -4,6 +4,7 @@
 #include "single_ts_trace_reader.h"
 #include "trace_reader.h"
 
+namespace topo::bench {
 class MeshGenerator {
 protected:
   MeshGenerator(const DriverOpts &opts) : opts_(opts) {}
@@ -73,3 +74,4 @@ public:
 private:
   TraceReader reader_;
 };
+}  // namespace topo::bench

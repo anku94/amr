@@ -11,6 +11,7 @@
 
 #include <mpi.h>
 
+namespace topo::bench {
 class Driver {
 public:
   Driver(const DriverOpts &opts) : opts_(opts) { Globals::driver_opts = opts; }
@@ -137,3 +138,4 @@ private:
   Mesh mesh_;
   const DriverOpts opts_;
 };
+}  // namespace topo::bench

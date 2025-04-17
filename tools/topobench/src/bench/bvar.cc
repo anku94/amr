@@ -5,6 +5,7 @@
 #include "block.h"
 #include "globals.h"
 
+namespace topo::bench {
 void BoundaryVariable::InitBoundaryData(BoundaryData<>& bd) {
   for (int n = 0; n < bd.kMaxNeighbor; n++) {
     bd.flag[n] = BoundaryStatus::waiting;
@@ -134,3 +135,4 @@ void BoundaryVariable::DestroyBoundaryData(BoundaryData<>& bd) {
     if (bd.req_recv[n] != MPI_REQUEST_NULL) MPI_Request_free(&bd.req_recv[n]);
   }
 }
+}  // namespace topo::bench

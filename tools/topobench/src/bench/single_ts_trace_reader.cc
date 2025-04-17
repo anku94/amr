@@ -1,5 +1,6 @@
 #include "single_ts_trace_reader.h"
 
+namespace topo::bench {
 Status SingleTimestepTraceReader::Read(int rank) {
   Status s = Status::OK;
 
@@ -83,3 +84,4 @@ Status SingleTimestepTraceReader::ParseLine(char *buf, size_t buf_sz,
 
   return s;
 }
+}  // namespace topo::bench

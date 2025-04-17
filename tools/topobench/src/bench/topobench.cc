@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
 
   DriverOpts opts;
   parse_opts(argc, argv, opts);
-  Driver driver(opts);
+  topo::bench::Driver driver(opts);
   driver.Run(argc, argv);
   return 0;
 }

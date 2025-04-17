@@ -19,6 +19,7 @@
     logv(__LOG_ARGS__, LOG_ERRO, msg);                                         \
   }
 
+namespace topo::bench {
 struct NeighborBlock {
   int block_id;
   int peer_rank;
@@ -128,3 +129,4 @@ private:
   std::vector<NeighborBlock> nbrvec_snd_;
   std::vector<NeighborBlock> nbrvec_rcv_;
 };
+}  // namespace topo::bench

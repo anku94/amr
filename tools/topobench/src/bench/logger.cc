@@ -26,7 +26,7 @@ std::string GetMPIStr() {
 }
 
 const std::string MeshGenMethodToStrUtil() {
-  switch (Globals::driver_opts.meshgen_method) {
+  switch (topo::bench::Globals::driver_opts.meshgen_method) {
   case MeshGenMethod::Ring:
     return "Ring";
     break;
@@ -34,10 +34,10 @@ const std::string MeshGenMethodToStrUtil() {
     return "AllToALl";
     break;
   case MeshGenMethod::FromSingleTSTrace:
-    return std::string("SingleTS:") + Globals::driver_opts.trace_root;
+    return std::string("SingleTS:") + topo::bench::Globals::driver_opts.trace_root;
     break;
   case MeshGenMethod::FromMultiTSTrace:
-    return std::string("MultiTS:") + Globals::driver_opts.trace_root;
+    return std::string("MultiTS:") + topo::bench::Globals::driver_opts.trace_root;
     break;
   default:
     break;
@@ -47,11 +47,12 @@ const std::string MeshGenMethodToStrUtil() {
 }
 } // namespace
 
-void Logger::LogData(std::vector<std::shared_ptr<MeshBlock>> &blocks_) {
+namespace topo::bench {
+void Logger::LogData(std::vector<std::shared_ptr<MeshBlock>> &blocks) {
   total_sent_ = 0;
   total_rcvd_ = 0;
 
-  for (auto b : blocks_) {
+  for (auto b : blocks) {
     total_sent_ += b->BytesSent();
     total_rcvd_ += b->BytesRcvd();
   }
@@ -146,3 +147,4 @@ int Logger::GetNumRanks() const {
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
   return num_ranks;
 }
+}  // namespace topo::bench

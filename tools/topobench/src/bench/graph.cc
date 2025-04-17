@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <numeric>
 
+namespace topo::bench {
 void GraphGenerator::GenerateDynamic(int nnodes, int avg_deg) {
   int nedge_total = nnodes * avg_deg / 2;
   LeastConnectedGraph g(nnodes);
@@ -142,3 +143,4 @@ void LeastConnectedGraph::PrintConnectivityStats() const {
   logv(__LOG_ARGS__, LOG_INFO, "Edge Count, Max/Max: %d/%d (Mean += std: %.1f += %.1f)",
        min_x, max_x, sum_x * 1.0 / nnodes_, nedge_std);
 }
+}  // namespace topo::bench

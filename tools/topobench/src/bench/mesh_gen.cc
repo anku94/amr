@@ -1,7 +1,10 @@
 #include "mesh_gen.h"
+
 #include "globals.h"
 
 namespace {
+using namespace topo::bench;
+
 static void GatherNeighborCounts(int count_local) {
   std::vector<int> counts(Globals::nranks);
 
@@ -31,27 +34,28 @@ static void GatherNeighborCounts(int count_local) {
   fprintf(f, "%d\n", counts[Globals::nranks - 1]);
   fclose(f);
 }
-} // namespace
+}  // namespace
 
+namespace topo::bench {
 std::unique_ptr<MeshGenerator> MeshGenerator::Create(const DriverOpts &opts) {
   MeshGenMethod t = opts.meshgen_method;
 
   switch (t) {
-  case MeshGenMethod::Ring:
-    return std::make_unique<RingMeshGenerator>(opts);
-    break;
-  case MeshGenMethod::AllToAll:
-    return std::make_unique<AllToAllMeshGenerator>(opts);
-    break;
-  case MeshGenMethod::Dynamic:
-    ABORT("Not implemented");
-    break;
-  case MeshGenMethod::FromSingleTSTrace:
-    return std::make_unique<SingleTimestepTraceMeshGenerator>(opts);
-    break;
-  case MeshGenMethod::FromMultiTSTrace:
-    return std::make_unique<MultiTimestepTraceMeshGenerator>(opts);
-    break;
+    case MeshGenMethod::Ring:
+      return std::make_unique<RingMeshGenerator>(opts);
+      break;
+    case MeshGenMethod::AllToAll:
+      return std::make_unique<AllToAllMeshGenerator>(opts);
+      break;
+    case MeshGenMethod::Dynamic:
+      ABORT("Not implemented");
+      break;
+    case MeshGenMethod::FromSingleTSTrace:
+      return std::make_unique<SingleTimestepTraceMeshGenerator>(opts);
+      break;
+    case MeshGenMethod::FromMultiTSTrace:
+      return std::make_unique<MultiTimestepTraceMeshGenerator>(opts);
+      break;
   }
 
   return nullptr;
@@ -208,3 +212,4 @@ Status MultiTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
 
   return s;
 }
+}  // namespace topo::bench

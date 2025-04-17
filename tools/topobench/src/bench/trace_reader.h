@@ -13,6 +13,7 @@
 
 typedef std::pair<int, int> RankSizePair;
 
+namespace topo::bench {
 class TraceReader {
 public:
   TraceReader(const char *trace_file)
@@ -51,3 +52,4 @@ private:
   int max_ts_;
   bool file_read_;
 };
+}  // namespace topo::bench

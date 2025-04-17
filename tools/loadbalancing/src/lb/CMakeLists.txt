@@ -2,7 +2,6 @@ find_package(MPI REQUIRED)
 find_package(pdlfs-common CONFIG REQUIRED)
 find_package(GUROBI)
 find_package(glog CONFIG REQUIRED)
-find_package(gflags CONFIG REQUIRED)
 
 set (lb_srcs
     lb_chunkwise.cc
@@ -42,7 +41,7 @@ target_include_directories(lb PUBLIC
 )
 
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
-target_link_libraries(lb PRIVATE pdlfs-common glog::glog gflags)
+target_link_libraries(lb PUBLIC pdlfs-common glog::glog)
 target_link_libraries(lb PUBLIC MPI::MPI_CXX)
 if (GUROBI_FOUND)
     target_compile_definitions(lb PRIVATE GUROBI_ENABLED)

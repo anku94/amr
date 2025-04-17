@@ -2,6 +2,7 @@
 
 #include "block.h"
 
+namespace topo::bench {
 class Mesh {
  public:
   Status AllocateBoundaryVariables() {
@@ -58,9 +59,7 @@ class Mesh {
     return Status::OK;
   }
 
-  void PrintStats() {
-    logger_.Aggregate();
-  }
+  void PrintStats() { logger_.Aggregate(); }
 
   void PrintConfig() {
     for (const auto& block : blocks_) {
@@ -79,3 +78,4 @@ class Mesh {
 
   friend class MeshGenerator;
 };
+}  // namespace topo::bench

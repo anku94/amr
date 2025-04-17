@@ -12,6 +12,7 @@
 
 typedef std::pair<int, int> RankSizePair;
 
+namespace topo::bench {
 class SingleTimestepTraceReader {
 public:
   SingleTimestepTraceReader(const char *trace_file)
@@ -37,3 +38,4 @@ private:
   std::vector<CommNeighbor> recv_map_;
   bool file_read_;
 };
+}  // namespace topo::bench

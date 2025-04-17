@@ -8,11 +8,14 @@
 #include <memory>
 #include <vector>
 
+#include "block.h"
+
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
                                           std::chrono::duration<double>>;
 
 class MeshBlock;
 
+namespace topo::bench {
 class Logger {
 public:
   Logger()
@@ -30,7 +33,7 @@ public:
     num_obs_++;
   }
 
-  void LogData(std::vector<std::shared_ptr<MeshBlock>> &blocks_);
+  void LogData(std::vector<std::shared_ptr<MeshBlock>> &blocks);
 
   void Aggregate();
 
@@ -55,3 +58,4 @@ private:
   double total_time_;
   uint64_t num_obs_;
 };
+}  // namespace topo::bench

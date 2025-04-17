@@ -23,6 +23,7 @@
 //  Status s = Topology::GenerateMesh(opts, mesh);
 //  ASSERT_EQ(s, Status::OK);
 //}
+using namespace topo::bench;
 
 TEST(Topogen_Test, NormalGenerator) {
   int mean = 5;

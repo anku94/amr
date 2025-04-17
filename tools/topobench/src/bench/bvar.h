@@ -12,6 +12,7 @@
 #define NMAX_NEIGHBORS 2048
 #define MAX_MSGSZ 16384
 
+namespace topo::bench {
 class MeshBlock;
 
 enum class BoundaryStatus { waiting, arrived, completed };
@@ -63,3 +64,4 @@ class BoundaryVariable {
   BoundaryData<> bd_var_, bd_var_flcor_;
   uint64_t bytes_sent_, bytes_rcvd_;
 };
+}  // namespace topo::bench
