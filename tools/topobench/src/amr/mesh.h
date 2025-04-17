@@ -8,9 +8,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "logging.h"
 #include "mesh_utils.h"
-
+#include "topo_common.h"
 namespace topo::amr {
 enum class NeighborType {
   kFace,
@@ -79,6 +78,15 @@ class Mesh {
   // Generate direct children of a Loc
   static std::vector<Loc> GetChildLocs(const Loc& loc);
 
+  // GetTotalBlockCount: total blocks (including intermediate)
+  int GetTotalBlockCount() const { return active_.size(); }
+
+  // GetLeafBlockCount: leaf block count only
+  int GetLeafBlockCount() const { return leaves_.size(); }
+
+  // GetRootLoc: root location
+  static Loc GetRootLoc() { return Loc{0, {0, 0, 0}}; }
+
  private:
   int root_level_, max_level_, current_max_level_;
   LeafSet leaves_, active_;
@@ -95,7 +103,7 @@ class Mesh {
 
   void BuildNeighbors(const Loc& loc, int id, const LocToIdMap& idmap,
                       OrderedMesh& om) const {
-    LOG(LOG_DBUG, "--- Building neighbors for block %d ---\n", id);
+    MLOG(MLOG_DBG0, "--- Building neighbors for block %d ---\n", id);
 
     auto& nbrmap_forid = om.nbrmap[id];
     nbrmap_forid.face.clear();

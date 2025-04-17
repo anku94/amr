@@ -11,25 +11,36 @@ inline std::string fmtstr(const char *fmt, ...) {
   return std::string(buf);
 }
 
+#define MLOG_ERRO 0
+#define MLOG_WARN 1
+#define MLOG_INFO 2
+#define MLOG_DBG0 3
+#define MLOG_DBG1 4
+#define MLOG_DBG2 5
+#define MLOG_DBG3 6
+
 #define MLOG_INNER(lvl, fmt, ...)                             \
   do {                                                        \
     switch (lvl) {                                            \
-      case LOG_ERRO:                                          \
+      case MLOG_ERRO:                                          \
         LOG(ERROR) << fmtstr("[ERRO] " fmt, ##__VA_ARGS__);   \
         break;                                                \
-      case LOG_WARN:                                          \
+      case MLOG_WARN:                                          \
         LOG(WARNING) << fmtstr("[WARN] " fmt, ##__VA_ARGS__); \
         break;                                                \
-      case LOG_INFO:                                          \
+      case MLOG_INFO:                                          \
         LOG(INFO) << fmtstr("[INFO] " fmt, ##__VA_ARGS__);    \
         break;                                                \
-      case LOG_DBUG:                                          \
+      case MLOG_DBG0:                                          \
         VLOG(0) << fmtstr("[DBG0] " fmt, ##__VA_ARGS__);      \
         break;                                                \
-      case LOG_DBG2:                                          \
+      case MLOG_DBG1:                                          \
+        VLOG(1) << fmtstr("[DBG1] " fmt, ##__VA_ARGS__);      \
+        break;                                                \
+      case MLOG_DBG2:                                          \
         VLOG(2) << fmtstr("[DBG2] " fmt, ##__VA_ARGS__);      \
         break;                                                \
-      case LOG_DBG3:                                          \
+      case MLOG_DBG3:                                          \
         VLOG(3) << fmtstr("[DBG3] " fmt, ##__VA_ARGS__);      \
         break;                                                \
     }                                                         \

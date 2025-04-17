@@ -2,6 +2,7 @@
 
 #include "mesh_utils.h"
 #include "print_utils.h"
+#include "topo_common.h"
 
 namespace topo::amr {
 // Define the offset arrays
@@ -41,7 +42,7 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
     if (it != idmap.end() && it->second != id) {
       bool is_neighbor_by_type = AreNeighborsByType(loc, nl) == ntype;
 
-      LOG(LOG_DBUG, "Loc: %s, nbrloc: %s, isntype:%s?::%s\n",
+      MLOG(MLOG_DBG2, "Loc: %s, nbrloc: %s, isntype:%s?::%s\n",
           loc.ToString().c_str(), nl.ToString().c_str(),
           NeighborTypeToString(ntype), is_neighbor_by_type ? "true" : "false");
 
@@ -54,7 +55,7 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
   std::sort(nbrs.begin(), nbrs.end());
   nbrs.erase(std::unique(nbrs.begin(), nbrs.end()), nbrs.end());
 
-  LOG(LOG_DBG2, "+ Gathered %zu nbrs: %s\n", nbrs.size(),
+  MLOG(MLOG_DBG3, "+ Gathered %zu nbrs: %s\n", nbrs.size(),
       PrintUtils::SerializeVec(nbrs).c_str());
 }
 
@@ -125,23 +126,23 @@ void Mesh::DFSAssign(const Loc& loc, LocToIdMap& idmap, int& next_id) const {
   }
 }
 
-NeighborType Mesh::AreNeighborsByType(const Loc &l1, const Loc &l2) const {
+NeighborType Mesh::AreNeighborsByType(const Loc& l1, const Loc& l2) const {
   // 1) Scale both blocks up to the same finest level
-  int L  = std::max(l1.level, l2.level);
+  int L = std::max(l1.level, l2.level);
   int d1 = L - l1.level, d2 = L - l2.level;
 
   // 2) Compute half-open intervals [min, max)
   Vec3ll min1 = l1.locv << d1;
   Vec3ll min2 = l2.locv << d2;
-  Vec3ll size1 = Vec3ll{1,1,1} << d1;
-  Vec3ll size2 = Vec3ll{1,1,1} << d2;
+  Vec3ll size1 = Vec3ll{1, 1, 1} << d1;
+  Vec3ll size2 = Vec3ll{1, 1, 1} << d2;
   Vec3ll max1 = min1 + size1;
   Vec3ll max2 = min2 + size2;
 
   // 3) On each axis, check overlap vs touch
-  auto axis_info = [&](int a_min1, int a_max1, int a_min2, int a_max2){
+  auto axis_info = [&](int a_min1, int a_max1, int a_min2, int a_max2) {
     bool overlap = (a_min1 < a_max2) && (a_min2 < a_max1);
-    bool touch   = (a_max1 == a_min2) || (a_max2 == a_min1);
+    bool touch = (a_max1 == a_min2) || (a_max2 == a_min1);
     return std::make_pair(overlap, touch);
   };
 
@@ -150,23 +151,26 @@ NeighborType Mesh::AreNeighborsByType(const Loc &l1, const Loc &l2) const {
   auto [oz, tz] = axis_info(min1.z, max1.z, min2.z, max2.z);
 
   // 4) Must overlap or touch on *all* axes
-  if (!( (ox||tx) && (oy||ty) && (oz||tz) )) {
+  if (!((ox || tx) && (oy || ty) && (oz || tz))) {
     return NeighborType::kNone;
   }
 
   // 5) Count how many axes are pure-touch
   int nTouch = int(tx) + int(ty) + int(tz);
   switch (nTouch) {
-    case 1: return NeighborType::kFace;
-    case 2: return NeighborType::kEdge;
-    case 3: return NeighborType::kVertex;
+    case 1:
+      return NeighborType::kFace;
+    case 2:
+      return NeighborType::kEdge;
+    case 3:
+      return NeighborType::kVertex;
     default:
       // nTouch==0 means all three axes overlap => same block or containment
       return NeighborType::kNone;
   }
 }
 
-std::vector<Loc> Mesh::GetCoveringLeaves(const Loc &t) const {
+std::vector<Loc> Mesh::GetCoveringLeaves(const Loc& t) const {
   // 1) find the minimal active ancestor of ‘t’
   Loc node = t;
   while (node.level > root_level_ && !active_.count(node)) {
@@ -179,11 +183,11 @@ std::vector<Loc> Mesh::GetCoveringLeaves(const Loc &t) const {
 
   // 2) collect all leaves under that ancestor
   std::vector<Loc> leaves;
-  std::function<void(const Loc&)> recurse = [&](auto const &n) {
+  std::function<void(const Loc&)> recurse = [&](auto const& n) {
     if (IsLeaf(n)) {
       leaves.push_back(n);
     } else {
-      for (auto &c : GetChildLocs(n)) {
+      for (auto& c : GetChildLocs(n)) {
         recurse(c);
       }
     }
@@ -193,4 +197,4 @@ std::vector<Loc> Mesh::GetCoveringLeaves(const Loc &t) const {
   return leaves;
 }
 
-}  // namespace amr
+}  // namespace topo::amr
