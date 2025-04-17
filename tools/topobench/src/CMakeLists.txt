@@ -1,6 +1,7 @@
 find_package(pdlfs-common CONFIG REQUIRED)
+find_package(glog CONFIG REQUIRED)
+find_package(gflags CONFIG REQUIRED)
 
-#add_executable(topobench topobench.cc block.cc driver.cc logger.cc topology.cc common.cc logger.h logger.cc)
 set(topo_srcs
         bvar.cc
         driver.cc
@@ -14,7 +15,7 @@ set(topo_srcs
 
 add_library(topo ${topo_srcs} ${common_srcs})
 target_include_directories(topo PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${common_include}")
-target_link_libraries(topo pdlfs-common)
+target_link_libraries(topo pdlfs-common glog::glog gflags)
 
 add_executable(topobench topobench.cc)
 target_link_libraries(topobench topo)

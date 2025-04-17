@@ -20,6 +20,8 @@ public:
   virtual Status GenerateMesh(Mesh &mesh, int ts) = 0;
 
   static std::unique_ptr<MeshGenerator> Create(const DriverOpts &opts);
+
+  virtual ~MeshGenerator() = default;
 };
 
 class RingMeshGenerator : public MeshGenerator {
