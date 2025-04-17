@@ -1,6 +1,5 @@
 #pragma once
 
-#include "amr/block.h"
 #include "logger.h"
 #include "topo_types.h"
 
@@ -17,6 +16,8 @@ class CommMesh {
   }
 
   Status ResetBvarsAndBlocks() {
+    MLOGIFR0(MLOG_INFO, "Resetting bvars and blocks");
+
     for (const auto& b : blocks_) {
       Status s = b->DestroyBoundaryData();
       if (s != Status::OK) return s;
@@ -30,27 +31,27 @@ class CommMesh {
   Status DoCommunicationRound() {
     logger_.LogBegin();
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Start Receiving...");
+    MLOGIFR0(MLOG_DBG0, "Start Receiving...");
     for (const auto& b : blocks_) {
       b->StartReceiving();
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Sending Boundary Buffers...");
+    MLOGIFR0(MLOG_DBG0, "Sending Boundary Buffers...");
     for (const auto& b : blocks_) {
       b->SendBoundaryBuffers();
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Receiving Boundary Buffers...");
+    MLOGIFR0(MLOG_DBG0, "Receiving Boundary Buffers...");
     for (const auto& b : blocks_) {
       b->ReceiveBoundaryBuffers();
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Receiving Remaining Boundary Buffers...");
+    MLOGIFR0(MLOG_DBG0, "Receiving Remaining Boundary Buffers...");
     for (const auto& b : blocks_) {
       b->ReceiveBoundaryBuffersWithWait();
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Clearing Boundaries...");
+    MLOGIFR0(MLOG_DBG0, "Clearing Boundaries...");
     for (auto b : blocks_) {
       b->ClearBoundary();
     }
@@ -79,5 +80,6 @@ class CommMesh {
   Logger logger_;
 
   friend class MeshGenerator;
+  friend class PlacementUtils;
 };
 }  // namespace topo::bench

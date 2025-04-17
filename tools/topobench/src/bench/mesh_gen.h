@@ -1,6 +1,6 @@
 #include "common.h"
 #include "amr/globals.h"
-#include "mesh.h"
+#include "comm_mesh.h"
 #include "single_ts_trace_reader.h"
 #include "trace_reader.h"
 #include "amr/block.h"

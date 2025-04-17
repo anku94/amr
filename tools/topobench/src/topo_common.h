@@ -41,6 +41,7 @@ inline std::string fmtstr(const char *fmt, ...) {
         VLOG(2) << fmtstr("[DBG2] " fmt, ##__VA_ARGS__);      \
         break;                                                \
       case MLOG_DBG3:                                         \
+      default:                                                \
         VLOG(3) << fmtstr("[DBG3] " fmt, ##__VA_ARGS__);      \
         break;                                                \
     }                                                         \
@@ -56,5 +57,15 @@ inline std::string fmtstr(const char *fmt, ...) {
     MLOG(level, fmt, ##__VA_ARGS__)   \
   }
 
-#define MLOGIFR0(level, fmt, ...) \
-  MLOGIF(!amr::Globals::my_rank, level, fmt, ##__VA_ARGS__)
+#define MLOGIFR0(level, fmt, ...)       \
+  if (amr::Globals::my_rank == 0) {     \
+    MLOG(level, fmt, ##__VA_ARGS__)     \
+  } else {                              \
+    MLOG(level + 1, fmt, ##__VA_ARGS__) \
+  }
+
+#define ABORTIF(cond, msg)               \
+  if (cond) {                            \
+    LOG(FATAL) << fmtstr("[ERRO] " msg); \
+    MPI_Abort(MPI_COMM_WORLD, 1);        \
+  }
