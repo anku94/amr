@@ -120,8 +120,7 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
   }
 
   Status DestroyBoundaryData() {
-    MLOGIFR0(MLOG_DBG0, "Destroying boundary data at bid %d", block_id_);
-    // pbval_.release();
+    MLOGIFR0(MLOG_DBG1, "Destroying boundary data at bid %d", block_id_);
     pbval_.reset();
     return Status::OK;
   }

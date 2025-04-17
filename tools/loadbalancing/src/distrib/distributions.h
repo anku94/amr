@@ -1,16 +1,15 @@
+#pragma once
+
+//
+// Created by Ankush J on 11/9/23.
+//
 #include <algorithm>
 #include <string>
+#include <vector>
 
 #include "alias_method.h"
 #include "common.h"
 #include "config_parser.h"
-//
-// Created by Ankush J on 11/9/23.
-//
-
-#pragma once
-
-#include <vector>
 
 namespace amr {
 enum class Distribution {

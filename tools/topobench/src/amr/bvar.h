@@ -90,8 +90,6 @@ class BoundaryVariable {
   void DestroyBoundaryData(BoundaryData<>& bd);
 
   ~BoundaryVariable() {
-    MLOGIFR0(MLOG_DBG0, "Destroying boundary variable");
-
     DestroyBoundaryData(bd_var_);
     DestroyBoundaryData(bd_var_flcor_);
   }

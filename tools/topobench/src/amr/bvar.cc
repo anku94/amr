@@ -82,12 +82,12 @@ void BoundaryVariable::SendBoundaryBuffers() {
 
   for (auto nb : pmb->nbrvec_snd_) {
     // some fence
-    MLOGIFR0(MLOG_DBG0, "Rank %d - Send START %d", Globals::my_rank, nb.buf_id);
+    MLOGIFR0(MLOG_DBG1, "Rank %d - Send START %d", Globals::my_rank, nb.buf_id);
 
     int status = MPI_Start(&(bd_var_.req_send[nb.buf_id]));
     MPI_CHECK(status, "MPI Start Failed");
 
-    MLOGIFR0(MLOG_DBG0, "Rank %d - Send POSTED %d", Globals::my_rank, nb.buf_id);
+    MLOGIFR0(MLOG_DBG1, "Rank %d - Send POSTED %d", Globals::my_rank, nb.buf_id);
   }
 }
 
@@ -143,7 +143,7 @@ void BoundaryVariable::ReceiveBoundaryBuffersWithWait() {
 }
 
 void BoundaryVariable::DestroyBoundaryData(BoundaryData<>& bd) {
-  MLOGIFR0(MLOG_INFO, "Destroying boundary data");
+  MLOGIFR0(MLOG_DBG2, "Destroying boundary data");
 
   for (int n = 0; n < bd.kMaxNeighbor; n++) {
     if (bd.req_send[n] != MPI_REQUEST_NULL) MPI_Request_free(&bd.req_send[n]);
