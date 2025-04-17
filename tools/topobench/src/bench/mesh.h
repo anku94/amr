@@ -1,6 +1,7 @@
 #pragma once
 
-#include "block.h"
+#include "amr/block.h"
+#include "logger.h"
 
 namespace topo::bench {
 class Mesh {
@@ -68,12 +69,12 @@ class Mesh {
   }
 
  private:
-  Status AddBlock(const std::shared_ptr<MeshBlock>& block) {
+  Status AddBlock(const std::shared_ptr<topo::amr::MeshBlock>& block) {
     blocks_.push_back(block);
     return Status::OK;
   }
 
-  std::vector<std::shared_ptr<MeshBlock>> blocks_;
+  std::vector<std::shared_ptr<topo::amr::MeshBlock>> blocks_;
   Logger logger_;
 
   friend class MeshGenerator;

@@ -22,31 +22,39 @@ inline std::string fmtstr(const char *fmt, ...) {
 #define MLOG_INNER(lvl, fmt, ...)                             \
   do {                                                        \
     switch (lvl) {                                            \
-      case MLOG_ERRO:                                          \
+      case MLOG_ERRO:                                         \
         LOG(ERROR) << fmtstr("[ERRO] " fmt, ##__VA_ARGS__);   \
         break;                                                \
-      case MLOG_WARN:                                          \
+      case MLOG_WARN:                                         \
         LOG(WARNING) << fmtstr("[WARN] " fmt, ##__VA_ARGS__); \
         break;                                                \
-      case MLOG_INFO:                                          \
+      case MLOG_INFO:                                         \
         LOG(INFO) << fmtstr("[INFO] " fmt, ##__VA_ARGS__);    \
         break;                                                \
-      case MLOG_DBG0:                                          \
+      case MLOG_DBG0:                                         \
         VLOG(0) << fmtstr("[DBG0] " fmt, ##__VA_ARGS__);      \
         break;                                                \
-      case MLOG_DBG1:                                          \
+      case MLOG_DBG1:                                         \
         VLOG(1) << fmtstr("[DBG1] " fmt, ##__VA_ARGS__);      \
         break;                                                \
-      case MLOG_DBG2:                                          \
+      case MLOG_DBG2:                                         \
         VLOG(2) << fmtstr("[DBG2] " fmt, ##__VA_ARGS__);      \
         break;                                                \
-      case MLOG_DBG3:                                          \
+      case MLOG_DBG3:                                         \
         VLOG(3) << fmtstr("[DBG3] " fmt, ##__VA_ARGS__);      \
         break;                                                \
     }                                                         \
-  } while (0)
+  } while (0);
 
 #define MLOG(level, fmt, ...)                                                  \
   MLOG_INNER(level, "[%10.10s:%3.3d] " fmt,                                    \
              (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
              __LINE__, ##__VA_ARGS__)
+
+#define MLOGIF(cond, level, fmt, ...) \
+  if (cond) {                         \
+    MLOG(level, fmt, ##__VA_ARGS__)   \
+  }
+
+#define MLOGIFR0(level, fmt, ...) \
+  MLOGIF(!amr::Globals::my_rank, level, fmt, ##__VA_ARGS__)

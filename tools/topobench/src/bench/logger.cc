@@ -4,8 +4,8 @@
 
 #include "logger.h"
 
-#include "block.h"
-#include "globals.h"
+#include "amr/block.h"
+#include "amr/globals.h"
 
 #include <inttypes.h>
 #include <mpi.h>
@@ -26,29 +26,29 @@ std::string GetMPIStr() {
 }
 
 const std::string MeshGenMethodToStrUtil() {
-  switch (topo::bench::Globals::driver_opts.meshgen_method) {
-  case MeshGenMethod::Ring:
-    return "Ring";
-    break;
-  case MeshGenMethod::AllToAll:
-    return "AllToALl";
-    break;
-  case MeshGenMethod::FromSingleTSTrace:
-    return std::string("SingleTS:") + topo::bench::Globals::driver_opts.trace_root;
-    break;
-  case MeshGenMethod::FromMultiTSTrace:
-    return std::string("MultiTS:") + topo::bench::Globals::driver_opts.trace_root;
-    break;
-  default:
-    break;
-  }
+  // switch (topo::bench::Globals::driver_opts.meshgen_method) {
+  // case MeshGenMethod::Ring:
+  //   return "Ring";
+  //   break;
+  // case MeshGenMethod::AllToAll:
+  //   return "AllToALl";
+  //   break;
+  // case MeshGenMethod::FromSingleTSTrace:
+  //   return std::string("SingleTS:") + topo::bench::Globals::driver_opts.trace_root;
+  //   break;
+  // case MeshGenMethod::FromMultiTSTrace:
+  //   return std::string("MultiTS:") + topo::bench::Globals::driver_opts.trace_root;
+  //   break;
+  // default:
+  //   break;
+  // }
 
   return "UNKNOWN";
 }
 } // namespace
 
 namespace topo::bench {
-void Logger::LogData(std::vector<std::shared_ptr<MeshBlock>> &blocks) {
+void Logger::LogData(std::vector<std::shared_ptr<topo::amr::MeshBlock>> &blocks) {
   total_sent_ = 0;
   total_rcvd_ = 0;
 
@@ -78,7 +78,7 @@ void Logger::Aggregate() {
   MPI_Reduce(&total_time_, &global_time_max, 1, MPI_DOUBLE, MPI_MAX, 0,
              MPI_COMM_WORLD);
 
-  if (Globals::my_rank != 0)
+  if (amr::Globals::my_rank != 0)
     return;
 
   const int nranks = GetNumRanks();
@@ -90,14 +90,12 @@ void Logger::Aggregate() {
 
   double sent_mbps = global_sent_mb / global_time_avg;
   double rcvd_mbps = global_rcvd_mb / global_time_avg;
-  logv(__LOG_ARGS__, LOG_INFO, "Bytes Exchanged: %" PRIu64 " B/%" PRIu64 " B",
+  MLOGIFR0(MLOG_INFO, "Bytes Exchanged: %" PRIu64 " B/%" PRIu64 " B",
        global_sent, global_rcvd);
-  logv(__LOG_ARGS__, LOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB",
+  MLOGIFR0(MLOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB",
        global_sent_mb, global_rcvd_mb);
-  logv(__LOG_ARGS__, LOG_INFO,
-       "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps, rcvd_mbps);
-  logv(__LOG_ARGS__, LOG_INFO,
-       "Time Avg: %.2lf ms, Min: %.2lf ms, Max: %.2lf ms (%d rounds)",
+  MLOGIFR0(MLOG_INFO, "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps, rcvd_mbps);
+  MLOGIFR0(MLOG_INFO, "Time Avg: %.2lf ms, Min: %.2lf ms, Max: %.2lf ms (%d rounds)",
        global_time_avg * 1e3, global_time_min * 1e3, global_time_max * 1e3,
        num_obs_);
 
@@ -111,7 +109,8 @@ void Logger::LogRun(double send_mb, double send_mbps, double recv_mb,
                     double time_max_ms, int num_obs) {
   struct stat statbuf;
 
-  auto log_fpath = std::string(Globals::driver_opts.job_dir) + "/bench_log.csv";
+  // auto log_fpath = std::string(Globals::driver_opts.job_dir) + "/bench_log.csv";
+  auto log_fpath = std::string("/tmp/bench_log.csv");
 
   if (stat(log_fpath.c_str(), &statbuf) != 0) {
     FILE *f = fopen(log_fpath.c_str(), "w");

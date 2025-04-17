@@ -4,17 +4,19 @@
 
 #pragma once
 
-#include "common.h"
-#include "globals.h"
-
 #include <string>
 #include <vector>
+
+#include "amr/globals.h"
+#include "common.h"
+
+#include "topo_common.h"
 
 typedef std::pair<int, int> RankSizePair;
 
 namespace topo::bench {
 class SingleTimestepTraceReader {
-public:
+ public:
   SingleTimestepTraceReader(const char *trace_file)
       : trace_file_(trace_file), file_read_(false) {}
 
@@ -24,13 +26,13 @@ public:
 
   std::vector<CommNeighbor> GetMsgsRcvd() { return recv_map_; }
 
-private:
+ private:
   Status ParseLine(char *buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
-    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
-            "Send count: %zu, Recv count: %zu", send_map_.size(),
-            recv_map_.size());
+    MLOGIF(!amr::Globals::my_rank, MLOG_INFO,
+           "Send count: %zu, Recv count: %zu", send_map_.size(),
+           recv_map_.size());
   }
 
   std::string trace_file_;

@@ -1,15 +1,16 @@
 #include "common.h"
-#include "globals.h"
+#include "amr/globals.h"
 #include "mesh.h"
 #include "single_ts_trace_reader.h"
 #include "trace_reader.h"
+#include "amr/block.h"
 
 namespace topo::bench {
 class MeshGenerator {
 protected:
   MeshGenerator(const DriverOpts &opts) : opts_(opts) {}
 
-  void AddMeshBlock(Mesh &mesh, std::shared_ptr<MeshBlock> block) {
+  void AddMeshBlock(Mesh &mesh, std::shared_ptr<topo::amr::MeshBlock> block) {
     mesh.AddBlock(block);
   }
 
@@ -49,7 +50,7 @@ public:
       : MeshGenerator(opts), reader_(opts.trace_root) {}
 
   int GetNumTimesteps() override {
-    reader_.Read(Globals::my_rank);
+    reader_.Read(amr::Globals::my_rank);
     return 1;
   }
 
@@ -65,7 +66,7 @@ public:
       : MeshGenerator(opts), reader_(opts.trace_root) {}
 
   int GetNumTimesteps() override {
-    reader_.Read(Globals::my_rank);
+    reader_.Read(amr::Globals::my_rank);
     return reader_.GetNumTimesteps();
   }
 

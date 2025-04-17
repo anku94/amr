@@ -4,18 +4,19 @@
 
 #pragma once
 
-#include "common.h"
-#include "globals.h"
-
 #include <map>
 #include <string>
 #include <vector>
+
+#include "amr/globals.h"
+#include "common.h"
+#include "topo_common.h"
 
 typedef std::pair<int, int> RankSizePair;
 
 namespace topo::bench {
 class TraceReader {
-public:
+ public:
   TraceReader(const char *trace_file)
       : trace_file_(trace_file), max_ts_(-1), file_read_(false) {}
 
@@ -27,22 +28,20 @@ public:
 
   std::vector<CommNeighbor> GetMsgsRcvd(int ts) { return ts_rcv_map_[ts]; }
 
-private:
+ private:
   Status ParseLine(char *buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
-    logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
-            "Timesteps upto ts %d discovered", max_ts_);
+    MLOGIF(!amr::Globals::my_rank, MLOG_INFO, "Timesteps upto ts %d discovered",
+           max_ts_);
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_snd_map_[t];
-      logvat0(Globals::my_rank, __LOG_ARGS__, LOG_DBUG, "[Send] TS %d: %zu msgs", t,
-              msgs_ts.size());
+      MLOGIFR0(MLOG_DBG0, "[Send] TS %d: %zu msgs", t, msgs_ts.size());
     }
 
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_rcv_map_[t];
-      logvat0(Globals::my_rank, __LOG_ARGS__, LOG_DBUG, "[Recv] TS %d: %zu msgs", t,
-              msgs_ts.size());
+      MLOGIFR0(MLOG_DBG0, "[Recv] TS %d: %zu msgs", t, msgs_ts.size());
     }
   }
 

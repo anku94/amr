@@ -4,13 +4,11 @@ namespace topo::bench {
 Status SingleTimestepTraceReader::Read(int rank) {
   Status s = Status::OK;
 
-  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
-          "[TimelessTraceReader] Reading trace file: %s",
+  MLOGIFR0(MLOG_INFO, "[TimelessTraceReader] Reading trace file: %s",
           trace_file_.c_str());
 
   if (trace_file_ == "") {
-    logv(__LOG_ARGS__, LOG_ERRO,
-         "[TimelessTraceReader] No trace file provided");
+    MLOGIFR0(MLOG_ERRO, "[TimelessTraceReader] No trace file provided");
     return Status::Error;
   }
 
@@ -18,12 +16,12 @@ Status SingleTimestepTraceReader::Read(int rank) {
     return Status::OK;
   }
 
-  logv(__LOG_ARGS__, LOG_DBUG, "[TimelessTraceReader] Reading %s\n",
+  MLOGIFR0(MLOG_DBG0, "[TimelessTraceReader] Reading %s\n",
        trace_file_.c_str());
 
   FILE *f = fopen(trace_file_.c_str(), "r");
   if (f == nullptr) {
-    logv(__LOG_ARGS__, LOG_ERRO, "[TimelessTraceReader] Read Failed: %s",
+    MLOGIFR0(MLOG_ERRO, "[TimelessTraceReader] Read Failed: %s",
          strerror(errno));
     s = Status::Error;
     return s;

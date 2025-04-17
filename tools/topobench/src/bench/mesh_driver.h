@@ -6,7 +6,7 @@
 #include "amr/mesh.h"
 #include "amr/mesh_utils.h"
 #include "amr/print_utils.h"
-#include "globals.h"
+#include "amr/globals.h"
 #include "topo_common.h"
 
 namespace topo::bench {

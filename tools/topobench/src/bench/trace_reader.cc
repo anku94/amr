@@ -3,27 +3,19 @@
 //
 
 #include "trace_reader.h"
-#include "globals.h"
+
+#include "amr/globals.h"
+#include "topo_common.h"
 
 namespace topo::bench {
 Status TraceReader::Read(int rank) {
   Status s = Status::OK;
 
-  if (Globals ::my_rank == 0) {
-    logv(::pdlfs ::Logger ::Default(),
-         "/users/ankushj/repos/parthenon-vibe/amr-umbrella/build/"
-         "amr-tools-prefix/src/amr-tools/tools/topobench/src/trace_reader.cc",
-         10, 3, "[TraceReader] Reading trace file: %s", trace_file_.c_str());
-  } else {
-    logv(::pdlfs ::Logger ::Default(),
-         "/users/ankushj/repos/parthenon-vibe/amr-umbrella/build/"
-         "amr-tools-prefix/src/amr-tools/tools/topobench/src/trace_reader.cc",
-         10, 3 + 1, "[TraceReader] Reading trace file: %s",
-         trace_file_.c_str());
-  };
+  MLOGIFR0(MLOG_DBG0, "[TraceReader] Reading trace file: %s",
+           trace_file_.c_str());
 
   if (trace_file_ == "") {
-    logv(__LOG_ARGS__, LOG_ERRO, "[TraceReader] No trace file provided");
+    MLOGIFR0(MLOG_ERRO, "[TraceReader] No trace file provided");
     return Status::Error;
   }
 
@@ -36,13 +28,11 @@ Status TraceReader::Read(int rank) {
    */
   file_read_ = true;
 
-  logv(__LOG_ARGS__, LOG_DBUG, "[TraceReader] Reading %s\n",
-       trace_file_.c_str());
+  MLOGIFR0(MLOG_DBG0, "[TraceReader] Reading %s\n", trace_file_.c_str());
 
   FILE *f = fopen(trace_file_.c_str(), "r");
   if (f == nullptr) {
-    logv(__LOG_ARGS__, LOG_ERRO, "[TraceReader] Read Failed: %s",
-         strerror(errno));
+    MLOGIFR0(MLOG_ERRO, "[TraceReader] Read Failed: %s", strerror(errno));
     s = Status::Error;
     return s;
   }
@@ -54,12 +44,10 @@ Status TraceReader::Read(int rank) {
   int ret = fscanf(f, "%4095[^\n]\n", buf);
   while (!feof(f)) {
     ret = fscanf(f, "%4095[^\n]\n", buf);
-    if (ret == EOF or ret == 0)
-      break;
+    if (ret == EOF or ret == 0) break;
 
     s = ParseLine(buf, ret, rank);
-    if (s != Status::OK)
-      return s;
+    if (s != Status::OK) return s;
   }
   // while (ret != EOF) {
   //   ret = fscanf(f, "%4095[^\n]\n", buf);
@@ -79,7 +67,7 @@ Status TraceReader::Read(int rank) {
 Status TraceReader::ParseLine(char *buf, size_t buf_sz, const int rank) {
   Status s = Status::OK;
 
-  logv(__LOG_ARGS__, LOG_DBG3, "Parsing: %s", buf);
+  MLOGIFR0(MLOG_DBG3, "Parsing: %s", buf);
 
   /* ts,blk_id,blk_rank,nbr_id,nbr_rank,msgsz,isflx */
 
@@ -94,8 +82,8 @@ Status TraceReader::ParseLine(char *buf, size_t buf_sz, const int rank) {
     return Status::Error;
   }
 
-  logv(__LOG_ARGS__, LOG_DBG3, "TS %d: Msg (%d -> %d), MsgSz: %dB", ts,
-       send_rank, recv_rank, msg_sz);
+  // MLOGIFR0(MLOG_DBG3, "TS %d: Msg (%d -> %d), MsgSz: %d B", ts, send_rank,
+  //          recv_rank, msg_sz);
 
   if (send_rank == rank && !is_flx) {
     ts_snd_map_[ts].push_back({recv_blk, recv_rank, msg_sz});

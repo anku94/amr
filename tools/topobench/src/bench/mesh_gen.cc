@@ -1,9 +1,10 @@
 #include "mesh_gen.h"
-
-#include "globals.h"
+#include "amr/block.h"
+#include "amr/globals.h"
 
 namespace {
-using namespace topo::bench;
+// using namespace topo::bench;
+using namespace topo::amr;
 
 static void GatherNeighborCounts(int count_local) {
   std::vector<int> counts(Globals::nranks);
@@ -20,7 +21,8 @@ static void GatherNeighborCounts(int count_local) {
   }
 
   const char *fname = "neighbor_counts.txt";
-  std::string fpath = std::string(Globals::driver_opts.job_dir) + "/" + fname;
+  std::string fpath = std::string("/tmp/") + fname;
+      // std::string(amr::Globals::driver_opts.job_dir) + "/" + fname;
   FILE *f = fopen(fpath.c_str(), "w");
   if (f == nullptr) {
     logv(__LOG_ARGS__, LOG_ERRO, "Failed to open file: %s", fpath.c_str());
@@ -66,10 +68,11 @@ Status RingMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
     int ring_delta = i * Globals::nranks;
     int bid_rel = Globals::my_rank;
     int nbr_left =
-        ((bid_rel - 1) % Globals::nranks + Globals::nranks) % Globals::nranks;
+        ((bid_rel - 1) % Globals::nranks + Globals::nranks) %
+        Globals::nranks;
     int nbr_right = (bid_rel + 1) % Globals::nranks;
 
-    auto mb = std::make_shared<MeshBlock>(ring_delta + bid_rel);
+    auto mb = std::make_shared<topo::amr::MeshBlock>(ring_delta + bid_rel);
     mb->AddNeighborSendRecv(nbr_left + ring_delta, nbr_left,
                             opts_.size_per_msg);
     mb->AddNeighborSendRecv(nbr_right + ring_delta, nbr_right,
@@ -203,10 +206,10 @@ Status MultiTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
 
   MeshGenerator::AddMeshBlock(mesh, mb);
 
-  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
-          "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"
-          "(full log in neighbor_counts.txt)",
-          Globals::my_rank, nbr_idx);
+  MLOGIFR0(MLOG_INFO,
+           "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"
+           "(full log in neighbor_counts.txt)",
+           Globals::my_rank, nbr_idx);
 
   GatherNeighborCounts(nbr_idx);
 
