@@ -35,24 +35,12 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
   Loc tgt{loc.level, loc.locv + off};
   std::vector<Loc> covering_leaves;
 
-  LOG(LOG_DBG2, "\n+ Before GatherLeaves: tgt is %s\n",
-      tgt.ToString().c_str());
-  GatherLeaves(tgt, covering_leaves);
-  LOG(LOG_DBG2, "+ After GatherLeaves: cov leaves is %s\n",
-      PrintUtils::SerializeVec(covering_leaves).c_str());
-
   for (auto& nl : covering_leaves) {
     auto it = idmap.find(nl);
     if (it != idmap.end() && it->second != id) {
       bool is_neighbor = AreNeighbors(loc, nl);
       bool is_neighbor_by_type = AreNeighborsByType(loc, nl) == ntype;
-      //   LOG(LOG_INFO, "Loc: %s, nbrloc: %s, ntype: %d:%s\n",
-      //   loc.ToString().c_str(),
-      //       nl.ToString().c_str(), ntype,
-      //       AreNeighborsByType(loc, nl)?"true":"false");
 
-      // AreNeighborsByType(loc, nl) == ntype) {
-      // AreNeighborsByType(loc, nl) == ntype) {
       LOG(LOG_DBUG, "Loc: %s, nbrloc: %s, isntype:%s?::%s\n",
           loc.ToString().c_str(), nl.ToString().c_str(),
           NeighborTypeToString(ntype), is_neighbor_by_type ? "true" : "false");
@@ -160,9 +148,6 @@ void Mesh::GatherLeaves(const Loc& tgt, std::vector<Loc>& out) const {
   } else {
     CollectDescendants(relevant_node, out);
   }
-
-  LOG(LOG_DBG2, "- - GatherLeaves: Gathered %zu leaves: %s\n", out.size(),
-      PrintUtils::SerializeVec(out).c_str());
 }
 
 Loc Mesh::FindRelevantNode(const Loc& target_in) const {
@@ -199,10 +184,7 @@ Loc Mesh::FindRelevantNode(const Loc& target_in) const {
 
   // 3. --- Traverse Downwards ---
   for (int lvl = root_level_; lvl < target.level; ++lvl) {
-    LOG(LOG_DBG2, "- - - tgt_in: %s, lvl: %d\n", target.ToString().c_str(),
-        lvl);
     if (IsLeaf(current_node)) {
-      LOG(LOG_DBG2, "- - - Hit a leaf: %s\n", current_node.ToString().c_str());
       return current_node;  // Hit a leaf before target level (coarser nbr)
     }
 
