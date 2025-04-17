@@ -4,7 +4,7 @@
 
 #include "lb/iterative/iter.h"
 #include "common.h"
-#include "distrib/distributions.h"
+#include "distributions.h"
 #include "tabular_data.h"
 
 #include <gtest/gtest.h>

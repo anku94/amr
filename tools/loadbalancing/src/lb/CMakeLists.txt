@@ -44,6 +44,7 @@ target_include_directories(lb PUBLIC
 )
 
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
+target_link_libraries(lb PRIVATE lb_common)
 target_link_libraries(lb PUBLIC pdlfs-common glog::glog)
 target_link_libraries(lb PUBLIC MPI::MPI_CXX)
 if (GUROBI_FOUND)

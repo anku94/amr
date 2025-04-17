@@ -3,7 +3,7 @@
 //
 #include "common.h"
 #include "scaling/scale_sim.h"
-#include "distrib/distributions.h"
+#include "distributions.h"
 
 #include <gtest/gtest.h>
 
