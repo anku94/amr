@@ -2,12 +2,12 @@
 // Created by Ankush J on 8/12/22.
 //
 
-#include "single_ts_trace_reader.h"
-#include "trace_reader.h"
+#include "bench/single_ts_trace_reader.h"
+#include "bench/trace_reader.h"
 
-#include <common.h>
+#include "bench/graph.h"
+#include "common.h"
 #include <glog/logging.h>
-#include <graph.h>
 #include <gtest/gtest.h>
 
 // TEST(Topogen_Test, GenerateMesh) {

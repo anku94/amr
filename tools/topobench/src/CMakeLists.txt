@@ -1,56 +1,28 @@
 find_package(pdlfs-common CONFIG REQUIRED)
 find_package(glog CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)
+find_package (MPI REQUIRED)
 
 set(topo_srcs
-        bvar.cc
-        driver.cc
-        globals.cc
-        graph.cc
-        logger.cc
-        mesh_gen.cc
-        trace_reader.cc
-        single_ts_trace_reader.cc
+        bench/bvar.cc
+        bench/driver.cc
+        bench/globals.cc
+        bench/graph.cc
+        bench/logger.cc
+        bench/mesh_gen.cc
+        bench/trace_reader.cc
+        bench/single_ts_trace_reader.cc
       )
 
 add_library(topo ${topo_srcs} ${common_srcs})
 target_include_directories(topo PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${common_include}")
 target_link_libraries(topo pdlfs-common glog::glog gflags)
 
-add_executable(topobench topobench.cc)
-target_link_libraries(topobench topo)
+add_executable(topobench bench/topobench.cc)
+target_link_libraries(topobench topo MPI::MPI_CXX)
 
 # Find required packages
-find_package (MPI MODULE REQUIRED)
-string (REPLACE " " ";" MPI_CXX_COMPILE_FLAGS_LIST "${MPI_CXX_COMPILE_FLAGS}")
-
-#
-# make sure we link with MPI.  use "MPI_CXX_COMPILE_FLAGS_LIST"
-# prepared by the calling module.
-#
-foreach (tgt topo topobench)
-
-    # mpich on ub14 gives a leading space that we need to trim off
-    foreach (lcv ${MPI_CXX_COMPILE_FLAGS_LIST})
-        if (NOT ${lcv} STREQUAL "")
-            target_compile_options (${tgt}
-                    PUBLIC $<BUILD_INTERFACE:${lcv}>)
-        endif ()
-    endforeach ()
-
-    # XXX: have to do this one dir at a time
-    foreach (lcv ${MPI_CXX_INCLUDE_PATH})
-        target_include_directories (${tgt}
-                PUBLIC $<BUILD_INTERFACE:${lcv}>)
-    endforeach ()
-
-    foreach (lcv ${MPI_CXX_LIBRARIES})
-        target_link_libraries(${tgt} $<BUILD_INTERFACE:${lcv}>)
-    endforeach ()
-
-    set_property (TARGET ${tgt} APPEND PROPERTY LINK_FLAGS
-            ${MPI_CXX_LINK_FLAGS})
-
-endforeach ()
+# string (REPLACE " " ";" MPI_CXX_COMPILE_FLAGS_LIST "${MPI_CXX_COMPILE_FLAGS}")
+# target_link_libraries(topobench PUBLIC MPI::MPI_CXX)
 
 install(TARGETS topobench RUNTIME DESTINATION bin)
