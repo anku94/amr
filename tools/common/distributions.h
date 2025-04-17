@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "alias_method.h"
-#include "common.h"
 #include "config_parser.h"
+#include "logging.h"
 
 namespace amr {
 enum class Distribution {
@@ -157,8 +157,7 @@ class DistributionUtils {
 
   static void GenDistribution(DistributionOpts& d, std::vector<double>& costs,
                               int nblocks) {
-    logv(__LOG_ARGS__, LOG_INFO,
-         "[GenDistribution] Distribution: %s, nblocks: %d",
+    MLOG(MLOG_INFO, "[GenDistribution] Distribution: %s, nblocks: %d",
          DistributionOptsToString(d).c_str(), nblocks);
 
     costs.resize(nblocks);
@@ -325,13 +324,13 @@ class DistributionUtils {
 
     FILE* f = fopen(fname, "r");
     if (!f) {
-      logv(__LOG_ARGS__, LOG_ERRO, "Could not open file: %s", fname);
+      MLOG(MLOG_ERRO, "Could not open file: %s", fname);
     }
 
     for (int i = 0; i < nblocks; i++) {
       int rv = fscanf(f, "%lf", &costs[i]);
       if (rv == EOF) {
-        logv(__LOG_ARGS__, LOG_WARN, "EOF reached at %d blocks", i);
+        MLOG(MLOG_WARN, "EOF reached at %d blocks", i);
         break;
       }
     }

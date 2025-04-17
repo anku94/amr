@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "common.h"
+#include "logging.h"
 
 #include <memory>
 #include <mpi.h>
 
-#include "topo_common.h"
+#include "logging.h"
 #include "globals.h"
 
 #define NMAX_NEIGHBORS 2048

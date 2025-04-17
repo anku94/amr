@@ -5,7 +5,8 @@
 #include "trace_reader.h"
 
 #include "amr/globals.h"
-#include "topo_common.h"
+#include "common.h"
+#include "logging.h"
 
 namespace topo::bench {
 Status TraceReader::Read(int rank) {

@@ -4,7 +4,7 @@
 
 #include "graph.h"
 
-#include "common.h"
+#include "logging.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -28,7 +28,7 @@ void GraphGenerator::GenerateDynamic(int nnodes, int avg_deg) {
 bool Graph::SanityCheck() {
 #define FAIL_IF(x, msg)   \
   if (x) {                \
-    logv(__LOG_ARGS__, LOG_WARN, msg);  \
+    MLOG(MLOG_WARN, msg);  \
     check_passed = false; \
     goto check_completed; \
   }
@@ -53,7 +53,7 @@ bool Graph::SanityCheck() {
 #undef FAIL_IF
 check_completed:
   if (check_passed) {
-    logv(__LOG_ARGS__, LOG_DBUG, "Graph sanity check passed!");
+    MLOG(MLOG_DBG0, "Graph sanity check passed!");
   }
 
   return check_passed;
@@ -61,7 +61,7 @@ check_completed:
 
 bool Graph::AddEdge(int u, int v) {
   if (graph_[u][v] == true or graph_[v][u] == true) {
-    logv(__LOG_ARGS__, LOG_DBUG, "%d and %d are already connected", u, v);
+    MLOG(MLOG_DBG0, "%d and %d are already connected", u, v);
     return false;
   }
 
@@ -96,17 +96,17 @@ bool LeastConnectedGraph::AddEdge() {
   }
 
   if (v.second == -1) {
-    logv(__LOG_ARGS__, LOG_ERRO, "No viable node found!!");
+    MLOG(MLOG_ERRO, "No viable node found!!");
     return false;
   }
 
-  logv(__LOG_ARGS__, LOG_DBG2, "Least connected nodes: %d and %d (edgecnt: %d and %d)",
+  MLOG(MLOG_DBG2, "Least connected nodes: %d and %d (edgecnt: %d and %d)",
        u.second, v.second, u.first, v.first);
 
   bool add_ret = Graph::AddEdge(u.second, v.second);
 
   if (!add_ret) {
-    logv(__LOG_ARGS__, LOG_DBUG, "Edge add failed! Graph must be full.");
+    MLOG(MLOG_DBG0, "Edge add failed! Graph must be full.");
   }
 
   // Bump u and v's connectivity
@@ -137,10 +137,10 @@ void LeastConnectedGraph::PrintConnectivityStats() const {
   float nedge_var = e_x2 - e_x * e_x;
   float nedge_std = std::pow(nedge_var, 0.5);
 
-  logv(__LOG_ARGS__, LOG_INFO, "Nodes: %d, Edges: %d (Max: %d, %%Full: %.2f%%)", nnodes_,
+  MLOG(MLOG_INFO, "Nodes: %d, Edges: %d (Max: %d, %%Full: %.2f%%)", nnodes_,
        sum_x, nedges_compl, sum_x * 100.0 / nedges_compl);
 
-  logv(__LOG_ARGS__, LOG_INFO, "Edge Count, Max/Max: %d/%d (Mean += std: %.1f += %.1f)",
+  MLOG(MLOG_INFO, "Edge Count, Max/Max: %d/%d (Mean += std: %.1f += %.1f)",
        min_x, max_x, sum_x * 1.0 / nnodes_, nedge_std);
 }
 }  // namespace topo::bench

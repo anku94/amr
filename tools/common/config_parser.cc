@@ -2,17 +2,18 @@
 
 #include <algorithm>
 #include <fstream>
+#include "logging.h"
 
 namespace amr {
 void ConfigParser::Initialize(const char* file_path) {
   if (file_path == nullptr) {
-    logv(__LOG_ARGS__, LOG_WARN, "Config file not specified\n");
+    MLOG(MLOG_WARN, "Config file not specified\n");
     return;
   }
 
   if (!std::ifstream(file_path)) {
     // file path is optional, but do not specify an invalid one
-    logv(__LOG_ARGS__, LOG_ERRO, "Config file %s does not exist\n", file_path);
+    MLOG(MLOG_ERRO, "Config file %s does not exist\n", file_path);
     ABORT("Config file does not exist");
     return;
   }

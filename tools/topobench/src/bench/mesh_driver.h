@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "amr/mesh_utils.h"
-#include "topo_common.h"
+#include "logging.h"
 
 namespace topo::bench {
 struct MeshDriverOpts {

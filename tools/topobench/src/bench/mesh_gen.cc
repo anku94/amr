@@ -12,7 +12,7 @@ static void GatherNeighborCounts(int count_local) {
   int rv = MPI_Gather(&count_local, 1, MPI_INT, counts.data(), 1, MPI_INT, 0,
                       MPI_COMM_WORLD);
   if (rv != MPI_SUCCESS) {
-    logv(__LOG_ARGS__, LOG_ERRO, "MPI_Allgather failed");
+    MLOG(MLOG_ERRO, "MPI_Allgather failed");
     ABORT("MPI_Allgather failed");
   }
 
@@ -25,7 +25,7 @@ static void GatherNeighborCounts(int count_local) {
       // std::string(amr::Globals::driver_opts.job_dir) + "/" + fname;
   FILE *f = fopen(fpath.c_str(), "w");
   if (f == nullptr) {
-    logv(__LOG_ARGS__, LOG_ERRO, "Failed to open file: %s", fpath.c_str());
+    MLOG(MLOG_ERRO, "Failed to open file: %s", fpath.c_str());
     return;
   }
 
@@ -87,7 +87,7 @@ Status RingMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
 Status AllToAllMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   if (opts_.blocks_per_rank <= Globals::nranks and
       (opts_.blocks_per_rank % Globals::nranks == 0)) {
-    logv(__LOG_ARGS__, LOG_ERRO, "Invalid arguments");
+    MLOG(MLOG_ERRO, "Invalid arguments");
     ABORT("Invalid arguments");
   }
 
@@ -109,7 +109,7 @@ Status AllToAllMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
       int bid_i_off = bid_i + off;
       int nrl_bid_off = nrl_bid + off;
       int nrr_bid_off = nrr_bid + off;
-      logv(__LOG_ARGS__, LOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off,
+      MLOG(MLOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off,
            nrl_bid_off, nrr_bid_off);
 
       auto mb = std::make_shared<MeshBlock>(bid_i_off);
@@ -125,8 +125,7 @@ Status AllToAllMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
 Status SingleTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   Status s = Status::OK;
 
-  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
-          "Generating Mesh: From Trace (ts: %d)", ts);
+  MLOG(MLOG_INFO, "Generating Mesh: From Trace (ts: %d)", ts);
 
   s = reader_.Read(Globals::my_rank);
 
@@ -134,7 +133,7 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   auto msgs_rcv = reader_.GetMsgsRcvd();
 
   if (msgs_snd.size() != msgs_rcv.size()) {
-    logv(__LOG_ARGS__, LOG_WARN,
+    MLOG(MLOG_WARN,
          "[Rank %d] msg_send count is not the same as msg_rcv count",
          Globals::my_rank);
 
@@ -159,10 +158,10 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
 
   MeshGenerator::AddMeshBlock(mesh, mb);
 
-  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
-          "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"
-          "(full log in neighbor_counts.txt)",
-          Globals::my_rank, nbr_idx);
+  MLOGIFR0(MLOG_INFO,
+           "[GenerateMeshFromTrace] Rank: %d, Neighbors: %d\n"
+           "(full log in neighbor_counts.txt)",
+           Globals::my_rank, nbr_idx);
 
   GatherNeighborCounts(nbr_idx);
 
@@ -172,8 +171,7 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
 Status MultiTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   Status s = Status::OK;
 
-  logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
-          "Generating Mesh: From Trace (ts: %d)", ts);
+  MLOG(MLOG_INFO, "Generating Mesh: From Trace (ts: %d)", ts);
 
   s = reader_.Read(Globals::my_rank);
 
@@ -181,7 +179,7 @@ Status MultiTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   auto msgs_rcv = reader_.GetMsgsRcvd(ts);
 
   if (msgs_snd.size() != msgs_rcv.size()) {
-    logv(__LOG_ARGS__, LOG_WARN,
+    MLOG(MLOG_WARN,
          "[Rank %d] msg_send count is not the same as msg_rcv count",
          Globals::my_rank);
 

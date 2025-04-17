@@ -6,7 +6,7 @@
 
 #include "mesh.h"
 #include "print_utils.h"
-#include "topo_common.h"
+#include "logging.h"
 
 using namespace topo::amr;
 

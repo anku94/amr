@@ -7,7 +7,7 @@
 #include <mpi.h>
 
 #include "amr/globals.h"
-#include "common.h"
+#include "logging.h"
 #include "comm_mesh.h"
 #include "mesh_gen.h"
 

@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "amr/block.h"
-#include "common.h"
+#include "logging.h"
 
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
                                           std::chrono::duration<double>>;

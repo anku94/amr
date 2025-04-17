@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "globals.h"
+#include "logging.h"
 
 namespace amr {
 // fwd decl
@@ -23,8 +24,7 @@ class ConfigParser {
   T GetParamOrDefault(const std::string& key, const T& default_val) {
     auto it = params_.find(key);
     if (it == params_.end()) {
-      logv(__LOG_ARGS__, LOG_DBG2,
-           "Key %s not found in config file, using default value\n",
+      MLOG(MLOG_DBG2, "Key %s not found in config file, using default value\n",
            key.c_str());
       return default_val;
     }
@@ -39,8 +39,7 @@ class ConfigParser {
                                 const char* default_val) {
     auto it = params_.find(key);
     if (it == params_.end()) {
-      logv(__LOG_ARGS__, LOG_DBG2,
-           "Key %s not found in config file, using default value\n",
+      MLOG(MLOG_DBG2, "Key %s not found in config file, using default value\n",
            key.c_str());
       return default_val;
     }
@@ -65,7 +64,7 @@ class ConfigUtils {
     Initialize();
 
     if (!Globals::config) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Globals.config is not set\n");
+      MLOG(MLOG_DBG2, "Globals.config is not set\n");
       return default_val;
     }
 
@@ -77,7 +76,7 @@ class ConfigUtils {
     Initialize();
 
     if (!Globals::config) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Globals.config is not set\n");
+      MLOG(MLOG_DBG2, "Globals.config is not set\n");
       return default_val;
     }
 
@@ -87,21 +86,21 @@ class ConfigUtils {
  private:
   static void Initialize() {
     if (Globals::config != nullptr) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Globals.config already set\n");
+      MLOG(MLOG_DBG2, "Globals.config already set\n");
       return;
     }
 
     // Check if env var LB_CONFIG_PATH is set
     const char* env_var = std::getenv("DISTRIB_CONFIG_FPATH");
     if (env_var == nullptr) {
-      logv(__LOG_ARGS__, LOG_DBUG, "DISTRIB_CONFIG_FPATH not set\n");
+      MLOG(MLOG_DBG2, "DISTRIB_CONFIG_FPATH not set\n");
       return;
     }
 
     // Check if a file exists at the path
     struct stat statbuf;
     if (stat(env_var, &statbuf) != 0) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Config file %s does not exist\n", env_var);
+      MLOG(MLOG_DBG2, "Config file %s does not exist\n", env_var);
       return;
     }
 
@@ -110,8 +109,7 @@ class ConfigUtils {
       Globals::config =
           std::unique_ptr<ConfigParser>(new ConfigParser(env_var));
     } else {
-      logv(__LOG_ARGS__, LOG_DBUG, "Config file %s is not a regular file\n",
-           env_var);
+      MLOG(MLOG_DBG2, "Config file %s is not a regular file\n", env_var);
     }
   }
 };

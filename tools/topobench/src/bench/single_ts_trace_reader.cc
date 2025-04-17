@@ -1,11 +1,14 @@
 #include "single_ts_trace_reader.h"
 
+#include "common.h"
+#include "logging.h"
+
 namespace topo::bench {
 Status SingleTimestepTraceReader::Read(int rank) {
   Status s = Status::OK;
 
   MLOGIFR0(MLOG_INFO, "[TimelessTraceReader] Reading trace file: %s",
-          trace_file_.c_str());
+           trace_file_.c_str());
 
   if (trace_file_ == "") {
     MLOGIFR0(MLOG_ERRO, "[TimelessTraceReader] No trace file provided");
@@ -17,12 +20,12 @@ Status SingleTimestepTraceReader::Read(int rank) {
   }
 
   MLOGIFR0(MLOG_DBG0, "[TimelessTraceReader] Reading %s\n",
-       trace_file_.c_str());
+           trace_file_.c_str());
 
   FILE *f = fopen(trace_file_.c_str(), "r");
   if (f == nullptr) {
     MLOGIFR0(MLOG_ERRO, "[TimelessTraceReader] Read Failed: %s",
-         strerror(errno));
+             strerror(errno));
     s = Status::Error;
     return s;
   }
@@ -36,12 +39,10 @@ Status SingleTimestepTraceReader::Read(int rank) {
   int ret = fscanf(f, "%4095[^\n]\n", buf);
   while (!feof(f)) {
     ret = fscanf(f, "%4095[^\n]\n", buf);
-    if (ret == EOF or ret == 0)
-      break;
+    if (ret == EOF or ret == 0) break;
 
     s = ParseLine(buf, ret, rank);
-    if (s != Status::OK)
-      return s;
+    if (s != Status::OK) return s;
   }
 
   fclose(f);
@@ -54,7 +55,7 @@ Status SingleTimestepTraceReader::ParseLine(char *buf, size_t buf_sz,
                                             const int rank) {
   Status s = Status::OK;
 
-  logv(__LOG_ARGS__, LOG_DBG3, "[TimelessTraceReader] Parsing line: %s", buf);
+  MLOG(MLOG_DBG3, "[TimelessTraceReader] Parsing line: %s", buf);
 
   /* blk_id,blk_rank,nbr_id,nbr_rank,msgsz,isflx */
   int blk_id, blk_rank, nbr_id, nbr_rank, msgsz, isflx;
@@ -66,9 +67,8 @@ Status SingleTimestepTraceReader::ParseLine(char *buf, size_t buf_sz,
     return Status::Error;
   }
 
-  logv(__LOG_ARGS__, LOG_DBG3,
-       "[TimelessTraceReader] Msg (%d -> %d), msgsz: %dB", blk_rank, nbr_rank,
-       msgsz);
+  MLOG(MLOG_DBG3, "[TimelessTraceReader] Msg (%d -> %d), msgsz: %dB", blk_rank,
+       nbr_rank, msgsz);
 
   if (isflx) {
     return s;

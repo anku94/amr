@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "mesh.h"
-#include "topo_common.h"
+#include "logging.h"
 namespace topo::amr {
 struct PrintUtils {
   // Short code for a location: e.g. "012"

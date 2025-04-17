@@ -13,13 +13,13 @@
 #include "bvar.h"
 #include "common.h"
 #include "globals.h"
+#include "logging.h"
 #include "mesh_utils.h"
-#include "topo_common.h"
 #include "topo_types.h"
 
-#define MPI_CHECK(status, msg)         \
-  if (status != MPI_SUCCESS) {         \
-    logv(__LOG_ARGS__, LOG_ERRO, msg); \
+#define MPI_CHECK(status, msg) \
+  if (status != MPI_SUCCESS) { \
+    MLOG(MLOG_ERRO, msg);      \
   }
 
 namespace topo::amr {

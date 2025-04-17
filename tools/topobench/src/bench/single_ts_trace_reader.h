@@ -9,8 +9,7 @@
 
 #include "amr/globals.h"
 #include "common.h"
-
-#include "topo_common.h"
+#include "logging.h"
 
 typedef std::pair<int, int> RankSizePair;
 

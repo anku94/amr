@@ -7,7 +7,7 @@
 #include "amr_lb.h"
 #include "bench/comm_mesh.h"
 #include "bench/placement_utils.h"
-#include "topo_common.h"
+#include "logging.h"
 
 using PlacementArgs = ::amr::lb::PlacementArgs;
 using LoadBalance = ::amr::lb::LoadBalance;

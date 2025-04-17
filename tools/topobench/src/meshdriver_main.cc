@@ -3,7 +3,7 @@
 
 #include "bench/mesh_driver.h"
 #include "amr/mesh_utils.h"
-#include "topo_common.h"
+#include "logging.h"
 
 using namespace topo::amr;
 using namespace topo::bench;
