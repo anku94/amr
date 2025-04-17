@@ -1,0 +1,156 @@
+//
+// Created by Ankush J on 4/8/22.
+//
+
+#pragma once
+
+#include <mpi.h>
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "bvar.h"
+#include "common.h"
+#include "globals.h"
+#include "topo_common.h"
+
+#define MPI_CHECK(status, msg)         \
+  if (status != MPI_SUCCESS) {         \
+    logv(__LOG_ARGS__, LOG_ERRO, msg); \
+  }
+
+namespace topo::amr {
+//
+// NeighborBlock: represents a single neighbor relation
+//
+struct NeighborBlock {
+  int block_id;   // our block id
+  int peer_rank;  // rank hosting nbr block
+  int buf_id;     // ??
+  int msg_sz;     // ??j
+};
+
+//
+// MeshBlock: represents a single AMR block
+// - Holds local mesh relationships using NeighborBlock
+//
+class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
+ public:
+  MeshBlock(int block_id) : block_id_(block_id) {}
+  MeshBlock(const MeshBlock &other)
+      : block_id_(other.block_id_),
+        nbrvec_snd_(other.nbrvec_snd_),
+        nbrvec_rcv_(other.nbrvec_rcv_) {}
+
+  // AddNeighborSendRecv: add a neighbor to send to and recv from
+  // (Note that this currently takes two buf id's, even though we could share)
+  Status AddNeighborSendRecv(int block_id, int peer_rank, int msg_sz) {
+    Status s;
+    s = AddNeighborSend(block_id, peer_rank, msg_sz);
+    if (s != Status::OK) return s;
+    s = AddNeighborRecv(block_id, peer_rank, msg_sz);
+    return s;
+  }
+
+  // AddNeighborSend: add a neighbor to send to
+  // For convenience we only use one of sendbuf and recvbuf from a buf_id
+  Status AddNeighborSend(int block_id, int peer_rank, int msg_sz) {
+    int buf_id = nbrvec_snd_.size() + nbrvec_rcv_.size();
+    nbrvec_snd_.push_back({block_id, peer_rank, buf_id, msg_sz});
+
+    int total = nbrvec_snd_.size() + nbrvec_rcv_.size();
+
+    if (total > BoundaryData<>::kMaxNeighbor) {
+      MLOG(MLOG_ERRO, "Exceeded max neighbors");
+      ABORT("Exceeded max neighbors");
+
+      return Status::Error;
+    }
+
+    return Status::OK;
+  }
+
+  // AddNeighborRecv: add a neighbor to recv from
+  // For convenience we only use one of sendbuf and recvbuf from a buf_id
+  Status AddNeighborRecv(int block_id, int peer_rank, int msg_sz) {
+    int buf_id = nbrvec_snd_.size() + nbrvec_rcv_.size();
+    nbrvec_rcv_.push_back({block_id, peer_rank, buf_id, msg_sz});
+
+    int total = nbrvec_snd_.size() + nbrvec_rcv_.size();
+
+    if (total > BoundaryData<>::kMaxNeighbor) {
+      MLOG(MLOG_ERRO, "Exceeded max neighbors");
+      ABORT("Exceeded max neighbors");
+
+      return Status::Error;
+    }
+
+    return Status::OK;
+  }
+
+  // Print: print local mesh relationships
+  void Print() {
+    std::string nbrstr = "[Send] ";
+
+    for (auto nbr : nbrvec_snd_) {
+      nbrstr += std::to_string(nbr.block_id) + "/" +
+                std::to_string(nbr.peer_rank) + ",";
+    }
+
+    nbrstr += ", [Recv] ";
+    for (auto nbr : nbrvec_rcv_) {
+      nbrstr += std::to_string(nbr.block_id) + "/" +
+                std::to_string(nbr.peer_rank) + ",";
+    }
+
+    MLOG(MLOG_DBG0, "Rank %d, Block ID %d, Neighbors: %s", Globals::my_rank,
+         block_id_, nbrstr.c_str());
+  }
+
+  // AllocateBoundaryVariables: allocate MPI requests
+  Status AllocateBoundaryVariables() {
+    MLOG(MLOG_DBG0, "Allocating boundary variables");
+    pbval_ = std::make_unique<BoundaryVariable>(shared_from_this());
+    pbval_->SetupPersistentMPI();
+    MLOG(MLOG_DBG0, "Allocating boundary variables - DONE!");
+    return Status::OK;
+  }
+
+  Status DestroyBoundaryData() {
+    // pbval_.release();
+    pbval_.reset();
+    return Status::OK;
+  }
+
+  // StartReceiving: wraps bvar StartReceiving
+  void StartReceiving() { pbval_->StartReceiving(); }
+
+  // SendBoundaryBuffers: wraps bvar SendBoundaryBuffers
+  void SendBoundaryBuffers() { pbval_->SendBoundaryBuffers(); }
+
+  // ReceiveBoundaryBuffers: wraps bvar ReceiveBoundaryBuffers
+  void ReceiveBoundaryBuffers() { pbval_->ReceiveBoundaryBuffers(); }
+
+  // ReceiveBoundaryBuffersWithWait: wraps bvar ReceiveBoundaryBuffersWithWait
+  void ReceiveBoundaryBuffersWithWait() {
+    pbval_->ReceiveBoundaryBuffersWithWait();
+  }
+
+  // ClearBoundary: wraps bvar ClearBoundary
+  void ClearBoundary() { pbval_->ClearBoundary(); }
+
+  // BytesSent: wraps bvar BytesSent
+  uint64_t BytesSent() const { return pbval_->bytes_sent_; }
+
+  // BytesRcvd: wraps bvar BytesRcvd
+  uint64_t BytesRcvd() const { return pbval_->bytes_rcvd_; }
+
+ private:
+  friend class BoundaryVariable;
+  int block_id_;                             // our block id [0, nblocks)
+  std::unique_ptr<BoundaryVariable> pbval_;  // bvars (only one for now)
+  std::vector<NeighborBlock> nbrvec_snd_;    // nbrs we send to
+  std::vector<NeighborBlock> nbrvec_rcv_;    // nbrs we recv from
+};
+}  // namespace topo::amr
