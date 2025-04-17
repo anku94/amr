@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "bin_readers.h"
-#include "common.h"
+#include "logging.h"
 #include "policy.h"
 #include "policy_exec_ctx.h"
 #include "policy_stats.h"
@@ -29,7 +29,7 @@ struct BlockSimulatorOpts {
 
 #define FAIL_IF(cond, msg)             \
   if (cond) {                          \
-    logv(__LOG_ARGS__, LOG_ERRO, msg); \
+    MLOG(MLOG_ERRO, msg); \
     ABORT(msg);                        \
   }
 

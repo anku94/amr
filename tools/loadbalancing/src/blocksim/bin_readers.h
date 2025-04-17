@@ -8,12 +8,12 @@
 #include <climits>
 #include <string>
 
-#include "common.h"
+#include "logging.h"
 #include "reader_base.h"
 
 #define FAILIO_IFLT(x, y)                                                     \
   if (x < y) {                                                                \
-    logv(__LOG_ARGS__, LOG_ERRO, "Error reading file: %s\n", fpath_.c_str()); \
+    MLOG(MLOG_ERRO, "Error reading file: %s\n", fpath_.c_str()); \
     return -1;                                                                \
   }
 
@@ -57,7 +57,7 @@ class PeekableReader : public ReaderBase {
 
     n = fread(&next_ts_, sizeof(int), 1, fd_);
     if (n == 0 && feof(fd_)) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Reached end of file");
+      MLOG(MLOG_DBG0, "Reached end of file");
       return 0;
     } else {
       FAILIO_IFLT(n, 1);
@@ -104,7 +104,7 @@ class RefinementReader : public PeekableReader {
       derefs.resize(0);
     } else {
       // read request for a future sub_ts, error
-      logv(__LOG_ARGS__, LOG_ERRO, "Unexpected state in RefinementReader!!");
+      MLOG(MLOG_ERRO, "Unexpected state in RefinementReader!!");
       ABORT("Unexpected state in RefinementReader");
     }
 
@@ -161,11 +161,11 @@ class AssignmentReader : public PeekableReader {
     } else if (sub_ts < next_sub_ts) {
       // Should not happen with assignment reader, we expect
       // every sub_ts to have an entry
-      logv(__LOG_ARGS__, LOG_WARN, "UNEXPECTED: sub_ts < next_sub_ts");
+      MLOG(MLOG_WARN, "UNEXPECTED: sub_ts < next_sub_ts");
       blocks.resize(0);
     } else {
       // read request for a future sub_ts, error
-      logv(__LOG_ARGS__, LOG_ERRO, "Unexpected state in RefinementReader!!");
+      MLOG(MLOG_ERRO, "Unexpected state in RefinementReader!!");
       ABORT("Unexpected state in RefinementReader");
     }
 

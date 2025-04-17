@@ -46,7 +46,7 @@ int logv(pdlfs::Logger *info_log, const char *file, int line, int level,
 }
 
 int loge(const char *op, const char *path) {
-  return logv(__LOG_ARGS__, LOG_ERRO, "!%s(%s): %s", strerror(errno), op, path);
+  return MLOG(MLOG_ERRO, "!%s(%s): %s", strerror(errno), op, path);
 }
 
 void msg_abort(int err, const char *msg, const char *func, const char *file,

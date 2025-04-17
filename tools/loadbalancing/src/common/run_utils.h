@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "common.h"
+#include "logging.h"
 #include "lb_policies.h"
 
 namespace amr {

@@ -31,10 +31,10 @@ struct PrintUtils {
     }
 
     // Log this node and its leaves
-    LOG(LOG_INFO, "%*sNode %s L%d (%lld,%lld,%lld): Leaves:", indent * 2, "",
+    LOG(MLOG_INFO, "%*sNode %s L%d (%lld,%lld,%lld): Leaves:", indent * 2, "",
         Code(loc).c_str(), loc.level, loc.locv.x, loc.locv.y, loc.locv.z);
-    for (auto& code : leafCodes) LOG(LOG_INFO, " %s", code.c_str());
-    LOG(LOG_INFO, "\n");
+    for (auto& code : leafCodes) LOG(MLOG_INFO, " %s", code.c_str());
+    LOG(MLOG_INFO, "\n");
 
     // Recurse into non-leaf children
     for (auto& c : children) {
@@ -68,16 +68,16 @@ struct PrintUtils {
     int vercnt = block.vertex.size();
     int totcnt = facecnt + edgecnt + vercnt;
 
-    LOG(LOG_INFO, "Block %2d: %3d nbrs (f/e/v: %2d/%2d/%2d)\n", bid, totcnt,
+    LOG(MLOG_INFO, "Block %2d: %3d nbrs (f/e/v: %2d/%2d/%2d)\n", bid, totcnt,
         facecnt, edgecnt, vercnt);
 
-    LOG(LOG_INFO, "  - face nbrs: %s\n", SerializeVec(block.face).c_str());
-    LOG(LOG_INFO, "  - edge nbrs: %s\n", SerializeVec(block.edge).c_str());
-    LOG(LOG_INFO, "  - vertex nbrs: %s\n", SerializeVec(block.vertex).c_str());
+    LOG(MLOG_INFO, "  - face nbrs: %s\n", SerializeVec(block.face).c_str());
+    LOG(MLOG_INFO, "  - edge nbrs: %s\n", SerializeVec(block.edge).c_str());
+    LOG(MLOG_INFO, "  - vertex nbrs: %s\n", SerializeVec(block.vertex).c_str());
   }
 
   static void PrintOmesh(Mesh::OrderedMesh& om) {
-    LOG(LOG_INFO, "Ordered mesh with %d blocks:\n", om.nblocks);
+    LOG(MLOG_INFO, "Ordered mesh with %d blocks:\n", om.nblocks);
     for (int i = 0; i < om.nblocks; ++i) {
       PrintOmeshBlock(om, i);
     }
@@ -87,7 +87,7 @@ struct PrintUtils {
                              int vec_id, const char* vec_name) {
     auto it = std::find(vec.begin(), vec.end(), val);
     if (it == vec.end()) {
-      LOG(LOG_ERROR, "!ERROR! Block %d not found in vec::%s of block %d\n", val,
+      LOG(MLOG_ERROR, "!ERROR! Block %d not found in vec::%s of block %d\n", val,
           vec_name, vec_id);
       exit(1);
     }
@@ -96,27 +96,27 @@ struct PrintUtils {
   // for each block i, if it has a nbr j, j should have i
   static void ValidateOmesh(const Mesh::OrderedMesh& om) {
     for (int i = 0; i < om.nblocks; ++i) {
-      LOG(LOG_INFO, "Validating block %d...", i);
+      LOG(MLOG_INFO, "Validating block %d...", i);
 
-      LOG(LOG_INFO, " checking faces ...");
+      LOG(MLOG_INFO, " checking faces ...");
       for (int j : om.nbrmap[i].face) {
         AssertValInVec(om.nbrmap[j].face, i, j, "face");
       }
 
-      LOG(LOG_INFO, " checking edges ...");
+      LOG(MLOG_INFO, " checking edges ...");
       for (int j : om.nbrmap[i].edge) {
         AssertValInVec(om.nbrmap[j].edge, i, j, "edge");
       }
 
-      LOG(LOG_INFO, " checking vertices ...");
+      LOG(MLOG_INFO, " checking vertices ...");
       for (int j : om.nbrmap[i].vertex) {
         AssertValInVec(om.nbrmap[j].vertex, i, j, "vertex");
       }
 
-      LOG(LOG_INFO, " done\n");
+      LOG(MLOG_INFO, " done\n");
     }
 
-    LOG(LOG_INFO, "Validation passed\n");
+    LOG(MLOG_INFO, "Validation passed\n");
   }
 };
 }  // namespace amr

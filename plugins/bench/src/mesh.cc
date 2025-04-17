@@ -41,7 +41,7 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
     if (it != idmap.end() && it->second != id) {
       bool is_neighbor_by_type = AreNeighborsByType(loc, nl) == ntype;
 
-      LOG(LOG_DBUG, "Loc: %s, nbrloc: %s, isntype:%s?::%s\n",
+      LOG(MLOG_DBG0, "Loc: %s, nbrloc: %s, isntype:%s?::%s\n",
           loc.ToString().c_str(), nl.ToString().c_str(),
           NeighborTypeToString(ntype), is_neighbor_by_type ? "true" : "false");
 
@@ -54,7 +54,7 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
   std::sort(nbrs.begin(), nbrs.end());
   nbrs.erase(std::unique(nbrs.begin(), nbrs.end()), nbrs.end());
 
-  LOG(LOG_DBG2, "+ Gathered %zu nbrs: %s\n", nbrs.size(),
+  LOG(MLOG_DBG2, "+ Gathered %zu nbrs: %s\n", nbrs.size(),
       PrintUtils::SerializeVec(nbrs).c_str());
 }
 

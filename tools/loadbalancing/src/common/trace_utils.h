@@ -9,7 +9,7 @@
 #include <regex>
 #include <string>
 
-#include "common.h"
+#include "logging.h"
 #include "policy.h"
 
 namespace amr {
@@ -18,11 +18,11 @@ class Utils {
   static int EnsureDir(pdlfs::Env* env, const std::string& dir_path) {
     pdlfs::Status s = env->CreateDir(dir_path.c_str());
     if (s.ok()) {
-      logv(__LOG_ARGS__, LOG_INFO, "\t- Created successfully.");
+      MLOG(MLOG_INFO, "\t- Created successfully.");
     } else if (s.IsAlreadyExists()) {
-      logv(__LOG_ARGS__, LOG_INFO, "\t- Already exists.");
+      MLOG(MLOG_INFO, "\t- Already exists.");
     } else {
-      logv(__LOG_ARGS__, LOG_ERRO,
+      MLOG(MLOG_ERRO,
            "Failed to create output directory: %s (Reason: %s)",
            dir_path.c_str(), s.ToString().c_str());
       return -1;
@@ -54,17 +54,17 @@ class Utils {
   static std::vector<std::string> LocateTraceFiles(
       pdlfs::Env* env, const std::string& search_dir,
       const std::vector<int>& events) {
-    logv(__LOG_ARGS__, LOG_INFO,
+    MLOG(MLOG_INFO,
          "[SimulateTrace] Looking for trace files in: \n\t%s",
          search_dir.c_str());
 
     std::vector<std::string> all_files;
     env->GetChildren(search_dir.c_str(), &all_files);
 
-    logv(__LOG_ARGS__, LOG_DBG2, "Enumerating directory: %s",
+    MLOG(MLOG_DBG2, "Enumerating directory: %s",
          search_dir.c_str());
     for (auto& f : all_files) {
-      logv(__LOG_ARGS__, LOG_DBG2, "- File: %s", f.c_str());
+      MLOG(MLOG_DBG2, "- File: %s", f.c_str());
     }
 
     // Disabled \d as we only need two specific evts
@@ -83,12 +83,12 @@ class Utils {
 
     std::vector<std::string> relevant_files;
     for (auto& pattern : regex_patterns) {
-      logv(__LOG_ARGS__, LOG_DBG2, "Searching by pattern: %s (nevents: %zu)",
+      MLOG(MLOG_DBG2, "Searching by pattern: %s (nevents: %zu)",
            pattern.c_str(), events.size());
       relevant_files = FilterByRegex(all_files, pattern, events);
 
       for (auto& f : relevant_files) {
-        logv(__LOG_ARGS__, LOG_DBG2, "- Match: %s", f.c_str());
+        MLOG(MLOG_DBG2, "- Match: %s", f.c_str());
       }
 
       if (!relevant_files.empty()) break;
@@ -102,7 +102,7 @@ class Utils {
 
     for (auto& f : relevant_files) {
       std::string full_path = std::string(search_dir) + "/" + f;
-      logv(__LOG_ARGS__, LOG_INFO, "[ProfSetReader] Adding trace file: %s",
+      MLOG(MLOG_INFO, "[ProfSetReader] Adding trace file: %s",
            full_path.c_str());
       all_fpaths.push_back(full_path);
     }
@@ -121,7 +121,7 @@ class Utils {
     } else if (policy == "add") {
       return ProfTimeCombinePolicy::kAdd;
     } else {
-      logv(__LOG_ARGS__, LOG_ERRO, "Invalid time combine policy: %s",
+      MLOG(MLOG_ERRO, "Invalid time combine policy: %s",
            policy.c_str());
       ABORT("Invalid time combine policy");
     }
@@ -153,7 +153,7 @@ class Utils {
     if (!env->FileExists(parent_dir.c_str())) {
       s = env->CreateDir(parent_dir.c_str());
       if (!s.ok()) {
-        logv(__LOG_ARGS__, LOG_ERRO, "Error creating dir: %s",
+        MLOG(MLOG_ERRO, "Error creating dir: %s",
              parent_dir.c_str());
         return;
       }
@@ -163,18 +163,18 @@ class Utils {
 
     s = env->NewWritableFile(fpath.c_str(), &fh);
     if (!s.ok()) {
-      logv(__LOG_ARGS__, LOG_ERRO, "Error opening file: %s", fpath.c_str());
+      MLOG(MLOG_ERRO, "Error opening file: %s", fpath.c_str());
       return;
     }
 
     s = fh->Append(content);
     if (!s.ok()) {
-      logv(__LOG_ARGS__, LOG_ERRO, "Error opening file: %s", fpath.c_str());
+      MLOG(MLOG_ERRO, "Error opening file: %s", fpath.c_str());
     }
 
     s = fh->Close();
     if (!s.ok()) {
-      logv(__LOG_ARGS__, LOG_ERRO, "Error opening file: %s", fpath.c_str());
+      MLOG(MLOG_ERRO, "Error opening file: %s", fpath.c_str());
     }
   }
 };

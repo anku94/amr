@@ -4,9 +4,12 @@
 
 #include "lb_policies.h"
 
+#include <algorithm>
+#include <numeric>
+
 #include "assignment_cache.h"
-#include "common.h"
 #include "constants.h"
+#include "logging.h"
 #include "policy.h"
 #include "policy_utils.h"
 #include "policy_wopts.h"
@@ -17,10 +20,6 @@ int LoadBalancePolicies::AssignBlocksCached(const char* policy_name,
                                             std::vector<int>& ranklist,
                                             int nranks, int my_rank,
                                             MPI_Comm comm) {
-  if (my_rank != 0) {
-    decrement_log_level_once();
-  }
-
   static AssignmentCache cache(Constants::kMaxAssignmentCacheReuse);
   int rv = 0;
 
@@ -28,12 +27,12 @@ int LoadBalancePolicies::AssignBlocksCached(const char* policy_name,
 
   if (policy.skip_cache) {
     if (my_rank == 0) {
-      logv(__LOG_ARGS__, LOG_INFO, "Skipping cache");
+      MLOG(MLOG_INFO, "Skipping cache");
     }
 
     bool cache_ret = cache.Get(costlist.size(), ranklist);
     if (cache_ret) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Cache hit");
+      MLOG(MLOG_DBG0, "Cache hit");
       return 0;
     }
   }
@@ -197,9 +196,9 @@ int LoadBalancePolicies::AssignBlocksContiguous(
           << "There is at least one process which has no MeshBlock" << std::endl
           << "Decrease the number of processes or use smaller MeshBlocks."
           << std::endl;
-      logv(__LOG_ARGS__, LOG_WARN, "%s", msg.str().c_str());
+      MLOG(MLOG_WARN, "%s", msg.str().c_str());
       ABORT(msg.str().c_str());
-      // logv(__LOG_ARGS__, LOG_WARN, "Thugs don't abort on fatal errors.");
+      // MLOG(MLOG_WARN, "Thugs don't abort on fatal errors.");
       return -1;
     }
     my_cost += costlist[block_id];

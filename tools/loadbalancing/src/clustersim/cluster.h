@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "logging.h"
 
 #include <algorithm>
 #include <cmath>
@@ -97,7 +97,7 @@ void Cluster(const std::vector<int>& costlist, std::vector<int>& costlist_new,
   double costlist_avg =
       std::accumulate(costlist.begin(), costlist.end(), 0.0) / costlist.size();
   mean_rel_error = mse_sqrt / costlist_avg;
-  logf(LOG_DBUG, "K: %d, mean_rel_error: %.1f%%, max_rel_error: %.1f%%", k,
+  logf(MLOG_DBG0, "K: %d, mean_rel_error: %.1f%%, max_rel_error: %.1f%%", k,
        mean_rel_error * 100, max_rel_error * 100);
 }
 }  // namespace amr

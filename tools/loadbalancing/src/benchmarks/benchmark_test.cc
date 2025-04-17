@@ -3,7 +3,7 @@
 //
 
 #include "lb/iterative/iter.h"
-#include "common.h"
+#include "logging.h"
 #include "distributions.h"
 #include "tabular_data.h"
 
@@ -29,7 +29,7 @@ class CustomRow : public TableRow {
   }
 };
 
-TEST_F(BenchmarkTest, BasicTest) { logv(__LOG_ARGS__, LOG_INFO, "HelloWorld!\n"); }
+TEST_F(BenchmarkTest, BasicTest) { MLOG(MLOG_INFO, "HelloWorld!\n"); }
 
 TEST_F(BenchmarkTest, TabularTest) {
   TabularData table;

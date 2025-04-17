@@ -1,7 +1,7 @@
 //
 // Created by Ankush J on 7/4/23.
 //
-#include "common.h"
+#include "logging.h"
 #include "iterative/solver.h"
 #include "lb_policies.h"
 #include "policy_wopts.h"
@@ -24,7 +24,7 @@ int LoadBalancePolicies::AssignBlocksCppIter(
     max_iters = config_max_iters;
   }
 
-  logv(__LOG_ARGS__, LOG_DBUG, "[CDPI] Max iters: %d", max_iters);
+  MLOG(MLOG_DBG0, "[CDPI] Max iters: %d", max_iters);
 
   double avg_cost, max_cost_lpt, max_cost_cpp, max_cost_iter;
 
@@ -39,9 +39,9 @@ int LoadBalancePolicies::AssignBlocksCppIter(
   solver.AssignBlocks(costlist, ranklist, nranks, max_iters);
   Solver::AnalyzePlacement(costlist, ranklist, nranks, avg_cost, max_cost_iter);
 
-  logv(__LOG_ARGS__, LOG_DBUG, "IterativeSolver finished. Took %d iters.",
+  MLOG(MLOG_DBG0, "IterativeSolver finished. Took %d iters.",
        iters);
-  logv(__LOG_ARGS__, LOG_DBUG,
+  MLOG(MLOG_DBG0,
        "Initial Cost: %.0lf, Target Cost: %.0lf.\n"
        "\t- Avg Cost: %.0lf, Max Cost: %.0lf",
        max_cost_cpp, max_cost_lpt, avg_cost, max_cost_iter);

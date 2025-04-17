@@ -51,17 +51,17 @@ void ParseOptions(int argc, char* argv[]) {
   options.env = pdlfs::Env::Default();
 
   if (options.output_dir.empty()) {
-    logv(__LOG_ARGS__, LOG_ERRO, "Output directory not specified\n");
+    MLOG(MLOG_ERRO, "Output directory not specified\n");
     PrintHelp(argc, argv);
   }
 
   if (!options.env->FileExists(options.output_dir.c_str())) {
-    logv(__LOG_ARGS__, LOG_ERRO, "Output directory does not exist\n");
+    MLOG(MLOG_ERRO, "Output directory does not exist\n");
     PrintHelp(argc, argv);
   }
 
   if (options.nblocks_beg < 0 || options.nblocks_end < 0) {
-    logv(__LOG_ARGS__, LOG_ERRO, "Block size not specified\n");
+    MLOG(MLOG_ERRO, "Block size not specified\n");
     PrintHelp(argc, argv);
   }
 }
@@ -79,12 +79,12 @@ int main(int argc, char* argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &nmpiranks);
 
   if (nmpiranks == 1) {
-    logv(__LOG_ARGS__, LOG_INFO, "Single rank, running Serial");
+    MLOG(MLOG_INFO, "Single rank, running Serial");
     sim.Run();
   } else {
     if (mympirank == 0) {
-      logv(__LOG_ARGS__, LOG_INFO, "Running Parallel with %d ranks", nmpiranks);
-      logv(__LOG_ARGS__, LOG_INFO,
+      MLOG(MLOG_INFO, "Running Parallel with %d ranks", nmpiranks);
+      MLOG(MLOG_INFO,
            "Warning: AssignBlocks can not tell the difference between policy "
            "nranks and computation nranks, so make sure you have enough.");
     }

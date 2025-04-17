@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "common.h"
+#include "logging.h"
 #include "lb_policies.h"
 #include "policy_wopts.h"
 #include "tools.h"
@@ -24,7 +24,7 @@ class ILPSolver {
         nblocks_(cost_list.size()),
         nranks_(nranks),
         assign_vars_(nblocks_, std::vector<GRBVar>(nranks_)) {
-    logv(__LOG_ARGS__, LOG_INFO, "[ILPSolver] Opts: %s",
+    MLOG(MLOG_INFO, "[ILPSolver] Opts: %s",
          opts_.ToString().c_str());
   }
 
@@ -105,7 +105,7 @@ class ILPSolver {
 
     double disorder = amr::PolicyTools::GetDisorder(rank_list_heuristic);
 
-    logv(__LOG_ARGS__, LOG_INFO,
+    MLOG(MLOG_INFO,
          "Heuristic solution stats.\n"
          "\tdisord:\t%.2lf\n"
          "\trt_avg: \t%.2lf\n"

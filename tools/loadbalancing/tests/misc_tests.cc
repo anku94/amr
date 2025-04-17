@@ -65,7 +65,7 @@ TEST_F(MiscTest, RefReaderTest) {
 
   do {
     rv = reader.ReadTimestep(ts, sub_ts, refs, derefs);
-    logv(__LOG_ARGS__, LOG_DBUG,
+    MLOG(MLOG_DBG0,
          "rv: %d, ts: %d, sub_ts: %d, refs: %s, derefs: %s", rv, ts, sub_ts,
          SerializeVector(refs, 10).c_str(),
          SerializeVector(derefs, 10).c_str());
@@ -85,7 +85,7 @@ TEST_F(MiscTest, AssignReaderTest) {
 
   do {
     rv = reader.ReadTimestep(ts, sub_ts, blocks);
-    logv(__LOG_ARGS__, LOG_DBUG, "rv: %d, ts: %d, sub_ts: %d, blocks: %s", rv,
+    MLOG(MLOG_DBG0, "rv: %d, ts: %d, sub_ts: %d, blocks: %s", rv,
          ts, sub_ts, SerializeVector(blocks, 10).c_str());
     sub_ts++;
 
@@ -121,27 +121,27 @@ TEST_F(MiscTest, prof_reader_test) {
 
   times.resize(0);
   rv = reader.ReadTimestep(-1, times, nlines_read);
-  logv(__LOG_ARGS__, LOG_DBUG, "RV: %d, Times: %s", rv,
+  MLOG(MLOG_DBG0, "RV: %d, Times: %s", rv,
        SerializeVector(times, 10).c_str());
 
   times.resize(0);
   rv = reader.ReadTimestep(0, times, nlines_read);
-  logv(__LOG_ARGS__, LOG_DBUG, "RV: %d, Times: %s", rv,
+  MLOG(MLOG_DBG0, "RV: %d, Times: %s", rv,
        SerializeVector(times, 10).c_str());
 
   times.resize(0);
   rv = reader.ReadTimestep(1, times, nlines_read);
-  logv(__LOG_ARGS__, LOG_DBUG, "RV: %d, Times: %s", rv,
+  MLOG(MLOG_DBG0, "RV: %d, Times: %s", rv,
        SerializeVector(times, 10).c_str());
 
   times.resize(0);
   rv = reader.ReadTimestep(2, times, nlines_read);
-  logv(__LOG_ARGS__, LOG_DBUG, "RV: %d, Times: %s", rv,
+  MLOG(MLOG_DBG0, "RV: %d, Times: %s", rv,
        SerializeVector(times, 10).c_str());
 
   times.resize(0);
   rv = reader.ReadTimestep(3, times, nlines_read);
-  logv(__LOG_ARGS__, LOG_DBUG, "RV: %d, Times: %s", rv,
+  MLOG(MLOG_DBG0, "RV: %d, Times: %s", rv,
        SerializeVector(times, 10).c_str());
 }
 
@@ -158,7 +158,7 @@ TEST_F(MiscTest, prof_set_reader_test) {
 
   do {
     rv = reader.ReadTimestep(sub_ts, times);
-    logv(__LOG_ARGS__, LOG_DBUG, "[PSRTest] TS: %d, RV: %d, Times: %s", sub_ts,
+    MLOG(MLOG_DBG0, "[PSRTest] TS: %d, RV: %d, Times: %s", sub_ts,
          rv, SerializeVector(times, 10).c_str());
     sub_ts++;
   } while (rv);
@@ -171,9 +171,9 @@ TEST_F(MiscTest, ExtrapolateCosts1) {
   std::vector<double> costs_cur;
 
   PolicyUtils::ExtrapolateCosts3D(costs_prev, refs, derefs, costs_cur);
-  logv(__LOG_ARGS__, LOG_DBUG, "Costs Prev: %s",
+  MLOG(MLOG_DBG0, "Costs Prev: %s",
        SerializeVector(costs_prev, 10).c_str());
-  logv(__LOG_ARGS__, LOG_DBUG, "Costs Cur: %s",
+  MLOG(MLOG_DBG0, "Costs Cur: %s",
        SerializeVector(costs_cur, 10).c_str());
   AssertApproxEqual(costs_cur, {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
 }
@@ -185,9 +185,9 @@ TEST_F(MiscTest, ExtrapolateCosts2) {
   std::vector<double> costs_cur;
 
   PolicyUtils::ExtrapolateCosts3D(costs_prev, refs, derefs, costs_cur);
-  logv(__LOG_ARGS__, LOG_DBUG, "Costs Prev: %s",
+  MLOG(MLOG_DBG0, "Costs Prev: %s",
        SerializeVector(costs_prev, 10).c_str());
-  logv(__LOG_ARGS__, LOG_DBUG, "Costs Cur: %s",
+  MLOG(MLOG_DBG0, "Costs Cur: %s",
        SerializeVector(costs_cur, 10).c_str());
   AssertApproxEqual(costs_cur, {4.5});
 }
@@ -200,9 +200,9 @@ TEST_F(MiscTest, ExtrapolateCosts3) {
   std::vector<double> costs_cur;
 
   PolicyUtils::ExtrapolateCosts3D(costs_prev, refs, derefs, costs_cur);
-  logv(__LOG_ARGS__, LOG_DBUG, "Costs Prev: %s",
+  MLOG(MLOG_DBG0, "Costs Prev: %s",
        SerializeVector(costs_prev, 10).c_str());
-  logv(__LOG_ARGS__, LOG_DBUG, "Costs Cur: %s",
+  MLOG(MLOG_DBG0, "Costs Cur: %s",
        SerializeVector(costs_cur, 10).c_str());
   AssertApproxEqual(costs_cur, {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 5.5});
 }
@@ -214,7 +214,7 @@ TEST_F(MiscTest, BinProfReaderTest) {
   while (true) {
     int nread = bpreader.ReadNextTimestep(times);
     if (nread == -1) break;
-    logv(__LOG_ARGS__, LOG_INFO, "Times: %s",
+    MLOG(MLOG_INFO, "Times: %s",
          SerializeVector(times, 10).c_str());
   }
 }

@@ -1,5 +1,5 @@
 #include "amr_monitor.h"
-#include "common.h"
+#include "logging.h"
 
 #include <cstdio>
 #include <mpi.h>
@@ -23,7 +23,7 @@ int MPI_Init(int* argc, char*** argv) {
       std::make_unique<amr::AMRMonitor>(pdlfs::Env::Default(), rank, nranks);
 
   if (rank == 0) {
-    logv(__LOG_ARGS__, LOG_INFO, "AMRMonitor initialized on rank %d", rank);
+    MLOG(MLOG_INFO, "AMRMonitor initialized on rank %d", rank);
   }
 
   return rv;

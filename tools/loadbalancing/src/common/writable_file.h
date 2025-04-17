@@ -7,7 +7,7 @@
 #include <pdlfs-common/env.h>
 #include <pdlfs-common/status.h>
 
-#include "common.h"
+#include "logging.h"
 
 #define SAFE_IO(func, msg) \
   s = func;                \
@@ -23,7 +23,7 @@ class WritableFile {
  public:
   WritableFile(pdlfs::Env* const env, const std::string& fpath) : env_(env) {
     if (env_->FileExists(fpath.c_str())) {
-      logv(__LOG_ARGS__, LOG_WARN, "Overwriting file: %s", fpath.c_str());
+      MLOG(MLOG_WARN, "Overwriting file: %s", fpath.c_str());
       env_->DeleteFile(fpath.c_str());
     }
 

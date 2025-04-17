@@ -1,7 +1,7 @@
 //
 // Created by Ankush J on 7/13/23.
 //
-#include "common.h"
+#include "logging.h"
 #include "scaling/scale_sim.h"
 #include "distributions.h"
 

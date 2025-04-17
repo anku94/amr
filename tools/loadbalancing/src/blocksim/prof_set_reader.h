@@ -11,7 +11,7 @@ class ProfSetReader {
   explicit ProfSetReader(const std::vector<std::string>& fpaths,
                          ProfTimeCombinePolicy combine_policy)
       : nblocks_prev_(0) {
-    logv(__LOG_ARGS__, LOG_INFO, "[ProfSetReader] Combine Policy: %s",
+    MLOG(MLOG_INFO, "[ProfSetReader] Combine Policy: %s",
          Utils::GetProfTimeCombinePolicyStr(combine_policy).c_str());
 
     for (auto& fpath : fpaths) {
@@ -40,7 +40,7 @@ class ProfSetReader {
       nblocks = std::max(nblocks, rnblocks);
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Blocks read: %d", nblocks);
+    MLOG(MLOG_DBG0, "Blocks read: %d", nblocks);
 
     if (nblocks > 0) {
       nblocks_prev_ = nblocks;
@@ -64,7 +64,7 @@ class ProfSetReader {
       nblocks = std::max(nblocks, rnblocks);
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Blocks read: %d", nblocks);
+    MLOG(MLOG_DBG0, "Blocks read: %d", nblocks);
 
     if (nblocks > 0) {
       nblocks_prev_ = nblocks;

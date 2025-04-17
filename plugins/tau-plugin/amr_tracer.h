@@ -23,7 +23,7 @@ const char* GetLogDir() {
   if (dir_handle) {
     closedir(dir_handle);
   } else {
-    logv(__LOG_ARGS__, LOG_ERRO, "Unable to verify TAU_AMR_LOGDIR: %s", strerror(errno));
+    MLOG(MLOG_ERRO, "Unable to verify TAU_AMR_LOGDIR: %s", strerror(errno));
     ABORT("Unable to verify TAU_AMR_LOGDIR");
   }
 
@@ -117,7 +117,7 @@ class AMRTracer {
   void RegisterSend(uint64_t msg_tag, uint64_t dest, uint64_t msg_sz,
                     uint64_t timestamp) {
     // if (rank_ == 0) {
-    // logv(__LOG_ARGS__, LOG_DBUG, "SendMsg, Src: %" PRIu64 ", Dest: %" PRIu64, rank_, dest);
+    // MLOG(MLOG_DBG0, "SendMsg, Src: %" PRIu64 ", Dest: %" PRIu64, rank_, dest);
     // }
 
     // msglog_->LogSend(msg_tag, dest, msg_sz, timestamp);
@@ -126,7 +126,7 @@ class AMRTracer {
   void RegisterRecv(uint64_t msg_tag, uint64_t src, uint64_t msg_sz,
                     uint64_t timestamp) {
     // if (rank_ == 0) {
-    // logv(__LOG_ARGS__, LOG_DBUG, "RecvMsg, Src: %" PRIu64 ", Dest: %" PRIu64, src, rank_);
+    // MLOG(MLOG_DBG0, "RecvMsg, Src: %" PRIu64 ", Dest: %" PRIu64, src, rank_);
     // }
 
     // msglog_->LogMsg(src, timestep_, PhaseToStr(), msg_tag, 1, msg_sz,
@@ -137,8 +137,8 @@ class AMRTracer {
 
   void PrintStats() {
     if (rank_ == 0) {
-      logv(__LOG_ARGS__, LOG_INFO, "Num TimeSteps:\t %d", timestep_);
-      logv(__LOG_ARGS__, LOG_INFO, "Num Redistributions:\t %d", num_redistrib_);
+      MLOG(MLOG_INFO, "Num TimeSteps:\t %d", timestep_);
+      MLOG(MLOG_INFO, "Num Redistributions:\t %d", num_redistrib_);
     }
   }
 

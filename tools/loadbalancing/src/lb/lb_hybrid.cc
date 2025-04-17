@@ -1,11 +1,12 @@
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 #include <queue>
 
-#include "common.h"
 #include "iterative/solver.h"
 #include "lb_policies.h"
 #include "lb_util.h"
+#include "logging.h"
 #include "policy_utils.h"
 #include "policy_wopts.h"
 
@@ -15,7 +16,7 @@ class HybridAssignment {
  public:
   HybridAssignment(int num_lpt)
       : num_lpt_(num_lpt), unassigned_first_(-1), unassigned_last_(-1) {
-    logv(__LOG_ARGS__, LOG_DBUG, "[HybridPolicy] num_lpt: %d", num_lpt_);
+    MLOG(MLOG_DBG0, "[HybridPolicy] num_lpt: %d", num_lpt_);
   }
 
   int AssignBlocksLPT(const int nblocks, const int nranks,
@@ -29,7 +30,7 @@ class HybridAssignment {
   void AssertAllAssigned() const {
     for (int i = 0; i < ranklist_.size(); i++) {
       if (ranklist_[i] == -1) {
-        logv(__LOG_ARGS__, LOG_ERRO, "Block %d not assigned", i);
+        MLOG(MLOG_ERRO, "Block %d not assigned", i);
         ABORT("Some blocks not assigned");
       }
     }
@@ -37,7 +38,7 @@ class HybridAssignment {
 
   void LogBlockCostVector(std::vector<BlockCostPair>& block_costs) {
     for (auto& bc : block_costs) {
-      logv(__LOG_ARGS__, LOG_INFO, "Block: %d, Cost: %f", bc.first, bc.second);
+      MLOG(MLOG_INFO, "Block: %d, Cost: %f", bc.first, bc.second);
     }
   }
 
@@ -77,8 +78,7 @@ int LoadBalancePolicies::AssignBlocksHybrid(const std::vector<double>& costlist,
   double lpt_threshold = opts.frac_lpt;
   int num_lpt = std::min(lpt_threshold * nblocks, nranks * 0.9);
 
-  logv(__LOG_ARGS__, LOG_INFO, "LPT Threshold: %.2f, Num LPT: %d",
-       lpt_threshold, num_lpt);
+  MLOG(MLOG_INFO, "LPT Threshold: %.2f, Num LPT: %d", lpt_threshold, num_lpt);
 
   auto ha = HybridAssignment(num_lpt);
   int rv = ha.AssignBlocks(costlist, ranklist, nranks);
@@ -103,9 +103,8 @@ int HybridAssignment::AssignBlocksLPT(const int nblocks, const int nranks,
     spt_pq.push(Rank(idx, block.second));
     ranklist_[block.first] = idx;
 
-    logv(__LOG_ARGS__, LOG_DBG2,
-         "[LPT] Block (%d, %.1f) assigned to rank (%d, %.1f)", block.first,
-         block.second, idx, block.second);
+    MLOG(MLOG_DBG2, "[LPT] Block (%d, %.1f) assigned to rank (%d, %.1f)",
+         block.first, block.second, idx, block.second);
   }
 
   unassigned_first_ = num_lpt_;
@@ -126,9 +125,8 @@ int HybridAssignment::AssignBlocksLPT(const int nblocks, const int nranks,
     spt_pq.push(min_rank);
     unassigned_last_ = idx;
 
-    logv(__LOG_ARGS__, LOG_DBG2,
-         "[SPT] Block (%d, %.1f) assigned to rank (%d, %.1f)", block.first,
-         block.second, min_rank.id, min_rank.load);
+    MLOG(MLOG_DBG2, "[SPT] Block (%d, %.1f) assigned to rank (%d, %.1f)",
+         block.first, block.second, min_rank.id, min_rank.load);
   }
 
   return 0;
@@ -165,8 +163,8 @@ int HybridAssignment::AssignBlocksRest(int nranks_rest) {
     int ridx_old = ridx_new + unassigned_first_;
 
     ranklist_[bidx_old] = ridx_old;
-    logv(__LOG_ARGS__, LOG_DBG2, "[Rest] Block (%d, %.1f) assigned to rank %d",
-         bidx_old, block_costs_[idx].second, ridx_old);
+    MLOG(MLOG_DBG2, "[Rest] Block (%d, %.1f) assigned to rank %d", bidx_old,
+         block_costs_[idx].second, ridx_old);
   }
   return 0;
 }
@@ -195,7 +193,7 @@ int HybridAssignment::AssignBlocks(const std::vector<double>& costlist,
   double cost_per_rank = cost_total / nranks;
   double blocks_per_rank = costlist.size() * 1.0 / nranks;
 
-  logv(__LOG_ARGS__, LOG_DBUG,
+  MLOG(MLOG_DBG0,
        "[HybridPolicy] Basic stats:\n"
        "\tTotal Cost: %.1f\n"
        "\tCost Per Rank: %.1f\n"
@@ -203,7 +201,7 @@ int HybridAssignment::AssignBlocks(const std::vector<double>& costlist,
        cost_total, cost_per_rank, blocks_per_rank);
 
   double lpt_max = GetLPTMax(costlist, nranks);
-  logv(__LOG_ARGS__, LOG_INFO, "[HybridPolicy] LPT Max: %.0lf\n", lpt_max);
+  MLOG(MLOG_INFO, "[HybridPolicy] LPT Max: %.0lf\n", lpt_max);
 
   unassigned_first_ = 0;
   unassigned_last_ = block_costs_.size();

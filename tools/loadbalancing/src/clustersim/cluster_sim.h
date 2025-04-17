@@ -41,7 +41,7 @@ class ClusterSim {
   }
 
   void HandleTimestep(const std::vector<int>& block_times_orig) {
-    logf(LOG_DBUG, "Block times: %zu\n", block_times_orig.size());
+    logf(MLOG_DBG0, "Block times: %zu\n", block_times_orig.size());
 
     std::vector<int> block_times_new(block_times_orig.size());
     double mean_rel_error, max_rel_error;
@@ -64,11 +64,11 @@ class ClusterSim {
     Cluster(block_times_orig, block_times_new, cur_k, mean_rel_error,
             max_rel_error);
 
-    logf(LOG_DBUG, "[ClusterSim] N: %d, K: %d, RelErr Mean: %.1f, Max: %.1f\n",
+    logf(MLOG_DBG0, "[ClusterSim] N: %d, K: %d, RelErr Mean: %.1f, Max: %.1f\n",
          k, cur_k, mean_rel_error, max_rel_error);
-    logf(LOG_DBG2, "[ClusterSim] OrigTS: %s",
+    logf(MLOG_DBG2, "[ClusterSim] OrigTS: %s",
          SerializeVector(block_times_orig, /* trunc_count */ 50).c_str());
-    logf(LOG_DBG2, "[ClusterSim] NewTS: %s",
+    logf(MLOG_DBG2, "[ClusterSim] NewTS: %s",
          SerializeVector(block_times_new, /* trunc_count */ 50).c_str());
 
     WriteData(k, cur_k, mean_rel_error, max_rel_error);
@@ -78,7 +78,7 @@ class ClusterSim {
     if (fd_) {
       pdlfs::Status s = fd_->Close();
       if (!s.ok()) {
-        logf(LOG_ERRO, "Unable to close file: %s", s.ToString().c_str());
+        logf(MLOG_ERRO, "Unable to close file: %s", s.ToString().c_str());
       }
       fd_ = nullptr;
     }
@@ -115,7 +115,7 @@ class ClusterSim {
 
     pdlfs::Status s = options_.env->NewWritableFile(fpath.c_str(), &fd_);
     if (!s.ok()) {
-      logf(LOG_ERRO, "Unable to open file: %s", s.ToString().c_str());
+      logf(MLOG_ERRO, "Unable to open file: %s", s.ToString().c_str());
       ABORT("Unable to open file");
     }
 
@@ -127,7 +127,7 @@ class ClusterSim {
     std::string header = "ts,n,k,mean_rel_error,max_rel_error\n";
     pdlfs::Status s = fd_->Append(header);
     if (!s.ok()) {
-      logf(LOG_ERRO, "Unable to write to file: %s", s.ToString().c_str());
+      logf(MLOG_ERRO, "Unable to write to file: %s", s.ToString().c_str());
       ABORT("Unable to write to file");
     }
   }
@@ -145,7 +145,7 @@ class ClusterSim {
 
     pdlfs::Status s = fd_->Append(data + "\n");
     if (!s.ok()) {
-      logf(LOG_ERRO, "Unable to write to file: %s", s.ToString().c_str());
+      logf(MLOG_ERRO, "Unable to write to file: %s", s.ToString().c_str());
       ABORT("Unable to write to file");
     }
   }

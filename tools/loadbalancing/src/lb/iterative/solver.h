@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "logging.h"
 #include "iter.h"
 #include "rank.h"
 
@@ -30,7 +30,7 @@ class Solver {
       LogRankStats(iter, avg_cost, max_cost);
 
       if (iter_.ShouldStop(max_cost)) {
-        logv(__LOG_ARGS__, LOG_DBUG, "[Solver] IterationTracker says we should stop!!");
+        MLOG(MLOG_DBG0, "[Solver] IterationTracker says we should stop!!");
         break;
       }
     }
@@ -60,7 +60,7 @@ class Solver {
       niters++;
 
       if (niters == max_iters) {
-        // logv(__LOG_ARGS__, LOG_WARN, "Solver hit kMaxIters (%d). Ending prem...",
+        // MLOG(MLOG_WARN, "Solver hit kMaxIters (%d). Ending prem...",
         // max_iters);
         break;
       }
@@ -129,7 +129,7 @@ class Solver {
       // IterateUtilBothWays(sb_rank, lb_rank);
       IterateUtilHybrid(sb_rank, lb_rank);
     } else {
-      logv(__LOG_ARGS__, LOG_WARN, "[Solver][Iterate] Rank %d has no blocks!", sb_rank);
+      MLOG(MLOG_WARN, "[Solver][Iterate] Rank %d has no blocks!", sb_rank);
       IterateUtilOneWay(sb_rank, lb_rank);
     }
   }
@@ -140,9 +140,9 @@ class Solver {
 
     ranks_[lb_rank].GetLargestBlock(lb_bidx, lb_cost);
 
-    logv(__LOG_ARGS__, LOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank, 0, lb_rank,
+    MLOG(MLOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank, 0, lb_rank,
          ranks_[lb_rank].GetCost());
-    logv(__LOG_ARGS__, LOG_DBG2,
+    MLOG(MLOG_DBG2,
          "Swapping blocks (c%.0lf, r%d) and (c%.0lf, r%d). (Reduction: %.0lf)",
          0, sb_rank, lb_cost, lb_rank, lb_cost);
 
@@ -156,9 +156,9 @@ class Solver {
     ranks_[lb_rank].GetLargestBlock(lb_bidx, lb_cost);
     ranks_[sb_rank].GetSmallestBlock(sb_bidx, sb_cost);
 
-    logv(__LOG_ARGS__, LOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank,
+    MLOG(MLOG_DBG2, "Before. r%d: %.0lf, r%d: %.0lf", sb_rank,
          ranks_[sb_rank].GetCost(), lb_rank, ranks_[lb_rank].GetCost());
-    logv(__LOG_ARGS__, LOG_DBG2,
+    MLOG(MLOG_DBG2,
          "Swapping blocks (c%.0lf, r%d) and (c%.0lf, r%d). (Reduction: %.0lf)",
          sb_cost, sb_rank, lb_cost, lb_rank, lb_cost - sb_cost);
 
@@ -182,7 +182,7 @@ class Solver {
     if (lbb_cost < cur_diff) {
       double new_max_cost = std::max(sr_cost + lbb_cost, lr_cost - lbb_cost);
 
-      logv(__LOG_ARGS__, LOG_DBUG,
+      MLOG(MLOG_DBG0,
            "[SWAP1] (c%.0lf from rc %.0lf, rid %d) -> (rc %.0lf, rid %d). "
            "Reduction: %.0lf",
            lbb_cost, lr_cost, lb_rank, sr_cost, sb_rank,
@@ -190,7 +190,7 @@ class Solver {
       TransferBlock(lbb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
     } else if (lbs_cost < cur_diff) {
       double new_max_cost = std::max(sr_cost + lbs_cost, lr_cost - lbs_cost);
-      logv(__LOG_ARGS__, LOG_DBUG,
+      MLOG(MLOG_DBG0,
            "[SWAP2] (c%.0lf from rc %.0lf, rid %d) -> (rc %.0lf, rid %d). "
            "Reduction: %.0lf",
            lbs_cost, lr_cost, lb_rank, sr_cost, sb_rank,
@@ -199,7 +199,7 @@ class Solver {
     } else {
       double diff = lbb_cost - sbs_cost;
       double new_max_cost = std::max(sr_cost + diff, lr_cost - diff);
-      logv(__LOG_ARGS__, LOG_DBUG,
+      MLOG(MLOG_DBG0,
            "[SWAP3] (c%.0lf - r%d) <-> (c%.0lf - r%d). Reduction: %.0lf",
            lbb_cost, lb_rank, sbs_cost, sb_rank, lr_cost - new_max_cost);
       TransferBlock(lbb_bidx, lb_rank, sb_rank, nranks_ - 1, 0);
@@ -227,7 +227,7 @@ class Solver {
 
   static void LogRankStats(const char* prefix, double avg_cost,
                            double max_cost) {
-    logv(__LOG_ARGS__, LOG_DBUG, "[%s] Rank Stats: Avg Cost: %.0f, Max: %.0f\n", prefix,
+    MLOG(MLOG_DBG0, "[%s] Rank Stats: Avg Cost: %.0f, Max: %.0f\n", prefix,
          avg_cost, max_cost);
   }
 

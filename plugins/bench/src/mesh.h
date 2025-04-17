@@ -95,7 +95,7 @@ class Mesh {
 
   void BuildNeighbors(const Loc& loc, int id, const LocToIdMap& idmap,
                       OrderedMesh& om) const {
-    LOG(LOG_DBUG, "--- Building neighbors for block %d ---\n", id);
+    LOG(MLOG_DBG0, "--- Building neighbors for block %d ---\n", id);
 
     auto& nbrmap_forid = om.nbrmap[id];
     nbrmap_forid.face.clear();

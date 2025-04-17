@@ -43,19 +43,18 @@ class ScaleSim {
     std::vector<int> ranks(rp.nranks, 0);
 
     for (auto& policy : suite) {
-      logv(__LOG_ARGS__, LOG_INFO, "[RUN] %s", policy.c_str());
+      MLOG(MLOG_INFO, "[RUN] %s", policy.c_str());
     }
 
-    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s",
-         options_.output_dir.c_str());
+    MLOG(MLOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
 
     for (auto& policy : suite) {
       // begin timing
       if (rp.nranks > 32768) {
-        logvat0(fake_rank, __LOG_ARGS__, LOG_INFO,
-                "Using smaller policy suite - skipping CDP because of "
-                "scale/malloc issues");
+        MLOG(MLOG_INFO,
+             "Using smaller policy suite - skipping CDP because of "
+             "scale/malloc issues");
         if (policy == "cdp") {
           continue;
         }
@@ -90,7 +89,7 @@ class ScaleSim {
       PolicyUtils::ComputePolicyCosts(rp.nranks, costs, ranks, rank_times,
                                       time_avg, time_max);
       if (fake_rank == 0) {
-        logv(__LOG_ARGS__, LOG_INFO,
+        MLOG(MLOG_INFO,
              "[%-20s] Placement evaluated. Avg Cost: %.2f, Max Cost: %.2f",
              r.policy.c_str(), time_avg, time_max);
       }
@@ -107,8 +106,7 @@ class ScaleSim {
   }
 
   void Run() {
-    logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s",
-         options_.output_dir.c_str());
+    MLOG(MLOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
     Utils::EnsureDir(options_.env, options_.output_dir);
 
     std::vector<RunProfile> run_profiles;  // = {{2048, 8192}, {4096, 8192}};
@@ -126,7 +124,7 @@ class ScaleSim {
     int nruns = policy_suite.size();
 
     for (auto& r : run_profiles) {
-      logv(__LOG_ARGS__, LOG_INFO,
+      MLOG(MLOG_INFO,
            "[Running profile] nranks_: %d, nblocks: %d, iters: %d, nruns: %d",
            r.nranks, r.nblocks, Constants::kScaleSimIters, nruns);
 
@@ -149,8 +147,7 @@ class ScaleSim {
     MPI_Comm_rank(comm, &my_rank);
     MPI_Comm_size(comm, &nranks);
 
-    logvat0(my_rank, __LOG_ARGS__, LOG_INFO, "Using output dir: %s",
-            options_.output_dir.c_str());
+    MLOG(MLOG_INFO, "Using output dir: %s", options_.output_dir.c_str());
 
     if (my_rank == 0) {
       Utils::EnsureDir(options_.env, options_.output_dir);
@@ -171,9 +168,9 @@ class ScaleSim {
       policy_suite = {"baseline", "cdp",      "cdpc512",  "cdpc512par8",
                       "hybrid25", "hybrid50", "hybrid75", "lpt"};
     } else {
-      logvat0(my_rank, __LOG_ARGS__, LOG_INFO,
-              "Using smaller policy suite - skipping CDP because of "
-              "scale/malloc issues");
+      MLOG(MLOG_INFO,
+           "Using smaller policy suite - skipping CDP because of "
+           "scale/malloc issues");
       policy_suite = {"baseline", "cdpc512",  "cdpc512par8", "hybrid25",
                       "hybrid50", "hybrid75", "lpt"};
     }
@@ -181,7 +178,7 @@ class ScaleSim {
     int nruns = policy_suite.size();
 
     for (auto& r : run_profiles) {
-      logv(__LOG_ARGS__, LOG_INFO,
+      MLOG(MLOG_INFO,
            "[Running profile] nranks_: %d, nblocks: %d, iters: %d, nruns: %d",
            r.nranks, r.nblocks, Constants::kScaleSimIters, nruns);
 
@@ -191,7 +188,7 @@ class ScaleSim {
 
         auto hist = Histogram::Plot(costs);
         if (my_rank == 0) {
-          logv(__LOG_ARGS__, LOG_INFO, "Histogram: \n%s", hist.c_str());
+          MLOG(MLOG_INFO, "Histogram: \n%s", hist.c_str());
         }
       }
 
@@ -217,7 +214,7 @@ class ScaleSim {
 
     int rv = MPI_Bcast(costs.data(), nblocks, MPI_DOUBLE, 0, comm);
     if (rv != MPI_SUCCESS) {
-      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Bcast failed");
+      MLOG(MLOG_ERRO, "MPI_Bcast failed");
       ABORT("MPI_Bcast failed");
     }
   }
@@ -226,7 +223,7 @@ class ScaleSim {
     std::string table_out = options_.output_dir + "/scalesim.log.csv";
     std::stringstream table_stream;
     table_.emitTable(table_stream, n);
-    logv(__LOG_ARGS__, LOG_INFO, "Table: \n%s", table_stream.str().c_str());
+    MLOG(MLOG_INFO, "Table: \n%s", table_stream.str().c_str());
 
     Utils::WriteToFile(options_.env, table_out, table_.toCSV());
   }
@@ -251,8 +248,8 @@ class ScaleSim {
     }
 
     for (auto& rp : v) {
-      logv(__LOG_ARGS__, LOG_INFO, "RunProfile: nranks: %d, nblocks: %d",
-           rp.nranks, rp.nblocks);
+      MLOG(MLOG_INFO, "RunProfile: nranks: %d, nblocks: %d", rp.nranks,
+           rp.nblocks);
     }
   }
 

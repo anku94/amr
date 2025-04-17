@@ -37,7 +37,7 @@ void EnsureDirOrDie(const char* dir_path, int rank, int sub_rank) {
 
   if (mkdir(dir_path, S_IRWXU)) {
     if (errno != EEXIST) {
-      logv(__LOG_ARGS__, LOG_ERRO, "Unable to create directory: %s", dir_path);
+      MLOG(MLOG_ERRO, "Unable to create directory: %s", dir_path);
       ABORT("Unable to create directory");
     }
   }
@@ -59,7 +59,7 @@ void EnsureFileOrDie(FILE** file, const char* dir_path, const char* fprefix,
   char fpath[8192];
   snprintf(fpath, 8192, "%s/%s.%d.%s", subdir_path, fprefix, rank, fmt);
 
-  // logv(__LOG_ARGS__, LOG_INFO, "Trying to create: %s", fpath);
+  // MLOG(MLOG_INFO, "Trying to create: %s", fpath);
 
   int attempts_rem = 4;
   int sleep_timer = 2;
@@ -69,7 +69,7 @@ void EnsureFileOrDie(FILE** file, const char* dir_path, const char* fprefix,
     sleep_timer *= 2;
     *file = fopen(fpath, "w+");
     if (*file == nullptr) {
-      logv(__LOG_ARGS__, LOG_INFO, "Rank: %d, error: %s", rank, strerror(errno));
+      MLOG(MLOG_INFO, "Rank: %d, error: %s", rank, strerror(errno));
     }
   }
 
