@@ -78,11 +78,7 @@ Mesh::OrderedMesh Mesh::GetOrderedMesh() const {
   for (auto& kv : idmap) {
     auto block_loc = kv.first;
     int block_id = kv.second;
-    // if (block_id == 1) {
-    LOG(LOG_DBUG, "Building neighbors for block %d: %s\n", block_id,
-        block_loc.ToString().c_str());
     BuildNeighbors(block_loc, block_id, idmap, om);
-    // }
   }
   return om;
 }
