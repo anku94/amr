@@ -1,8 +1,10 @@
 find_package(MPI REQUIRED)
 find_package(pdlfs-common CONFIG REQUIRED)
 find_package(GUROBI)
+find_package(glog CONFIG REQUIRED)
 
 set (lb_srcs
+    amr_lb.cc
     lb_chunkwise.cc
     lb_contig_improv.cc
     lb_contig_improv2.cc
@@ -31,6 +33,8 @@ endif()
 # GUROBI requires C++11; *sigh*
 target_compile_features(lb PRIVATE cxx_std_11)
 
+target_include_directories(lb PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../common)
+
 target_include_directories(lb PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
@@ -40,9 +44,9 @@ target_include_directories(lb PUBLIC
 )
 
 #target_link_libraries(lb PRIVATE ${GUROBI_CXX_LIBRARY})
-target_link_libraries(lb PRIVATE pdlfs-common)
+target_link_libraries(lb PRIVATE lb_common)
+target_link_libraries(lb PUBLIC pdlfs-common glog::glog)
 target_link_libraries(lb PUBLIC MPI::MPI_CXX)
-
 if (GUROBI_FOUND)
     target_compile_definitions(lb PRIVATE GUROBI_ENABLED)
     target_link_libraries(lb PUBLIC ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})

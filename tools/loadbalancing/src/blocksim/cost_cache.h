@@ -5,7 +5,7 @@
 #pragma once
 
 #include <map>
-#include "common.h"
+#include "logging.h"
 
 namespace amr {
 class CostCache {
@@ -26,12 +26,12 @@ class CostCache {
 
 
     if (ts - it->second.first > ttl_) {
-      logv(__LOG_ARGS__, LOG_DBUG, "[CostCache] Cache Miss, Expired: TS_req: %d, TS_cache: %d", ts, it->second.first);
+      MLOG(MLOG_DBG0, "[CostCache] Cache Miss, Expired: TS_req: %d, TS_cache: %d", ts, it->second.first);
       req_exp_++;
       return false;
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "[CostCache] Cache Hit: TS_req: %d, TS_cache: %d", ts, it->second.first);
+    MLOG(MLOG_DBG0, "[CostCache] Cache Hit: TS_req: %d, TS_cache: %d", ts, it->second.first);
     cost = it->second.second;
     return true;
   }
@@ -44,7 +44,7 @@ class CostCache {
   void LogStats() const {
     if (req_cnt_ == 0) return;
 
-    logv(__LOG_ARGS__, LOG_INFO,
+    MLOG(MLOG_INFO,
          "[CostCache] Requests: %d, Hits: %d (Misses: %d, Expired: %d)",
          req_cnt_, req_cnt_ - req_miss_ - req_exp_, req_miss_, req_exp_);
   }

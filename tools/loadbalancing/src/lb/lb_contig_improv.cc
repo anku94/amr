@@ -4,10 +4,12 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <numeric>
 #include <vector>
 
-#include "common.h"
 #include "lb_policies.h"
+#include "logging.h"
 
 namespace {
 double GetTimeMs() {
@@ -34,8 +36,8 @@ void GetRollingSum(std::vector<double> const& v, std::vector<double>& sum,
   double rolling_max = *std::max_element(sum.begin(), sum.end());
   double rolling_min = *std::min_element(sum.begin(), sum.end());
 
-  logv(__LOG_ARGS__, LOG_DBG2, "K: %d, Rolling Max: %.2lf, Rolling Min: %.2lf",
-       k, rolling_max, rolling_min);
+  MLOG(MLOG_DBG2, "K: %d, Rolling Max: %.2lf, Rolling Min: %.2lf", k,
+       rolling_max, rolling_min);
 }
 
 bool IsRangeAvailable(std::vector<int> const& ranklist, int start, int end) {
@@ -48,8 +50,7 @@ bool IsRangeAvailable(std::vector<int> const& ranklist, int start, int end) {
 }
 
 bool MarkRange(std::vector<int>& ranklist, int start, int end, int flag) {
-  logv(__LOG_ARGS__, LOG_DBG3, "MarkRange marking [%d, %d] with %d", start, end,
-       flag);
+  MLOG(MLOG_DBG3, "MarkRange marking [%d, %d] with %d", start, end, flag);
 
   for (int i = start; i <= end; i++) {
     ranklist[i] = flag;
@@ -65,9 +66,8 @@ double GetSumRange(std::vector<double> const& cum_sum, int a, int b) {
   }
 }
 
-#define LOG_TIME(evt)                                                \
-  logv(__LOG_ARGS__, LOG_DBUG, "Time taken until %s: %.2lf ms", evt, \
-       GetTimeMs() - _ts_beg);
+#define LOG_TIME(evt) \
+  MLOG(MLOG_DBG0, "Time taken until %s: %.2lf ms", evt, GetTimeMs() - _ts_beg);
 
 int AssignBlocksDP(std::vector<double> const& costlist,
                    std::vector<int>& ranklist, int nranks) {
@@ -75,7 +75,7 @@ int AssignBlocksDP(std::vector<double> const& costlist,
 
   double cost_total = std::accumulate(costlist.begin(), costlist.end(), 0.0);
   double cost_target = cost_total / nranks;
-  logv(__LOG_ARGS__, LOG_DBG2, "Target Cost: %.2lf", cost_target);
+  MLOG(MLOG_DBG2, "Target Cost: %.2lf", cost_target);
 
   std::vector<double> cum_costlist(costlist);
   int nblocks = costlist.size();
@@ -84,8 +84,7 @@ int AssignBlocksDP(std::vector<double> const& costlist,
   int nalloc_b = nblocks % nranks;
   int nalloc_a = nranks - nalloc_b;
 
-  logv(__LOG_ARGS__, LOG_DBUG, "nalloc_a: %d, nalloc_b: %d", nalloc_a,
-       nalloc_b);
+  MLOG(MLOG_DBG0, "nalloc_a: %d, nalloc_b: %d", nalloc_a, nalloc_b);
 
   for (int i = 1; i < nblocks; i++) {
     cum_costlist[i] += cum_costlist[i - 1];
@@ -132,13 +131,13 @@ int AssignBlocksDP(std::vector<double> const& costlist,
 
       if (dp_cost != kBigDouble) {
         dp[i][j] = dp_cost;
-        // logv(__LOG_ARGS__, LOG_DBG3, "DP[%d][%d]: %.2lf", i, j, dp[i][j]);
+        // MLOG(MLOG_DBG3, "DP[%d][%d]: %.2lf", i, j, dp[i][j]);
       }
     }
   }
 
   LOG_TIME("DP");
-  logv(__LOG_ARGS__, LOG_DBG2, "DP Cost: %.2lf", dp[nalloc_a][nalloc_b]);
+  MLOG(MLOG_DBG2, "DP Cost: %.2lf", dp[nalloc_a][nalloc_b]);
 
   int i = nalloc_a;
   int j = nalloc_b;
@@ -168,13 +167,11 @@ int AssignBlocksDP(std::vector<double> const& costlist,
     // should not encounter invalid solutions while backtracking
     assert(dp_cost != kBigDouble);
     if (dp_cost == opt1_cost) {
-      logv(__LOG_ARGS__, LOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j,
-           i - 1, j);
+      MLOG(MLOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j, i - 1, j);
       MarkRange(ranklist, l - n_a, l - 1, cur_rank);
       i--;
     } else {
-      logv(__LOG_ARGS__, LOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j, i,
-           j - 1);
+      MLOG(MLOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j, i, j - 1);
       MarkRange(ranklist, l - n_b, l - 1, cur_rank);
       j--;
     }
@@ -194,7 +191,7 @@ int LoadBalancePolicies::AssignBlocksContigImproved(
     int nranks) {
   int nblocks = costlist.size();
   if (nblocks % nranks == 0) {
-    logv(__LOG_ARGS__, LOG_DBUG,
+    MLOG(MLOG_DBG0,
          "Blocks evenly divisible by nranks_, using AssignBlocksContiguous");
     return AssignBlocksContiguous(costlist, ranklist, nranks);
   } else {

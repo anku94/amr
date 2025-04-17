@@ -22,7 +22,7 @@ void ParseCsvStr(const char* str, std::vector<int>& vals) {
     str += 1;
   }
 
-  logv(__LOG_ARGS__, LOG_INFO, "BlockSim: parsed %zu events", vals.size());
+  MLOG(MLOG_INFO, "BlockSim: parsed %zu events", vals.size());
 }
 
 void ParseOptions(int argc, char* argv[]) {
@@ -70,28 +70,28 @@ void ParseOptions(int argc, char* argv[]) {
   options.env = env;
 
   if (options.prof_dir.empty()) {
-    logv(__LOG_ARGS__, LOG_ERRO, "No profile_dir specified!");
+    MLOG(MLOG_ERRO, "No profile_dir specified!");
     PrintHelp(argc, argv);
   }
 
   if (!options.env->FileExists(options.prof_dir.c_str())) {
-    logv(__LOG_ARGS__, LOG_ERRO, "Directory does not exist!!!");
+    MLOG(MLOG_ERRO, "Directory does not exist!!!");
     PrintHelp(argc, argv);
   }
 
   if (options.nblocks < 0) {
-    logv(__LOG_ARGS__, LOG_ERRO, "No nblocks specified!");
+    MLOG(MLOG_ERRO, "No nblocks specified!");
     PrintHelp(argc, argv);
   }
 
   if (options.nranks < 0) {
-    logv(__LOG_ARGS__, LOG_ERRO, "No nranks_ specified!");
+    MLOG(MLOG_ERRO, "No nranks_ specified!");
     PrintHelp(argc, argv);
   }
 
   options.output_dir = options.prof_dir + "/block_sim";
 
-  logv(__LOG_ARGS__, LOG_INFO,
+  MLOG(MLOG_INFO,
        "[Initial Parameters] nranks_=%d, nblocks=%d, nts=%d\n"
        "output_dir=%s",
        options.nranks, options.nblocks, options.nts,

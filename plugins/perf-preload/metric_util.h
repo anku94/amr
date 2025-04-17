@@ -27,7 +27,7 @@ class CommonComputer {
       return StringVec();
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "[Rank %d] Number of items: %d", rank_,
+    MLOG(MLOG_DBG0, "[Rank %d] Number of items: %d", rank_,
          num_items);
 
     StringVec common_strings;
@@ -61,7 +61,7 @@ class CommonComputer {
 
     int rv = PMPI_Bcast(&num_items, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Bcast failed");
+      MLOG(MLOG_ERRO, "MPI_Bcast failed");
       return -1;
     }
 
@@ -74,16 +74,16 @@ class CommonComputer {
     memset(buf, 0, bufsz);
 
     if (key == nullptr and rank_ == 0) {
-      logv(__LOG_ARGS__, LOG_ERRO, "Key is null.");
+      MLOG(MLOG_ERRO, "Key is null.");
       return "";
     }
 
     if (rank_ == 0) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Checking for key: %s", key);
+      MLOG(MLOG_DBG0, "Checking for key: %s", key);
 
       size_t key_len = strlen(key);
       if (key_len >= bufsz) {
-        logv(__LOG_ARGS__, LOG_ERRO, "Key too long: %s. Will be truncated.",
+        MLOG(MLOG_ERRO, "Key too long: %s. Will be truncated.",
              key);
       }
 
@@ -93,7 +93,7 @@ class CommonComputer {
 
     int rv = PMPI_Bcast(buf, bufsz, MPI_CHAR, 0, MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Bcast failed");
+      MLOG(MLOG_ERRO, "MPI_Bcast failed");
       return "";
     }
 
@@ -103,19 +103,19 @@ class CommonComputer {
     rv = PMPI_Allreduce(&exists_locally, &exists_globally, 1, MPI_INT, MPI_MIN,
                         MPI_COMM_WORLD);
     if (rv != MPI_SUCCESS) {
-      logv(__LOG_ARGS__, LOG_ERRO, "MPI_Reduce failed");
+      MLOG(MLOG_ERRO, "MPI_Reduce failed");
       return "";
     }
 
     if (exists_globally) {
       if (rank_ == 0) {
-        logv(__LOG_ARGS__, LOG_DBG2, "Key %s exists globally: %d", buf,
+        MLOG(MLOG_DBG2, "Key %s exists globally: %d", buf,
              exists_globally);
       }
       return std::string(buf);
     }
 
-    logv(__LOG_ARGS__, LOG_DBG2, "Key %s does not exist globally.", buf);
+    MLOG(MLOG_DBG2, "Key %s does not exist globally.", buf);
     return "";
   }
 };

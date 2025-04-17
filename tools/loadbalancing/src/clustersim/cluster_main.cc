@@ -3,7 +3,7 @@
 //
 
 #include "cluster_sim.h"
-#include "common.h"
+#include "logging.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -35,13 +35,13 @@ void ParseOptions(int argc, char* argv[]) {
   options.env = env;
 
   if (options.prof_dir.empty()) {
-    logf(LOG_ERRO, "No profile_dir specified!");
+    logf(MLOG_ERRO, "No profile_dir specified!");
     PrintHelp(argc, argv);
     exit(-1);
   }
 
   if (!options.env->FileExists(options.prof_dir.c_str())) {
-    logf(LOG_ERRO, "Directory does not exist!!!");
+    logf(MLOG_ERRO, "Directory does not exist!!!");
     PrintHelp(argc, argv);
     exit(-1);
   }

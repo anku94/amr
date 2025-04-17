@@ -1,4 +1,4 @@
-#include "common.h"
+#include "logging.h"
 #include "logging.h"
 
 #include <pdlfs-common/env.h>
@@ -32,7 +32,7 @@ struct MetricWithTimestamp {
     int n = snprintf(buf, bufsz, "%lu %d %d %lu\n", ts_micros, metric_id,
                      is_open ? 1 : 0, duration);
     if (n >= bufsz) {
-      logv(__LOG_ARGS__, LOG_ERRO, "Buffer overflow in MetricWithTimestamp");
+      MLOG(MLOG_ERRO, "Buffer overflow in MetricWithTimestamp");
     }
   }
 
@@ -109,7 +109,7 @@ class TimestepwiseLogger {
   }
 
   void FlushTimestampDataToFile(pdlfs::WritableFile* f) {
-    logv(__LOG_ARGS__, LOG_DBG2, "Flushing %d metric lines",
+    MLOG(MLOG_DBG2, "Flushing %d metric lines",
          metric_lines_.size());
 
     for (auto& l : metric_lines_) {
@@ -121,7 +121,7 @@ class TimestepwiseLogger {
   }
 
   void FlushMetricsToFile(pdlfs::WritableFile* f) {
-    logv(__LOG_ARGS__, LOG_DBG2, "Flushing %d metric names", metrics_.size());
+    MLOG(MLOG_DBG2, "Flushing %d metric names", metrics_.size());
 
     for (auto& m : metrics_) {
       char buf[4096];

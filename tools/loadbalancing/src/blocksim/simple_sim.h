@@ -2,7 +2,7 @@
 
 #include <pdlfs-common/env.h>
 
-#include "common.h"
+#include "logging.h"
 
 extern const char* policy_file;
 
@@ -62,7 +62,7 @@ class CSVReader {
     }
     msg << "...";
 
-    logv(__LOG_ARGS__, LOG_INFO, "Preview (%zu): %s\n", vec.size(),
+    MLOG(MLOG_INFO, "Preview (%zu): %s\n", vec.size(),
          msg.str().c_str());
   }
 

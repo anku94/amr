@@ -1,5 +1,5 @@
 #include "amr_monitor.h"
-#include "common.h"
+#include "logging.h"
 
 #include <Kokkos_Core.hpp>
 #include <Kokkos_Macros.hpp>

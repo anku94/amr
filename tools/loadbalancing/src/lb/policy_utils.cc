@@ -10,7 +10,7 @@
 #include <numeric>
 #include <string>
 
-#include "common.h"
+#include "logging.h"
 #include "constants.h"
 #include "policy.h"
 #include "policy_wopts.h"
@@ -156,7 +156,7 @@ void PolicyUtils::ExtrapolateCosts2D(std::vector<double> const& costs_prev,
                                      std::vector<double>& costs_cur) {
   static bool first_time = true;
   if (first_time) {
-    logv(__LOG_ARGS__, LOG_WARN, "ALERT: Using 2D extrapolation!");
+    MLOG(MLOG_WARN, "ALERT: Using 2D extrapolation!");
     first_time = false;
   }
 
@@ -200,7 +200,7 @@ void PolicyUtils::ExtrapolateCosts3D(std::vector<double> const& costs_prev,
                                      std::vector<double>& costs_cur) {
   static bool first_time = true;
   if (first_time) {
-    logv(__LOG_ARGS__, LOG_WARN, "ALERT: Using 3D extrapolation!");
+    MLOG(MLOG_WARN, "ALERT: Using 3D extrapolation!");
     first_time = false;
   }
 
@@ -299,7 +299,7 @@ std::string PolicyUtils::GetLogPath(const char* output_dir,
                                     const char* suffix) {
   std::string result = GetSafePolicyName(policy_name);
   result = std::string(output_dir) + "/" + result + "." + suffix;
-  logv(__LOG_ARGS__, LOG_DBUG, "LoadBalancePolicy Name: %s, Log Fname: %s",
+  MLOG(MLOG_DBG0, "LoadBalancePolicy Name: %s, Log Fname: %s",
        policy_name, result.c_str());
   return result;
 }
@@ -333,10 +333,10 @@ void PolicyUtils::LogAssignmentStats(std::vector<double> const& costlist,
   double max_count = rank_counts.back();
   double med_count = rank_counts[nranks / 2];
 
-  logv(__LOG_ARGS__, LOG_INFO, "Rank statistics (nblocks=%d):", nblocks);
-  logv(__LOG_ARGS__, LOG_INFO, "  Costs: min=%.0lf med=%.0lf max=%.0lf",
+  MLOG(MLOG_INFO, "Rank statistics (nblocks=%d):", nblocks);
+  MLOG(MLOG_INFO, "  Costs: min=%.0lf med=%.0lf max=%.0lf",
        min_cost / 1e3, med_cost / 1e3, max_cost / 1e3);
-  logv(__LOG_ARGS__, LOG_INFO, "  Counts: min=%.0lf med=%.0lf max=%.0lf",
+  MLOG(MLOG_INFO, "  Counts: min=%.0lf med=%.0lf max=%.0lf",
        min_count, med_count, max_count);
 }
 
@@ -353,11 +353,11 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
       .v2 = true, .lpt_frac = 0.5, .alt_solncnt_max = 0};
 
   if (std::regex_match(policy_str, match, re_oneparam)) {
-    logv(__LOG_ARGS__, LOG_DBUG, "One param matched: %s", match.str(1).c_str());
+    MLOG(MLOG_DBG0, "One param matched: %s", match.str(1).c_str());
 
     hcf_opts.lpt_frac = std::stoi(match.str(1)) / 100.0;
   } else if (std::regex_match(policy_str, match, re_twoparam)) {
-    logv(__LOG_ARGS__, LOG_DBUG, "Two params matched: %s, %s",
+    MLOG(MLOG_DBG0, "Two params matched: %s, %s",
          match.str(1).c_str(), match.str(2).c_str());
 
     hcf_opts.lpt_frac = std::stoi(match.str(1)) / 100.0;
@@ -371,14 +371,14 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
 
   static bool first_time = true;
   if (first_time) {
-    logv(__LOG_ARGS__, LOG_INFO,
+    MLOG(MLOG_INFO,
          "[LB] Using Hybrid policy with LPT frac: %.2lf%%",
          hcf_opts.lpt_frac * 100);
     first_time = false;
   }
 
   std::string policy_name_friendly =
-      "Hybrid (" + std::to_string(hcf_opts.lpt_frac) + "%)";
+      "Hybrid (" + std::to_string(hcf_opts.lpt_frac * 100) + "%)";
 
   LBPolicyWithOpts policy = {
       .id = policy_str,
@@ -387,7 +387,7 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
       .skip_cache = false,
       .hcf_opts = hcf_opts};
 
-  logv(__LOG_ARGS__, LOG_DBUG, "Generated policy: %s",
+  MLOG(MLOG_DBG0, "Generated policy: %s",
        policy_name_friendly.c_str());
 
   return policy;
@@ -405,9 +405,9 @@ const LBPolicyWithOpts PolicyUtils::GenCDPC(const std::string& policy_str) {
     ABORT(msg.str().c_str());
   }
 
-  logv(__LOG_ARGS__, LOG_DBG2, "Match size: %d", match.size());
+  MLOG(MLOG_DBG2, "Match size: %d", match.size());
   for (int midx = 0; midx < match.size(); midx++) {
-    logv(__LOG_ARGS__, LOG_DBG2, "Match %d: %s", midx, match.str(midx).c_str());
+    MLOG(MLOG_DBG2, "Match %d: %s", midx, match.str(midx).c_str());
   }
 
   int chunk_size = std::stoi(match.str(1));

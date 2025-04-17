@@ -6,7 +6,7 @@
 
 #include <pdlfs-common/env.h>
 
-#include "common.h"
+#include "logging.h"
 #include "cost_cache.h"
 #include "policy_utils.h"
 #include "policy_wopts.h"

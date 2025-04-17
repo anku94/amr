@@ -59,25 +59,25 @@ class AMROptUtils {
   }
 
   static void LogOpts(const AMROpts& opts) {
-    logv(__LOG_ARGS__, LOG_INFO, "AMRMON options:");
+    MLOG(MLOG_INFO, "AMRMON options:");
     // replace by %30s: %d variants of the parameter logging
 
-    logv(__LOG_ARGS__, LOG_INFO, "%30s: %d", "AMRMON_PRINT_TOPK", opts.print_topk);
-    logv(__LOG_ARGS__, LOG_INFO, "%30s: %d", "AMRMON_P2P_ENABLE_REDUCE",
+    MLOG(MLOG_INFO, "%30s: %d", "AMRMON_PRINT_TOPK", opts.print_topk);
+    MLOG(MLOG_INFO, "%30s: %d", "AMRMON_P2P_ENABLE_REDUCE",
          opts.p2p_enable_matrix_reduce);
-    logv(__LOG_ARGS__, LOG_INFO, "%30s: %d", "AMRMON_P2P_ENABLE_PUT",
+    MLOG(MLOG_INFO, "%30s: %d", "AMRMON_P2P_ENABLE_PUT",
         opts.p2p_enable_matrix_put);
-    logv(__LOG_ARGS__, LOG_INFO, "%30s: %d", "AMRMON_RANKWISE_ENABLED",
+    MLOG(MLOG_INFO, "%30s: %d", "AMRMON_RANKWISE_ENABLED",
          opts.rankwise_enabled);
-    logv(__LOG_ARGS__, LOG_INFO, "%30s: %d", "AMRMON_TSWISE_ENABLED",
+    MLOG(MLOG_INFO, "%30s: %d", "AMRMON_TSWISE_ENABLED",
         opts.tswise_enabled);
-    logv(__LOG_ARGS__, LOG_INFO, "%30s: %d", "AMRMON_TRACING_ENABLED",
+    MLOG(MLOG_INFO, "%30s: %d", "AMRMON_TRACING_ENABLED",
         opts.tracing_enabled);
-    logv(__LOG_ARGS__, LOG_INFO, "%30s: %s", "AMRMON_OUTPUT_DIR",
+    MLOG(MLOG_INFO, "%30s: %s", "AMRMON_OUTPUT_DIR",
         opts.output_dir.c_str());
 
     if (opts.rankwise_enabled) {
-      logv(__LOG_ARGS__, LOG_INFO, "%30s: %s", "AMRMON_RANKWISE_FPATH",
+      MLOG(MLOG_INFO, "%30s: %s", "AMRMON_RANKWISE_FPATH",
           opts.rankwise_fpath.c_str());
     }
   }
@@ -91,12 +91,12 @@ class AMROptUtils {
     char buf[256];
     snprintf(buf, sizeof(buf), kTswiseOutputFmt, rank);
     std::string fpath = opts.output_dir + "/" + buf;
-    logv(__LOG_ARGS__, LOG_DBUG, "Tswise output fpath: %s", fpath.c_str());
+    MLOG(MLOG_DBG0, "Tswise output fpath: %s", fpath.c_str());
 
     pdlfs::WritableFile* f;
     pdlfs::Status s = env->NewWritableFile(fpath.c_str(), &f);
     if (!s.ok()) {
-      logv(__LOG_ARGS__, LOG_WARN, "Failed to open file %s", fpath.c_str());
+      MLOG(MLOG_WARN, "Failed to open file %s", fpath.c_str());
       return nullptr;
     }
 
@@ -113,12 +113,12 @@ class AMROptUtils {
     snprintf(buf, sizeof(buf), kTraceOutputFmt, rank);
 
     std::string fpath = opts.output_dir + "/" + buf;
-    logv(__LOG_ARGS__, LOG_DBUG, "Tracer output fpath: %s", fpath.c_str());
+    MLOG(MLOG_DBG0, "Tracer output fpath: %s", fpath.c_str());
 
     pdlfs::WritableFile* f;
     pdlfs::Status s = env->NewWritableFile(fpath.c_str(), &f);
     if (!s.ok()) {
-      logv(__LOG_ARGS__, LOG_WARN, "Failed to open file %s",
+      MLOG(MLOG_WARN, "Failed to open file %s",
            opts.rankwise_fpath.c_str());
       return nullptr;
     }

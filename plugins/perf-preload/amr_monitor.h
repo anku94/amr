@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "logging.h"
 #include "detailed_logger.h"
 #include "logging.h"
 #include "metric.h"
@@ -29,17 +29,17 @@ class AMRMonitor {
         tswise_logger_(TSWISE_FILE_ARG, rank),
         tracer_(TRACER_FILE_ARG, rank) {
     if (rank == 0) {
-      logv(__LOG_ARGS__, LOG_INFO, "AMRMonitor initializing.");
+      MLOG(MLOG_INFO, "AMRMonitor initializing.");
       AMROptUtils::LogOpts(amr_opts);
 
       if (amr_opts.tswise_enabled) {
-        logv(__LOG_ARGS__, LOG_WARN,
+        MLOG(MLOG_WARN,
              "Timestep-wise logging is enabled! This may produce lots of "
              "data!!");
       }
 
       if (amr_opts.tracing_enabled) {
-        logv(__LOG_ARGS__, LOG_WARN,
+        MLOG(MLOG_WARN,
              "Tracing is enabled! This may produce lots of data!!");
       }
     }
@@ -72,7 +72,7 @@ class AMRMonitor {
     uint64_t init_time = ts.tv_sec * 1000000000 + ts.tv_nsec;
     ss << "|inittime:" << init_time;
 
-    logv(__LOG_ARGS__, LOG_INFO, "amrmonitor|%s", ss.str().c_str());
+    MLOG(MLOG_INFO, "amrmonitor|%s", ss.str().c_str());
   }
 
   uint64_t Now() const {
@@ -104,13 +104,13 @@ class AMRMonitor {
 
   void LogStackEnd(const char* type) {
     if (stack_map_.find(type) == stack_map_.end()) {
-      logv(__LOG_ARGS__, LOG_WARN, "type %s not found in stack_map_.", type);
+      MLOG(MLOG_WARN, "type %s not found in stack_map_.", type);
       return;
     }
 
     auto& s = stack_map_[type];
     if (s.empty()) {
-      logv(__LOG_ARGS__, LOG_WARN, "Rank %d: stack %s is empty.", rank_, type);
+      MLOG(MLOG_WARN, "Rank %d: stack %s is empty.", rank_, type);
       sleep(1000);
       return;
     }
@@ -135,7 +135,7 @@ class AMRMonitor {
       int size;
       int rv = PMPI_Type_size(datatype, &size);
       if (rv != MPI_SUCCESS) {
-        logv(__LOG_ARGS__, LOG_WARN, "PMPI_Type_size failed");
+        MLOG(MLOG_WARN, "PMPI_Type_size failed");
       }
 
       mpi_datatype_sizes_[datatype] = size;
@@ -229,7 +229,7 @@ class AMRMonitor {
     pdlfs::Status s =
         env_->NewWritableFile(amr_opts.rankwise_fpath.c_str(), &f);
     if (!s.ok()) {
-      logv(__LOG_ARGS__, LOG_WARN, "Failed to open file %s",
+      MLOG(MLOG_WARN, "Failed to open file %s",
            amr_opts.rankwise_fpath.c_str());
       return;
     }

@@ -1,7 +1,7 @@
 #include "simple_sim.h"
 
-#include "lb_policies.h"
-#include "policy_utils.h"
+#include "common/lb_policies.h"
+#include "common/policy_utils.h"
 
 const char* policy_file = nullptr;
 
@@ -23,7 +23,7 @@ void RunPolicy(const char* policy_name, std::vector<double> const& costlist,
   amr::PolicyUtils::ComputePolicyCosts(nranks, costlist, ranklist, rank_times,
                                        rtavg, rtmax);
 
-  logv(__LOG_ARGS__, LOG_INFO, "Policy %12s. Avg: %12.0lf, Max: %12.0lf",
+  MLOG(MLOG_INFO, "Policy %12s. Avg: %12.0lf, Max: %12.0lf",
        policy_name, rtavg, rtmax);
 
   rtavg_total += rtavg;
@@ -39,7 +39,7 @@ void Run(const char* policy_file) {
   reader.SkipLines(ntoskip);
 
   for (int i = 0; i < nlines; i++) {
-    logv(__LOG_ARGS__, LOG_INFO, "-----------\nLine %d", i + ntoskip);
+    MLOG(MLOG_INFO, "-----------\nLine %d", i + ntoskip);
 
     auto vec = reader.ReadOnce();
     reader.PreviewVector(vec, 10);
@@ -59,7 +59,7 @@ void Run(const char* policy_file) {
   // RunPolicy("hybrid70", vec, 512);
   // RunPolicy("hybrid90", vec, 512);
   //
-  logv(__LOG_ARGS__, LOG_INFO, "Total Avg: %12.0lf, Max: %12.0lf", rtavg_total,
+  MLOG(MLOG_INFO, "Total Avg: %12.0lf, Max: %12.0lf", rtavg_total,
        rtmax_total);
 }
 

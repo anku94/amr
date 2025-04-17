@@ -1,9 +1,10 @@
 #include <mpi.h>
 
+#include <numeric>
 #include <vector>
 
-#include "common.h"
 #include "lb_policies.h"
+#include "logging.h"
 
 namespace amr {
 // fwd decl
@@ -40,12 +41,11 @@ class LBChunkwise {
     auto chunks = ComputeChunks(costlist, nranks, nchunks);
     ValidateChunks(chunks, costlist.size(), nranks, nchunks);
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Computed %d chunks", chunks.size());
+    MLOG(MLOG_DBG0, "Computed %d chunks", chunks.size());
 
     int chunk_idx = 0;
     for (auto const& chunk : chunks) {
-      logv(__LOG_ARGS__, LOG_DBG2, "Chunk %d: %s", chunk_idx++,
-           chunk.ToString().c_str());
+      MLOG(MLOG_DBG2, "Chunk %d: %s", chunk_idx++, chunk.ToString().c_str());
 
       std::vector<double> const chunk_costlist =
           std::vector<double>(costlist.begin() + chunk.block_first,
@@ -56,8 +56,7 @@ class LBChunkwise {
           chunk_costlist, chunk_ranklist, chunk.NumRanks());
 
       if (rv != 0) {
-        logv(__LOG_ARGS__, LOG_WARN,
-             "Failed to assign blocks to chunk %s, rv: %d",
+        MLOG(MLOG_WARN, "Failed to assign blocks to chunk %s, rv: %d",
              chunk.ToString().c_str(), rv);
 
         return rv;
@@ -76,7 +75,7 @@ class LBChunkwise {
                                   MPI_Comm comm, int mympirank, int nmpiranks,
                                   int nchunks) {
     if (nchunks > nranks or nchunks > nmpiranks) {
-      logv(__LOG_ARGS__, LOG_ERRO, "nchunks > nranks");
+      MLOG(MLOG_ERRO, "nchunks > nranks");
       ABORT("nchunks > nranks");
       return -1;
     }
@@ -88,7 +87,7 @@ class LBChunkwise {
 
     if (mympirank < nchunks) {
       auto const& chunk = chunks[mympirank];
-      logv(__LOG_ARGS__, LOG_DBUG, "Rank %d: Executing chunk %s", mympirank,
+      MLOG(MLOG_DBG0, "Rank %d: Executing chunk %s", mympirank,
            chunk.ToString().c_str());
 
       std::vector<double> const chunk_costlist =
@@ -100,8 +99,7 @@ class LBChunkwise {
           chunk_costlist, chunk_ranklist, chunk.NumRanks());
 
       if (rv != 0) {
-        logv(__LOG_ARGS__, LOG_ERRO,
-             "Failed to assign blocks to chunk %s, rv: %d",
+        MLOG(MLOG_ERRO, "Failed to assign blocks to chunk %s, rv: %d",
              chunk.ToString().c_str(), rv);
 
         return rv;
@@ -113,7 +111,7 @@ class LBChunkwise {
       }
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Rank %d: Gathering results", mympirank);
+    MLOG(MLOG_DBG0, "Rank %d: Gathering results", mympirank);
 
     // Gather the results
     // First, prepare recvcnts and displs
@@ -134,7 +132,7 @@ class LBChunkwise {
                        recvcnts.data(), displs.data(), MPI_INT, comm);
 
     if (rv != MPI_SUCCESS) {
-      logv(__LOG_ARGS__, LOG_WARN, "MPI_Allgatherv failed, rv: %d", rv);
+      MLOG(MLOG_WARN, "MPI_Allgatherv failed, rv: %d", rv);
       return rv;
     }
 
@@ -166,7 +164,7 @@ class LBChunkwise {
       return {};
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "nranks: %d, nchunks: %d", nranks, nchunks);
+    MLOG(MLOG_DBG0, "nranks: %d, nchunks: %d", nranks, nchunks);
     int nblocks = costlist.size();
     int nranks_pc = nranks / nchunks;
 
@@ -185,11 +183,10 @@ class LBChunkwise {
     double cost_total = std::accumulate(costlist.begin(), costlist.end(), 0.0);
     double cost_pc = cost_total / nchunks;
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Cost total: %.2lf, per-chunk: %.2lf",
-         cost_total, cost_pc);
+    MLOG(MLOG_DBG0, "Cost total: %.2lf, per-chunk: %.2lf", cost_total, cost_pc);
 
-    int cur_cidx = 0; // current chunk index
-    double cur_cost = 0; // current cost
+    int cur_cidx = 0;     // current chunk index
+    double cur_cost = 0;  // current cost
 
     // target_cost is cost_pc, but is calculated from cost_remaining
     // to avoid floating point errors
@@ -211,12 +208,11 @@ class LBChunkwise {
           (cur_cost >= target_cost - EPSILON and cur_count >= nranks_pc);
       bool cond2 = (nblocks_rem <= nchunks_rem * nranks_pc);
 
-      logv(__LOG_ARGS__, LOG_DBG3,
-           "[%4d] Cond1 (%s): %.2lf >= %.2lf and %d >= %d", bidx,
+      MLOG(MLOG_DBG3, "[%4d] Cond1 (%s): %.2lf >= %.2lf and %d >= %d", bidx,
            cond1 ? "true" : "false", cur_cost, target_cost, cur_count,
            nranks_pc);
 
-      logv(__LOG_ARGS__, LOG_DBG3, "[%4d] Cond2 (%s): %d <= %d * %d", bidx,
+      MLOG(MLOG_DBG3, "[%4d] Cond2 (%s): %d <= %d * %d", bidx,
            cond2 ? "true" : "false", nblocks_rem, nchunks_rem, nranks_pc);
 
       if (cond1 or cond2) {
@@ -228,7 +224,7 @@ class LBChunkwise {
 
         chunks[cur_cidx].cost = cur_cost;
 
-        logv(__LOG_ARGS__, LOG_DBUG, "Chunk %d: %s", cur_cidx,
+        MLOG(MLOG_DBG0, "Chunk %d: %s", cur_cidx,
              chunks[cur_cidx].ToString().c_str());
 
         // move on to next chunk, update target cost
@@ -240,8 +236,7 @@ class LBChunkwise {
     }
 
     for (int cidx = 0; cidx < nchunks; cidx++) {
-      logv(__LOG_ARGS__, LOG_DBUG, "Chunk %d: %s", cidx,
-           chunks[cidx].ToString().c_str());
+      MLOG(MLOG_DBG0, "Chunk %d: %s", cidx, chunks[cidx].ToString().c_str());
     }
 
     return chunks;
@@ -255,12 +250,11 @@ class LBChunkwise {
   static void ValidateChunks(std::vector<WorkloadChunk> const& chunks,
                              int nblocks, int nranks, int nchunks) {
     if (chunks.size() != nchunks) {
-      logv(__LOG_ARGS__, LOG_WARN, "Expected %d chunks, got %d", nchunks,
-           chunks.size());
+      MLOG(MLOG_WARN, "Expected %d chunks, got %d", nchunks, chunks.size());
       ABORT("Chunk count mismatch");
     }
 
-    logv(__LOG_ARGS__, LOG_DBUG, "Chunk range: %d %d", chunks[0].block_first,
+    MLOG(MLOG_DBG0, "Chunk range: %d %d", chunks[0].block_first,
          chunks[nchunks - 1].block_last);
 
     ASSERT(chunks[0].block_first == 0);

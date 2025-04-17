@@ -15,7 +15,7 @@ void BlockSimulator::SetupAllPolicies() {
   policy_opts.nblocks_init = options_.nblocks;
   // XXX: hardcoded for now
   policy_opts.trigger_interval = 1000;
-  logv(__LOG_ARGS__, LOG_INFO, "Hardcoded trigger interval: %d\n",
+  MLOG(MLOG_INFO, "Hardcoded trigger interval: %d\n",
        policy_opts.trigger_interval);
 
   policy_opts.SetPolicy("Actual/Actual-Cost", "actual",
@@ -106,8 +106,8 @@ void BlockSimulator::SetupAllPolicies() {
 }
 
 void BlockSimulator::Run() {
-  logv(__LOG_ARGS__, LOG_INFO, "Using prof dir: %s", options_.prof_dir.c_str());
-  logv(__LOG_ARGS__, LOG_INFO, "Using output dir: %s",
+  MLOG(MLOG_INFO, "Using prof dir: %s", options_.prof_dir.c_str());
+  MLOG(MLOG_INFO, "Using output dir: %s",
        options_.output_dir.c_str());
 
   Utils::EnsureDir(options_.env, options_.output_dir);
@@ -128,7 +128,7 @@ void BlockSimulator::Run() {
 
   LogSummary();
 
-  logv(__LOG_ARGS__, LOG_INFO,
+  MLOG(MLOG_INFO,
        "Simulation finished. Sub-timesteps simulated: %d.", sub_ts);
 }
 
@@ -139,11 +139,11 @@ int BlockSimulator::RunTimestep(int& ts, int sub_ts) {
   std::vector<int> refs, derefs;
   std::vector<int> times;
 
-  logv(__LOG_ARGS__, LOG_DBUG, "========================================");
+  MLOG(MLOG_DBG0, "========================================");
 
   rv = assign_reader_.ReadTimestep(ts, sub_ts, block_assignments);
   FAIL_IF(rv < 0, "Error in AssRd/ReadTimestep");
-  logv(__LOG_ARGS__, LOG_DBUG,
+  MLOG(MLOG_DBG0,
        "[BlockSim] [AssRd] TS:%d_%d, rv: %d\nAssignments: %s", ts, sub_ts, rv,
        SerializeVector(block_assignments, 10).c_str());
 
@@ -152,7 +152,7 @@ int BlockSimulator::RunTimestep(int& ts, int sub_ts) {
   int ts_rr;
   rv = ref_reader_.ReadTimestep(ts_rr, sub_ts, refs, derefs);
   FAIL_IF(rv < 0, "Error in RefRd/ReadTimestep");
-  logv(__LOG_ARGS__, LOG_DBUG,
+  MLOG(MLOG_DBG0,
        "[BlockSim] [RefRd] TS:%d_%d, rv: %d\n\tRefs: %s\n\tDerefs: %s", ts,
        sub_ts, rv, SerializeVector(refs, 10).c_str(),
        SerializeVector(derefs, 10).c_str());
@@ -162,10 +162,10 @@ int BlockSimulator::RunTimestep(int& ts, int sub_ts) {
   // XXX: commented out on 20240129, stochsg/mat.bin follows different
   // convention? rv = prof_reader_.ReadTimestep(sub_ts - 1, times);
   rv = prof_reader_.ReadTimestep(sub_ts, times);
-  logv(__LOG_ARGS__, LOG_DBUG, "[BlockSim] [ProfSetReader] RV: %d, Times: %s",
+  MLOG(MLOG_DBG0, "[BlockSim] [ProfSetReader] RV: %d, Times: %s",
        rv, SerializeVector(times, 10).c_str());
   if (times.size() != block_assignments.size()) {
-    logv(__LOG_ARGS__, LOG_WARN,
+    MLOG(MLOG_WARN,
          "[ts%d/%d] times.size() != block_assignments.size() (%d, %d)", sub_ts,
          ts, times.size(), block_assignments.size());
     times.resize(block_assignments.size(), 1);
@@ -181,11 +181,11 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
                                          std::vector<int>& derefs,
                                          std::vector<int>& assignments,
                                          std::vector<int>& times) {
-  logv(__LOG_ARGS__, LOG_DBG2, "----------------------------------------");
+  MLOG(MLOG_DBG2, "----------------------------------------");
 
   if (nblocks_next_expected_ != -1 &&
       nblocks_next_expected_ != assignments.size()) {
-    logv(__LOG_ARGS__, LOG_ERRO,
+    MLOG(MLOG_ERRO,
          "nblocks_next_expected_ != assignments.size()");
     ABORT("nblocks_next_expected_ != assignments.size()");
   }
@@ -193,7 +193,7 @@ int BlockSimulator::ReadTimestepInternal(int ts, int sub_ts,
   nblocks_next_expected_ = PolicyExecCtx::GetNumBlocksNext(
       assignments.size(), refs.size(), derefs.size());
 
-  logv(__LOG_ARGS__, LOG_DBUG, "[BlockSim] TS:%d_%d, nblocks: %d->%d", ts,
+  MLOG(MLOG_DBG0, "[BlockSim] TS:%d_%d, nblocks: %d->%d", ts,
        sub_ts, (int)assignments.size(), nblocks_next_expected_);
 
   std::vector<double> costs(times.begin(), times.end());
@@ -248,6 +248,6 @@ void BlockSimulator::LogSummary() {
   std::stringstream ss;
   table.emitTable(ss);
 
-  logv(__LOG_ARGS__, LOG_INFO, "\n%s", ss.str().c_str());
+  MLOG(MLOG_INFO, "\n%s", ss.str().c_str());
 }
 }  // namespace amr

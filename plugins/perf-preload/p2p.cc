@@ -1,6 +1,6 @@
 #include "p2p.h"
 
-#include "common.h"
+#include "logging.h"
 #include "logging.h"
 #include "print_utils.h"
 
@@ -12,7 +12,7 @@
   do {                                                            \
     int rv = call;                                                \
     if (rv != MPI_SUCCESS) {                                      \
-      logv(__LOG_ARGS__, LOG_ERRO, "MPI call failed: %s", #call); \
+      MLOG(MLOG_ERRO, "MPI call failed: %s", #call); \
       return ret_val;                                             \
     }                                                             \
   } while (0)
@@ -97,7 +97,7 @@ void MPIMemDeleter(void* ptr) {
 
   int rv = MPI_Free_mem(ptr);
   if (rv != MPI_SUCCESS) {
-    logv(__LOG_ARGS__, LOG_ERRO, "MPI_Free_mem failed");
+    MLOG(MLOG_ERRO, "MPI_Free_mem failed");
   }
 }
 
@@ -141,7 +141,7 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithReduce(
   analysis = AnalyzeMatrix(matrix_global.data(), nranks_, npernode_);
 
   if (my_rank_ == 0) {
-    logv(__LOG_ARGS__, LOG_DBG2, "Global Comm Matrix: \n%s\n",
+    MLOG(MLOG_DBG2, "Global Comm Matrix: \n%s\n",
          MetricPrintUtils::MatrixToStr(matrix_global, nranks_).c_str());
   }
 
@@ -197,7 +197,7 @@ std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks, bool us
   npernode_ = ComputeRanksPerNode(nranks);
 
   if (my_rank == 0) {
-    logv(__LOG_ARGS__, LOG_INFO, "Ranks per node: %d", npernode_);
+    MLOG(MLOG_INFO, "Ranks per node: %d", npernode_);
   }
 
   if (use_rma_put) {

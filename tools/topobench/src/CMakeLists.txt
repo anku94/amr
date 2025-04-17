@@ -1,55 +1,38 @@
 find_package(pdlfs-common CONFIG REQUIRED)
+find_package(glog CONFIG REQUIRED)
+find_package (MPI MODULE REQUIRED)
 
-#add_executable(topobench topobench.cc block.cc driver.cc logger.cc topology.cc common.cc logger.h logger.cc)
+set(CMAKE_CXX_STANDARD 17)
+
 set(topo_srcs
-        bvar.cc
-        driver.cc
-        globals.cc
-        graph.cc
-        logger.cc
-        mesh_gen.cc
-        trace_reader.cc
-        single_ts_trace_reader.cc
+        bench/driver.cc
+        bench/graph.cc
+        bench/logger.cc
+        bench/mesh_gen.cc
+        bench/trace_reader.cc
+        bench/single_ts_trace_reader.cc
+        bench/mesh_driver.cc
+        bench/newlogger.cc
       )
 
-add_library(topo ${topo_srcs} ${common_srcs})
-target_include_directories(topo PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${common_include}")
-target_link_libraries(topo pdlfs-common)
+set (amr_srcs 
+    amr/bvar.cc
+    amr/mesh.cc)
 
-add_executable(topobench topobench.cc)
-target_link_libraries(topobench topo)
 
-# Find required packages
-find_package (MPI MODULE REQUIRED)
-string (REPLACE " " ";" MPI_CXX_COMPILE_FLAGS_LIST "${MPI_CXX_COMPILE_FLAGS}")
+add_library(topo ${common_srcs} ${topo_srcs} ${amr_srcs})
+target_include_directories(topo 
+  PUBLIC 
+  "${CMAKE_CURRENT_SOURCE_DIR}" 
+  "${common_include}")
+target_link_libraries(topo PRIVATE lb lb_common)
+target_link_libraries(topo PUBLIC pdlfs-common glog::glog MPI::MPI_CXX)
 
-#
-# make sure we link with MPI.  use "MPI_CXX_COMPILE_FLAGS_LIST"
-# prepared by the calling module.
-#
-foreach (tgt topo topobench)
+add_executable(meshdriver_main meshdriver_main.cc)
+target_link_libraries(meshdriver_main topo)
 
-    # mpich on ub14 gives a leading space that we need to trim off
-    foreach (lcv ${MPI_CXX_COMPILE_FLAGS_LIST})
-        if (NOT ${lcv} STREQUAL "")
-            target_compile_options (${tgt}
-                    PUBLIC $<BUILD_INTERFACE:${lcv}>)
-        endif ()
-    endforeach ()
+# Mac doesn't set @rpath without this
+set_target_properties(meshdriver_main PROPERTIES
+  INSTALL_RPATH "@executable_path/../lib")
 
-    # XXX: have to do this one dir at a time
-    foreach (lcv ${MPI_CXX_INCLUDE_PATH})
-        target_include_directories (${tgt}
-                PUBLIC $<BUILD_INTERFACE:${lcv}>)
-    endforeach ()
-
-    foreach (lcv ${MPI_CXX_LIBRARIES})
-        target_link_libraries(${tgt} $<BUILD_INTERFACE:${lcv}>)
-    endforeach ()
-
-    set_property (TARGET ${tgt} APPEND PROPERTY LINK_FLAGS
-            ${MPI_CXX_LINK_FLAGS})
-
-endforeach ()
-
-install(TARGETS topobench RUNTIME DESTINATION bin)
+install(TARGETS meshdriver_main RUNTIME DESTINATION bin)

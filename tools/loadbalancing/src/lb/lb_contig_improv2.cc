@@ -4,10 +4,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 #include <vector>
 
-#include "common.h"
 #include "lb_policies.h"
+#include "logging.h"
 
 namespace {
 void GetRollingSum(std::vector<double> const& v, std::vector<double>& sum,
@@ -26,8 +27,8 @@ void GetRollingSum(std::vector<double> const& v, std::vector<double>& sum,
   double rolling_max = *std::max_element(sum.begin(), sum.end());
   double rolling_min = *std::min_element(sum.begin(), sum.end());
 
-  logv(__LOG_ARGS__, LOG_DBG2, "K: %d, Rolling Max: %.2lf, Rolling Min: %.2lf",
-       k, rolling_max, rolling_min);
+  MLOG(MLOG_DBG2, "K: %d, Rolling Max: %.2lf, Rolling Min: %.2lf", k,
+       rolling_max, rolling_min);
 }
 
 bool IsRangeAvailable(std::vector<int> const& ranklist, int start, int end) {
@@ -40,8 +41,7 @@ bool IsRangeAvailable(std::vector<int> const& ranklist, int start, int end) {
 }
 
 bool MarkRange(std::vector<int>& ranklist, int start, int end, int flag) {
-  logv(__LOG_ARGS__, LOG_DBG2, "MarkRange marking [%d, %d] with %d", start, end,
-       flag);
+  MLOG(MLOG_DBG2, "MarkRange marking [%d, %d] with %d", start, end, flag);
 
   for (int i = start; i <= end; i++) {
     ranklist[i] = flag;
@@ -61,7 +61,7 @@ int AssignBlocksDP2(std::vector<double> const& costlist,
                     std::vector<int>& ranklist, int nranks) {
   double cost_total = std::accumulate(costlist.begin(), costlist.end(), 0.0);
   double cost_target = cost_total / nranks;
-  logv(__LOG_ARGS__, LOG_DBG2, "Target Cost: %.2lf", cost_target);
+  MLOG(MLOG_DBG2, "Target Cost: %.2lf", cost_target);
 
   std::vector<double> cum_costlist(costlist);
   int nblocks = costlist.size();
@@ -89,18 +89,17 @@ int AssignBlocksDP2(std::vector<double> const& costlist,
         double cost_j = GetSumRange(cum_costlist, ni - j, ni - 1);
         double cost_before_j = dp[ni - j][ri - 1];
         double cost_max = std::max(cost_j, cost_before_j);
-        logv(__LOG_ARGS__, LOG_DBG3,
-             "J: %d, CJ: %.2lf, CB: %.2lf, CM: %.2lf",
-             j, cost_j, cost_before_j, cost_max);
+        MLOG(MLOG_DBG3, "J: %d, CJ: %.2lf, CB: %.2lf, CM: %.2lf", j, cost_j,
+             cost_before_j, cost_max);
 
         dp[ni][ri] = std::min(dp[ni][ri], cost_max);
       }
 
-      logv(__LOG_ARGS__, LOG_DBG2, "DP[%d][%d]: %.2lf", ni, ri, dp[ni][ri]);
+      MLOG(MLOG_DBG2, "DP[%d][%d]: %.2lf", ni, ri, dp[ni][ri]);
     }
   }
 
-  logv(__LOG_ARGS__, LOG_DBG2, "Final DP[%d][%d]: %.2lf", n, r, dp[n][r]);
+  MLOG(MLOG_DBG2, "Final DP[%d][%d]: %.2lf", n, r, dp[n][r]);
 
   return 0;
 }
@@ -112,7 +111,7 @@ int LoadBalancePolicies::AssignBlocksContigImproved2(
     int nranks) {
   int nblocks = costlist.size();
   if (nblocks % nranks == 0) {
-    logv(__LOG_ARGS__, LOG_DBUG,
+    MLOG(MLOG_DBG0,
          "Blocks evenly divisible by nranks_, using AssignBlocksContiguous");
     return AssignBlocksContiguous(costlist, ranklist, nranks);
   } else {

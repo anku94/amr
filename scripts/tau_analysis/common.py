@@ -116,7 +116,10 @@ def plot_init_print():
 
 
 def plot_dir_latest() -> str:
-    all_dirs = glob.glob("figures/202*")
+    # all_dirs = glob.glob("figures/202*")
+    glob_path = "/Users/schwifty/Repos/amr-data"
+    all_dirs = glob.glob(f"{glob_path}/202*")
+
     def get_key(x: str) -> int:
         mobj = re.search(r"202[0-9]+", x)
         if mobj:

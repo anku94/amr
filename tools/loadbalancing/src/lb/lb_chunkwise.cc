@@ -1,8 +1,10 @@
 #include "lb_chunkwise.h"
 
-#include "common.h"
 #include "lb_policies.h"
 #include "policy_wopts.h"
+#include "logging.h"
+
+#include <algorithm>
 
 namespace amr {
 int LoadBalancePolicies::AssignBlocksCDPChunked(
@@ -11,7 +13,7 @@ int LoadBalancePolicies::AssignBlocksCDPChunked(
   int chunksz = opts.chunk_size;
 
   if (nranks % chunksz != 0) {
-    logv(__LOG_ARGS__, LOG_WARN,
+    MLOG(MLOG_WARN,
          "Number of ranks %d is not a multiple of chunk size %d", nranks,
          chunksz);
     return -1;
@@ -21,7 +23,7 @@ int LoadBalancePolicies::AssignBlocksCDPChunked(
   int rv = LBChunkwise::AssignBlocks(costlist, ranklist, nranks, nchunks);
 
   if (rv) {
-    logv(__LOG_ARGS__, LOG_WARN, "Failed to assign blocks to chunks, rv: %d",
+    MLOG(MLOG_WARN, "Failed to assign blocks to chunks, rv: %d",
          rv);
   }
 
@@ -36,14 +38,14 @@ int LoadBalancePolicies::AssignBlocksParallelCDPChunked(
 
   // we only care about this if we have more ranks than one chunk
   if (nranks % chunksz != 0 and nranks > chunksz) {
-    logv(__LOG_ARGS__, LOG_WARN,
+    MLOG(MLOG_WARN,
          "Number of ranks %d is not a multiple of chunk size %d", nranks,
          chunksz);
     return -1;
   }
 
   if (mympirank == 0) {
-    logv(__LOG_ARGS__, LOG_DBUG, "CDPChunkedOpts: %s", opts.ToString().c_str());
+    MLOG(MLOG_DBG0, "CDPChunkedOpts: %s", opts.ToString().c_str());
   }
 
   int parallelism = std::min(opts.parallelism, nmpiranks);
@@ -60,7 +62,7 @@ int LoadBalancePolicies::AssignBlocksParallelCDPChunked(
                                                mympirank, nmpiranks, nchunks);
   }
   if (rv) {
-    logv(__LOG_ARGS__, LOG_WARN, "Failed to assign blocks to chunks, rv: %d",
+    MLOG(MLOG_WARN, "Failed to assign blocks to chunks, rv: %d",
          rv);
   }
 

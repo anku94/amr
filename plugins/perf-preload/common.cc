@@ -1,4 +1,4 @@
-#include "common.h"
+#include "logging.h"
 
 #include "amr_monitor.h"
 

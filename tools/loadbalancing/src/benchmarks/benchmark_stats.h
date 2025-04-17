@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "tabular_data.h"
+#include "common/tabular_data.h"
 
 #include <utility>
 
