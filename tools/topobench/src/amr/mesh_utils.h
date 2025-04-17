@@ -6,6 +6,26 @@
 #include <string>
 
 namespace topo::amr {
+// OrderedID: single block's SFC ID
+using OrderedBlockVec = std::vector<int>;
+
+//
+// OrderedMeshNode: a single block and its neighbors
+// in SFC block ID format
+//
+struct OrderedMeshNode {
+  OrderedBlockVec face, edge, vertex;
+};
+
+//
+// OrderedMesh: mesh structure in SFC block IDs
+//
+struct OrderedMesh {
+  int nblocks;
+  std::vector<OrderedMeshNode> nbrmap;
+};
+
+// Vec3: 3D vector utility class
 template <typename T>
 struct Vec3 {
   T x, y, z;
@@ -33,11 +53,16 @@ struct Vec3 {
     return x == other.x && y == other.y && z == other.z;
   }
 
+  // AnyLT: any dim less than that of other
   bool AnyLT(T val) const { return x < val || y < val || z < val; }
+  // AnyGT: any dim greater than that of other
   bool AnyGT(T val) const { return x > val || y > val || z > val; }
+  // AnyLTE: any dim less than or equal to that of other
   bool AnyLTE(T val) const { return x <= val && y <= val && z <= val; }
+  // AnyGTE: any dim greater than or equal to that of other
   bool AnyGTE(T val) const { return x >= val && y >= val && z >= val; }
 
+  // ToString: convert to string
   std::string ToString() const {
     std::stringstream ss;
     ss << "Vec3(" << x << ", " << y << ", " << z << ")";
@@ -49,9 +74,11 @@ using Vec3i = Vec3<int>;
 using Vec3ll = Vec3<int64_t>;
 
 // Logical location in the AMR hierarchy
+// locv of a child is (locv_parent << 1) + offset
+// offset: [0, 8). each offset bit is added to a locv dim
 struct Loc {
-  int level = -1;
-  Vec3ll locv;
+  int level = -1;  // refinement level
+  Vec3ll locv;     // Loc vec
 
   Loc() : level(-1), locv{-1, -1, -1} {}
   Loc(int level, Vec3ll loc) : level(level), locv(loc) {}
@@ -89,4 +116,4 @@ struct LocHash {
     return h;
   }
 };
-}  // namespace amr
+}  // namespace topo::amr

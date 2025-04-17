@@ -63,7 +63,7 @@ std::unique_ptr<MeshGenerator> MeshGenerator::Create(const DriverOpts &opts) {
   return nullptr;
 }
 
-Status RingMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
+Status RingMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   for (size_t i = 0; i < opts_.blocks_per_rank; i++) {
     int ring_delta = i * Globals::nranks;
     int bid_rel = Globals::my_rank;
@@ -84,7 +84,7 @@ Status RingMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
   return Status::OK;
 }
 
-Status AllToAllMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
+Status AllToAllMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   if (opts_.blocks_per_rank <= Globals::nranks and
       (opts_.blocks_per_rank % Globals::nranks == 0)) {
     logv(__LOG_ARGS__, LOG_ERRO, "Invalid arguments");
@@ -122,7 +122,7 @@ Status AllToAllMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
   return Status::OK;
 }
 
-Status SingleTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
+Status SingleTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   Status s = Status::OK;
 
   logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,
@@ -169,7 +169,7 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
   return s;
 }
 
-Status MultiTimestepTraceMeshGenerator::GenerateMesh(Mesh &mesh, int ts) {
+Status MultiTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   Status s = Status::OK;
 
   logvat0(Globals::my_rank, __LOG_ARGS__, LOG_INFO,

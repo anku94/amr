@@ -76,10 +76,10 @@ class Driver {
 
     for (int rnum = 0; rnum < nrounds; rnum++) {
       mesh_gen->GenerateMesh(mesh_, rnum);
-      mesh_.AllocateBoundaryVariables();
+      mesh_.AllocateBvars();
       mesh_.PrintConfig();
       mesh_.DoCommunicationRound();
-      mesh_.Reset();
+      mesh_.ResetBvarsAndBlocks();
     }
   }
 
@@ -120,7 +120,7 @@ class Driver {
       mesh_gen->GenerateMesh(mesh_, ts);
       MPI_Barrier(MPI_COMM_WORLD);
 
-      mesh_.AllocateBoundaryVariables();
+      mesh_.AllocateBvars();
       mesh_.PrintConfig();
 
       for (int rnum = 0; rnum < nrounds; rnum++) {
@@ -128,12 +128,12 @@ class Driver {
         MPI_Barrier(MPI_COMM_WORLD);
       }
 
-      mesh_.Reset();
+      mesh_.ResetBvarsAndBlocks();
     }
   }
 
  private:
-  Mesh mesh_;
+  CommMesh mesh_;
   const DriverOpts opts_;
 };
 }  // namespace topo::bench

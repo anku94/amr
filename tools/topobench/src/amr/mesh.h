@@ -23,16 +23,7 @@ class Mesh {
  public:
   using LeafSet = std::unordered_set<Loc, LocHash>;
   using LocToIdMap = std::unordered_map<Loc, int, LocHash>;
-  using OrderedBlockVec = std::vector<int>;
 
-  struct OrderedMeshNode {
-    OrderedBlockVec face, edge, vertex;
-  };
-
-  struct OrderedMesh {
-    int nblocks;
-    std::vector<OrderedMeshNode> nbrmap;
-  };
 
   // Mesh:: ctor
   Mesh(int nx, int ny, int nz, int max_level) : max_level_(max_level) {

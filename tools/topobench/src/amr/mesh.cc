@@ -59,7 +59,7 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
       PrintUtils::SerializeVec(nbrs).c_str());
 }
 
-Mesh::OrderedMesh Mesh::GetOrderedMesh() const {
+OrderedMesh Mesh::GetOrderedMesh() const {
   // DFS numbering
   LocToIdMap idmap;
   idmap.reserve(leaves_.size());

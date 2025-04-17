@@ -2,11 +2,12 @@
 
 #include "amr/block.h"
 #include "logger.h"
+#include "topo_types.h"
 
 namespace topo::bench {
-class Mesh {
+class CommMesh {
  public:
-  Status AllocateBoundaryVariables() {
+  Status AllocateBvars() {
     for (const auto& b : blocks_) {
       Status s = b->AllocateBoundaryVariables();
       if (s != Status::OK) return s;
@@ -15,7 +16,7 @@ class Mesh {
     return Status::OK;
   }
 
-  Status Reset() {
+  Status ResetBvarsAndBlocks() {
     for (const auto& b : blocks_) {
       Status s = b->DestroyBoundaryData();
       if (s != Status::OK) return s;
@@ -69,12 +70,12 @@ class Mesh {
   }
 
  private:
-  Status AddBlock(const std::shared_ptr<topo::amr::MeshBlock>& block) {
+  Status AddBlock(const MeshBlockRef& block) {
     blocks_.push_back(block);
     return Status::OK;
   }
 
-  std::vector<std::shared_ptr<topo::amr::MeshBlock>> blocks_;
+  std::vector<MeshBlockRef> blocks_;
   Logger logger_;
 
   friend class MeshGenerator;

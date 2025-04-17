@@ -65,7 +65,7 @@ struct PrintUtils {
     return oss.str();
   }
 
-  static void PrintOmeshBlock(Mesh::OrderedMesh& om, int bid) {
+  static void PrintOmeshBlock(OrderedMesh& om, int bid) {
     auto& block = om.nbrmap[bid];
     int facecnt = block.face.size();
     int edgecnt = block.edge.size();
@@ -80,15 +80,15 @@ struct PrintUtils {
          SerializeVec(block.vertex).c_str());
   }
 
-  static void PrintOmesh(Mesh::OrderedMesh& om) {
+  static void PrintOmesh(OrderedMesh& om) {
     MLOG(MLOG_INFO, "\n\n--- Ordered mesh with %d blocks ---\n", om.nblocks);
     for (int i = 0; i < om.nblocks; ++i) {
       PrintOmeshBlock(om, i);
     }
   }
 
-  static void AssertValInVec(const Mesh::OrderedBlockVec& vec, int val,
-                             int vec_id, const char* vec_name) {
+  static void AssertValInVec(const OrderedBlockVec& vec, int val, int vec_id,
+                             const char* vec_name) {
     auto it = std::find(vec.begin(), vec.end(), val);
     if (it == vec.end()) {
       MLOG(MLOG_ERRO, "!ERROR! Block %d not found in vec::%s of block %d\n",
@@ -98,7 +98,7 @@ struct PrintUtils {
   }
 
   // for each block i, if it has a nbr j, j should have i
-  static void ValidateOmesh(const Mesh::OrderedMesh& om) {
+  static void ValidateOmesh(const OrderedMesh& om) {
     for (int i = 0; i < om.nblocks; ++i) {
       MLOG(MLOG_INFO, "Validating block %d...", i);
 

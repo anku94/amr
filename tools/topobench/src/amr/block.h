@@ -13,7 +13,9 @@
 #include "bvar.h"
 #include "common.h"
 #include "globals.h"
+#include "mesh_utils.h"
 #include "topo_common.h"
+#include "topo_types.h"
 
 #define MPI_CHECK(status, msg)         \
   if (status != MPI_SUCCESS) {         \

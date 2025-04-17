@@ -10,7 +10,7 @@ class MeshGenerator {
 protected:
   MeshGenerator(const DriverOpts &opts) : opts_(opts) {}
 
-  void AddMeshBlock(Mesh &mesh, std::shared_ptr<topo::amr::MeshBlock> block) {
+  void AddMeshBlock(CommMesh &mesh, std::shared_ptr<topo::amr::MeshBlock> block) {
     mesh.AddBlock(block);
   }
 
@@ -19,7 +19,7 @@ protected:
 public:
   virtual int GetNumTimesteps() = 0;
 
-  virtual Status GenerateMesh(Mesh &mesh, int ts) = 0;
+  virtual Status GenerateMesh(CommMesh &mesh, int ts) = 0;
 
   static std::unique_ptr<MeshGenerator> Create(const DriverOpts &opts);
 
@@ -32,7 +32,7 @@ public:
 
   int GetNumTimesteps() override { return 1; }
 
-  Status GenerateMesh(Mesh &mesh, int ts) override;
+  Status GenerateMesh(CommMesh &mesh, int ts) override;
 };
 
 class AllToAllMeshGenerator : public MeshGenerator {
@@ -41,7 +41,7 @@ public:
 
   int GetNumTimesteps() override { return 1; }
 
-  Status GenerateMesh(Mesh &mesh, int ts) override;
+  Status GenerateMesh(CommMesh &mesh, int ts) override;
 };
 
 class SingleTimestepTraceMeshGenerator : public MeshGenerator {
@@ -54,7 +54,7 @@ public:
     return 1;
   }
 
-  Status GenerateMesh(Mesh &mesh, int ts) override;
+  Status GenerateMesh(CommMesh &mesh, int ts) override;
 
 private:
   SingleTimestepTraceReader reader_;
@@ -70,7 +70,7 @@ public:
     return reader_.GetNumTimesteps();
   }
 
-  Status GenerateMesh(Mesh &mesh, int ts) override;
+  Status GenerateMesh(CommMesh &mesh, int ts) override;
 
 private:
   TraceReader reader_;

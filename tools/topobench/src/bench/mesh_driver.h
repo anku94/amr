@@ -15,6 +15,13 @@ struct MeshDriverOpts {
   int max_reflvl;
 };
 
+struct BlockPlacement {
+  int nblocks;
+  int nranks;
+  std::vector<double> costlist;
+  std::vector<double> ranklist;
+};
+
 class MeshDriver {
  public:
   MeshDriver(const MeshDriverOpts &opts) : opts_(opts) { PrintOpts(); }
