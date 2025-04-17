@@ -35,7 +35,7 @@ class PlacementUtils {
     for (int bid : rank_bids) {
       auto block = std::make_shared<amr::MeshBlock>(bid);
 
-      MLOG(MLOG_DBG0, "Setting up nbrs for block %d", bid);
+      MLOGIFR0(MLOG_DBG0, "Setting up nbrs for block %d", bid);
       AddNeighborVec(block, omesh.nbrmap[bid].face, ranklist, msgsz);
       AddNeighborVec(block, omesh.nbrmap[bid].edge, ranklist, msgsz);
       AddNeighborVec(block, omesh.nbrmap[bid].vertex, ranklist, msgsz);
@@ -49,7 +49,7 @@ class PlacementUtils {
   // AddNeighbor: add a neighbor vec (face/edge/vtx) to the block
   static void AddNeighborVec(MeshBlockRef &block, std::vector<int> bids,
                              std::vector<int> ranklist, int msg_sz) {
-    MLOG(MLOG_DBG0, "- Adding %zu nbrs", bids.size());
+    MLOGIFR0(MLOG_DBG1, "- Adding %zu nbrs", bids.size());
 
     for (int bid : bids) {
       int peer_rank = ranklist[bid];

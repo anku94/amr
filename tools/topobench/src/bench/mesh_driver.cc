@@ -38,26 +38,25 @@ void MeshDriver::Run() {
 
   PlacementArgs lb_args{"baseline", costlist, ranklist, nranks};
   int rv = LoadBalance::AssignBlocks(lb_args);
-  ABORTIF(!rv, "Placement assignment failed!");
+  ABORTIF(rv, "Placement assignment failed!");
   MLOG(MLOG_INFO, "Placement assignment complete.");
 
-//   CommMesh comm_mesh;
-//   rv = PlacementUtils::SetupCommMesh(comm_mesh, omesh, lb_args.ranklist);
-//   MLOGIF(!rv, MLOG_ERRO, "SetupCommMesh failed!");
+  CommMesh comm_mesh;
+  rv = PlacementUtils::SetupCommMesh(comm_mesh, omesh, lb_args.ranklist);
+  MLOGIF(rv, MLOG_ERRO, "SetupCommMesh failed!");
 
 //   // Allocate boundary variables for communication
-//   auto s = comm_mesh.AllocateBvars();
-//   MLOGIF(s != Status::OK, MLOG_ERRO, "Failed to allocate boundary variables!");
-
-//   MLOG(MLOG_INFO, "Allocated boundary variables");
+  auto s = comm_mesh.AllocateBvars();
+  MLOGIF(s != Status::OK, MLOG_ERRO, "Failed to allocate boundary variables!");
+  MLOG(MLOG_INFO, "Allocated boundary variables");
 
 //   // Run one communication round
-//   s = comm_mesh.DoCommunicationRound();
-//   MLOGIF(s != Status::OK, MLOG_ERRO, "Communication round failed!");
-//   MLOG(MLOG_INFO, "Communication round complete.");
+  s = comm_mesh.DoCommunicationRound();
+  MLOGIF(s != Status::OK, MLOG_ERRO, "Communication round failed!");
+  MLOG(MLOG_INFO, "Communication round complete.");
 
 //   // Print stats and cleanup
-//   comm_mesh.PrintStats();
-//   comm_mesh.ResetBvarsAndBlocks();
+  comm_mesh.PrintStats();
+  comm_mesh.ResetBvarsAndBlocks();
 }
 }  // namespace topo::bench

@@ -50,11 +50,10 @@ void BoundaryVariable::StartReceiving() {
   for (auto nb : pmb->nbrvec_rcv_) {
     int status = MPI_Start(&(bd_var_.req_recv[nb.buf_id]));
     if (status != MPI_SUCCESS) {
-      logv(__LOG_ARGS__, LOG_ERRO, "MPI Start Failed");
+      MLOGIFR0(MLOG_ERRO, "MPI Start Failed");
     }
 
-    logv(__LOG_ARGS__, LOG_DBG2, "Rank %d - Receive POSTED %d",
-         Globals::my_rank, nb.buf_id);
+    MLOGIFR0(MLOG_DBG2, "Rank %d - Receive POSTED %d", Globals::my_rank, nb.buf_id);
   }
 }
 
@@ -130,6 +129,16 @@ void BoundaryVariable::ReceiveBoundaryBuffersWithWait() {
     // redundant; guaranteed with MPI_Wait
     bd_var_.flag[nb.buf_id] = BoundaryStatus::arrived;
     bytes_rcvd_ += bd_var_.recvbufsz[nb.buf_id];
+  }
+
+  // XXX: we explicitly add sends in receive boundary buffers
+  // instead of the clearboundary thing (todo: remove at clearboundary)
+  for (auto nb : pmb->nbrvec_snd_) {
+    if (bd_var_.flag[nb.buf_id] == BoundaryStatus::arrived) continue;
+    int status = MPI_Wait(&(bd_var_.req_send[nb.buf_id]), MPI_STATUS_IGNORE);
+    MPI_CHECK(status, "MPI_Wait failed");
+
+    bd_var_.flag[nb.buf_id] = BoundaryStatus::arrived;
   }
 }
 

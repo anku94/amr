@@ -9,6 +9,9 @@
 #include <memory>
 #include <mpi.h>
 
+#include "topo_common.h"
+#include "globals.h"
+
 #define NMAX_NEIGHBORS 2048
 #define MAX_MSGSZ 16384
 
@@ -85,6 +88,13 @@ class BoundaryVariable {
   // DestroyBoundaryData: destroy MPI requests in bd and set to null
   // reverse of SetupPersistentMPI
   void DestroyBoundaryData(BoundaryData<>& bd);
+
+  ~BoundaryVariable() {
+    MLOGIFR0(MLOG_DBG0, "Destroying boundary variable");
+
+    DestroyBoundaryData(bd_var_);
+    DestroyBoundaryData(bd_var_flcor_);
+  }
 
  private:
   friend class MeshBlock;

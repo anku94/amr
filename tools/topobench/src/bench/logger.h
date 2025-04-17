@@ -3,44 +3,49 @@
 
 #pragma once
 
-#include "common.h"
 #include <chrono>
 #include <memory>
 #include <vector>
 
 #include "amr/block.h"
+#include "common.h"
 
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
                                           std::chrono::duration<double>>;
 
-
 namespace topo::bench {
 class Logger {
-public:
+ public:
   Logger()
-      : start_ms_{}, end_ms_{}, total_sent_(0), total_rcvd_(0), total_time_(0),
+      : start_ms_{},
+        end_ms_{},
+        total_sent_(0),
+        total_rcvd_(0),
+        total_time_(0),
         num_obs_(0) {}
 
+  // LogBegin: log the start time of the communication round
   void LogBegin() { start_ms_ = Now(); }
 
+  // LogEnd: log the total time taken for the communication round
   void LogEnd() {
     end_ms_ = Now();
-
-    logv(__LOG_ARGS__, LOG_DBUG, "Total time: %.2f us",
-         (end_ms_ - start_ms_) * 1e3);
-
+    MLOGIFR0(MLOG_INFO, "Total time: %.2f us", (end_ms_ - start_ms_) * 1e3);
     num_obs_++;
   }
 
+  // LogData: ??
   void LogData(std::vector<std::shared_ptr<topo::amr::MeshBlock>> &blocks);
 
+  // Aggregate: ??
   void Aggregate();
 
+  // LogRun: ??
   void LogRun(double send_mb, double send_mbps, double recv_mb,
               double recv_mbps, double time_avg_ms, double time_min_ms,
               double time_max_ms, int num_obs);
 
-private:
+ private:
   int GetNumRanks() const;
 
   uint64_t Now() const {
