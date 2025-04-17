@@ -4,6 +4,7 @@ find_package(GUROBI)
 find_package(glog CONFIG REQUIRED)
 
 set (lb_srcs
+    amr_lb.cc
     lb_chunkwise.cc
     lb_contig_improv.cc
     lb_contig_improv2.cc
@@ -31,6 +32,8 @@ endif()
 
 # GUROBI requires C++11; *sigh*
 target_compile_features(lb PRIVATE cxx_std_11)
+
+target_include_directories(lb PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../common)
 
 target_include_directories(lb PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../include>

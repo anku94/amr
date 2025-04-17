@@ -13,7 +13,10 @@ set(lb_tests
   policy_tests.cc)
 
 set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/../src)
-set(all_include_dirs ${src_dir} ${src_dir}/blocksim)
+set(all_include_dirs 
+  ${src_dir} 
+  ${src_dir}/blocksim 
+  ${src_dir}/common)
 
 set(misc_srcs
     ${src_dir}/blocksim/block_alloc_sim.cc
@@ -38,7 +41,11 @@ target_include_directories(misc_tests PRIVATE ${all_include_dirs})
 gtest_discover_tests(misc_tests)
 add_test(NAME misc_tests COMMAND misc_tests)
 
-add_executable (scale_tests scale_tests.cc ${src_dir}/globals.cc ${src_dir}/config_parser.cc ${src_dir}/distrib/alias_method.cc)
+add_executable (scale_tests 
+  scale_tests.cc 
+  ${src_dir}/common/globals.cc 
+  ${src_dir}/common/config_parser.cc 
+  ${src_dir}/distrib/alias_method.cc)
 target_link_libraries(scale_tests GTest::gtest_main lb pdlfs-common)
 target_include_directories(scale_tests PRIVATE ${all_include_dirs})
 gtest_discover_tests(scale_tests)

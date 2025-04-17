@@ -1,7 +1,7 @@
 #include "simple_sim.h"
 
-#include "lb_policies.h"
-#include "policy_utils.h"
+#include "common/lb_policies.h"
+#include "common/policy_utils.h"
 
 const char* policy_file = nullptr;
 

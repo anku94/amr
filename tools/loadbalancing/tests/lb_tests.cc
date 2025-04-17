@@ -2,7 +2,7 @@
 // Created by Ankush J on 4/10/23.
 //
 
-#include "lb_policies.h"
+#include "common/lb_policies.h"
 #include "common.h"
 
 #include <gtest/gtest.h>

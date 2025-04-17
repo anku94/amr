@@ -5,14 +5,13 @@
 #include "bench_util.h"
 #include "benchmark_stats.h"
 #include "common.h"
-#include "config_parser.h"
+#include "common/config_parser.h"
 #include "distrib/distributions.h"
-#include "globals.h"
-#include "lb_policies.h"
-#include "policy_utils.h"
-#include "run_utils.h"
-#include "tabular_data.h"
-#include "trace_utils.h"
+#include "common/lb_policies.h"
+#include "common/policy_utils.h"
+#include "common/run_utils.h"
+#include "common/tabular_data.h"
+#include "common/trace_utils.h"
 
 namespace amr {
 struct BenchmarkOpts {
