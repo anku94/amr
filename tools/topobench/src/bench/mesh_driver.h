@@ -13,6 +13,7 @@ namespace topo {
 struct MeshDriverOpts {
   topo::Vec3i mesh_dims;  // mesh dims as blocks in x,y,z
   int max_reflvl;         // max refinement level
+  int tgt_leafcnt;        // target leaf count
   topo::Vec3i msgsz;      // face/edge/vertex msg sizes
   int my_rank;            // local MPI rank
   int nranks;             // total MPI ranks
@@ -53,6 +54,7 @@ class MeshDriver {
     MLOG(MLOG_INFO, "%15s: %s", "Mesh dims",
          opts_.mesh_dims.ToString().c_str());
     MLOG(MLOG_INFO, "%15s: %d", "Max reflvl", opts_.max_reflvl);
+    MLOG(MLOG_INFO, "%15s: %d", "Target leafcnt", opts_.tgt_leafcnt);
     MLOG(MLOG_INFO, "%15s: %s", "Msg sizes", opts_.msgsz.ToString().c_str());
     MLOG(MLOG_INFO, "%15s: %s", "Policy", opts_.policy.c_str());
     MLOG(MLOG_INFO, "%15s: %d", "Num ts", opts_.num_ts);

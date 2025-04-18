@@ -30,6 +30,13 @@ void MeshDriver::Run() {
 
     // Create base mesh and print it
     Mesh mesh(dims.x, dims.y, dims.z, lvl);
+
+    // Refine to target leaf count
+    int tgt_leafcnt = opts_.tgt_leafcnt;
+    int cur_leafcnt = mesh.RefineToTargetLeafcnt(tgt_leafcnt);
+    MLOGIFR0(MLOG_INFO, "Refined to %d leaves", cur_leafcnt);
+
+    // Print hierarchy
     PrintUtils::PrintHierarchy(mesh, Mesh::GetRootLoc());
 
     // Generate ordered mesh and print it
@@ -38,12 +45,12 @@ void MeshDriver::Run() {
       PrintUtils::PrintOmesh(omesh);
     }
 
-    int nblocks = omesh.nblocks;
-    std::vector<int> ranklist(nblocks, -1);
-    int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
-    ABORTIF(rv, "Placement assignment failed!");
+    // int nblocks = omesh.nblocks;
+    // std::vector<int> ranklist(nblocks, -1);
+    // int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
+    // ABORTIF(rv, "Placement assignment failed!");
 
-    RunWithOmesh(omesh, ranklist);
+    // RunWithOmesh(omesh, ranklist);
   }
 }
 

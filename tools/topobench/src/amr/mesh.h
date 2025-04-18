@@ -79,6 +79,10 @@ class Mesh {
   // GetRootLoc: root location
   static Loc GetRootLoc() { return Loc{0, {0, 0, 0}}; }
 
+  // RefineToTargetLeafcnt: Refine randomly until we reach tgt_leafcnt
+  int RefineToTargetLeafcnt(int tgt_leafcnt);
+
+
  private:
   int root_level_, max_level_, current_max_level_;
   LeafSet leaves_, active_;

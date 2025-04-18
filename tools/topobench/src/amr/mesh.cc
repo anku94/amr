@@ -100,6 +100,21 @@ std::vector<Loc> Mesh::GetChildLocs(const Loc& loc) {
   return children;
 }
 
+int Mesh::RefineToTargetLeafcnt(int tgt_leafcnt) {
+  int cur_leafcnt = leaves_.size();
+  while (cur_leafcnt < tgt_leafcnt) {
+    // Refine a random active block
+    auto it = active_.begin();
+    std::advance(it, rand() % active_.size());
+    Refine(*it);
+    cur_leafcnt = leaves_.size();
+    MLOG(MLOG_DBG0, "Refined block %s, now have %d leaves",
+         it->ToString().c_str(), cur_leafcnt);
+  }
+
+  return cur_leafcnt;
+}
+
 void Mesh::InitializeRoots(int nx, int ny, int nz) {
   for (int z = 0; z < nz; ++z)
     for (int y = 0; y < ny; ++y)

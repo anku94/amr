@@ -14,6 +14,7 @@
 topo::MeshDriverOpts GetOpts() {
   auto dims_xyz = amr::ConfigUtils::GetParamOrDefault<int>("dims_xyz", 2);
   auto max_reflvl = amr::ConfigUtils::GetParamOrDefault<int>("max_reflvl", 4);
+  auto tgt_leafcnt = amr::ConfigUtils::GetParamOrDefault<int>("target_leafcnt", 15);
 
   auto f_msgsz =
       amr::ConfigUtils::GetParamOrDefault<int>("f_msgsz_bytes", 1024);
@@ -35,6 +36,7 @@ topo::MeshDriverOpts GetOpts() {
     topo::PrintSectionUtil print_section(MLOG_DBG0, "Parsed Config", 10);
     MLOG(MLOG_DBG0, "%15s: %d", "Dims xyz", dims_xyz);
     MLOG(MLOG_DBG0, "%15s: %d", "Max reflvl", max_reflvl);
+    MLOG(MLOG_DBG0, "%15s: %d", "Target leafcnt", tgt_leafcnt);
     MLOG(MLOG_DBG0, "%15s: %s", "Msg sizes (bytes)", msgsz.ToString().c_str());
     MLOG(MLOG_DBG0, "%15s: %s", "Job dir", jobdir);
     MLOG(MLOG_DBG0, "%15s: %s", "Log fname", log_fname);
@@ -46,6 +48,7 @@ topo::MeshDriverOpts GetOpts() {
   topo::MeshDriverOpts opts;
   opts.mesh_dims = topo::Vec3i(dims_xyz, dims_xyz, dims_xyz);
   opts.max_reflvl = max_reflvl;
+  opts.tgt_leafcnt = tgt_leafcnt;
   opts.msgsz = msgsz;
   opts.policy = policy;
   opts.jobdir = jobdir;
