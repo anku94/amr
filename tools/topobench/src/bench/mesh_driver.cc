@@ -20,42 +20,52 @@ MeshDriver::MeshDriver(const MeshDriverOpts& opts) : opts_(opts) {
   PrintOpts();
 }
 
-
 void MeshDriver::Run() {
   MLOG(MLOG_INFO, "Running mesh driver");
   auto dims = opts_.mesh_dims;
   auto lvl = opts_.max_reflvl;
 
-  // Create base mesh and print it
-  Mesh mesh(dims.x, dims.y, dims.z, lvl);
-  PrintUtils::PrintHierarchy(mesh, Mesh::GetRootLoc());
+  for (int ts = 0; ts < opts_.num_ts; ts++) {
+    MLOGIFR0(MLOG_INFO, "- Running timestep %d- ", ts);
 
-  // Generate ordered mesh and print it
-  auto omesh = mesh.GetOrderedMesh();
-  PrintUtils::PrintOmesh(omesh);
+    // Create base mesh and print it
+    Mesh mesh(dims.x, dims.y, dims.z, lvl);
+    PrintUtils::PrintHierarchy(mesh, Mesh::GetRootLoc());
 
-  RunWithOmesh(omesh);
+    // Generate ordered mesh and print it
+    auto omesh = mesh.GetOrderedMesh();
+    if (Globals::my_rank == 0) {
+      PrintUtils::PrintOmesh(omesh);
+    }
+
+    int nblocks = omesh.nblocks;
+    MLOGIFR0(MLOG_INFO, "Num blocks: %d", nblocks);
+    std::vector<int> ranklist(nblocks, -1);
+    int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
+    ABORTIF(rv, "Placement assignment failed!");
+
+    RunWithOmesh(omesh, ranklist);
+  }
 }
 
-void MeshDriver::RunWithOmesh(OrderedMesh& omesh) {
+void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
   // Compute load-balanced placement
   int nblocks = omesh.nblocks;
-  std::vector<int> ranklist(nblocks, -1);
-  int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
-  ABORTIF(rv, "Placement assignment failed!");
-
-  rv = PlacementUtils::SetupCommMesh(comm_mesh_, omesh, ranklist);
+  int rv = PlacementUtils::SetupCommMesh(comm_mesh_, omesh, ranklist);
   MLOGIF(rv, MLOG_ERRO, "SetupCommMesh failed!");
 
   // Allocate boundary variables for communication
   auto s = comm_mesh_.AllocateBvars();
   MLOGIF(s != Status::OK, MLOG_ERRO, "Failed to allocate boundary variables!");
-  MLOG(MLOG_INFO, "Allocated boundary variables");
+  MLOGIFR0(MLOG_INFO, "Allocated boundary variables");
 
-  // Run one communication round
-  s = comm_mesh_.DoCommunicationRound();
-  MLOGIF(s != Status::OK, MLOG_ERRO, "Communication round failed!");
-  MLOG(MLOG_INFO, "Communication round complete.");
+  for (int rnum = 0; rnum < opts_.num_rounds; rnum++) {
+    // Run one communication round
+    s = comm_mesh_.DoCommunicationRound();
+    MPI_Barrier(MPI_COMM_WORLD);
+    MLOGIF(s != Status::OK, MLOG_ERRO, "Communication round failed!");
+    MLOGIFR0(MLOG_INFO, "Communication round complete.");
+  }
 
   //   // Print stats and cleanup
   comm_mesh_.PrintStats();
@@ -69,7 +79,7 @@ int MeshDriver::AssignBlocks(std::vector<int>& ranklist, int nblocks,
   DistributionUtils::GenDistribution(dopts, costlist, nblocks);
 
   MLOGIFR0(MLOG_INFO, "AssignBlocks: gen costs for %d blocks using distrib: %s",
-       nblocks, DistributionUtils::DistributionOptsToString(dopts).c_str());
+           nblocks, DistributionUtils::DistributionOptsToString(dopts).c_str());
 
   auto policy = opts_.policy.c_str();
   MLOGIFR0(MLOG_INFO, "AssignBlocks: using policy %s", policy);

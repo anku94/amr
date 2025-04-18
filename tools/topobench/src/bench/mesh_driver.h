@@ -13,10 +13,12 @@ namespace topo {
 struct MeshDriverOpts {
   topo::Vec3i mesh_dims;
   int max_reflvl;
-  int my_rank = 0;  // local MPI rank
-  int nranks = 1;   // total MPI ranks
-  std::string policy = "baseline";
-  std::string jobdir = "/tmp";
+  int my_rank;         // local MPI rank
+  int nranks;          // total MPI ranks
+  std::string policy;  // placement policy
+  std::string jobdir;  // job directory
+  int num_ts;          // num timesteps
+  int num_rounds;      // num rounds/timestep
 };
 
 class MeshDriver {
@@ -30,9 +32,12 @@ class MeshDriver {
     MLOG(MLOG_INFO, "Total ranks: %d", opts_.nranks);
   }
 
+  // Run: Run for num_ts timesteps
   void Run();
 
-  void RunWithOmesh(OrderedMesh& omesh);
+  // RunWithOmesh: Run with an ordered mesh for nrounds
+  // (with a single mesh)
+  void RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist);
 
   // AssignBlocks: populate ranklist using a synthetic costlist
   // generated using distribution, + placement scheme in opts.policy
