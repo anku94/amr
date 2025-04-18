@@ -20,7 +20,7 @@ MPI_Datatype GetMpiType() {
     return MPI_INT;
   } else if (std::is_same<T, double>::value) {
     return MPI_DOUBLE;
-  }else  if (std::is_same<T, float>::value) {
+  } else if (std::is_same<T, float>::value) {
     return MPI_FLOAT;
   } else {
     static_assert(std::is_same<T, T>::value, "should not reach here");
@@ -98,7 +98,8 @@ void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
   ExtraMetricVec extra_metrics{
       {"policy", opts_.policy},
       {"nblocks", std::to_string(nblocks)},
-      {"msgsz", opts_.msgsz.ToString()},
+      {"msgsz-f-e-v", fmtstr(MLOG_BUFSZ, "%d-%d-%d", opts_.msgsz.x,
+                             opts_.msgsz.y, opts_.msgsz.z)},
   };
 
   {
@@ -109,14 +110,14 @@ void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
 }
 
 int MeshDriver::AssignBlocksSync(std::vector<int>& ranklist, int nblocks,
-                                  int nranks) {
+                                 int nranks) {
   int rv = AssignBlocksSingle(ranklist, nblocks, nranks);
   BroadcastVec(ranklist, 0);
   return rv;
 }
 
 int MeshDriver::AssignBlocksSingle(std::vector<int>& ranklist, int nblocks,
-                             int nranks) {
+                                   int nranks) {
   std::vector<double> costlist(nblocks, -1.0);
   auto dopts = DistributionUtils::GetConfigOpts();
   DistributionUtils::GenDistribution(dopts, costlist, nblocks);

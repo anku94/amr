@@ -51,6 +51,8 @@ class MetricUtils {
   struct LocStats {
     uint64_t totbytes_sent_;
     uint64_t totbytes_rcvd_;
+    uint64_t totcnt_sent_;
+    uint64_t totcnt_rcvd_;
     double totdur_ms_;
   };
 
@@ -58,6 +60,8 @@ class MetricUtils {
   struct GlobStats {
     uint64_t totbytes_sent_;
     uint64_t totbytes_rcvd_;
+    uint64_t totcnt_sent_;
+    uint64_t totcnt_rcvd_;
     double totdurms_avg_;
     double totdurms_min_;
     double totdurms_max_;
@@ -86,6 +90,10 @@ class MetricUtils {
                MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(&local_stats.totbytes_rcvd_, &global_stats.totbytes_rcvd_, 1,
                MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_stats.totcnt_sent_, &global_stats.totcnt_sent_, 1,
+               MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_stats.totcnt_rcvd_, &global_stats.totcnt_rcvd_, 1,
+               MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
 
     MPI_Reduce(&local_stats.totdur_ms_, &global_stats.totdurms_avg_, 1,
                MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -110,8 +118,8 @@ class MetricUtils {
     return oss.str();
   }
 
-  // LogBytes: log bytes sent/recvd, also compute mbps for both
-  static void LogBytes(GlobStats const &gstats, MetricData &md) {
+  // LogComm: log bytes sent/recvd, also compute mbps for both
+  static void LogComm(GlobStats const &gstats, MetricData &md) {
     const uint64_t bytes_per_mb = 1ull << 20;
     double dursec = gstats.totdurms_max_ * 1.0 / 1000.0;
     ABORTIF(dursec <= 0.0, "Duration is <= 0!");
@@ -134,6 +142,8 @@ class MetricUtils {
     FMT_AND_ADD("mbytes_recv", mbytes_recv, "%.2lf", "%.2lf MB");
     FMT_AND_ADD("mbps_sent", mbps_sent, "%.4lf", "%.4lf MB/s");
     FMT_AND_ADD("mbps_recv", mbps_recv, "%.4lf", "%.4lf MB/s");
+    FMT_AND_ADD("cnt_sent", gstats.totcnt_sent_, "%" PRIu64, "%" PRIu64);
+    FMT_AND_ADD("cnt_recv", gstats.totcnt_rcvd_, "%" PRIu64, "%" PRIu64);
   }
 
   // LogTime: log durms avg/min/max
@@ -175,6 +185,8 @@ void Logger::DrainBlockData(std::vector<MeshBlockRef> &blocks) {
   for (auto b : blocks) {
     totbytes_sent_ += b->BytesSent();
     totbytes_rcvd_ += b->BytesRcvd();
+    totcnt_sent_ += b->CountSent();
+    totcnt_rcvd_ += b->CountRcvd();
   }
 
   auto delta = end_us_ - start_us_;
@@ -186,6 +198,8 @@ void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics,
   MetricUtils::LocStats locstats{
       .totbytes_sent_ = totbytes_sent_,
       .totbytes_rcvd_ = totbytes_rcvd_,
+      .totcnt_sent_ = totcnt_sent_,
+      .totcnt_rcvd_ = totcnt_rcvd_,
       .totdur_ms_ = totdur_ms_,
   };
   MetricUtils::GlobStats gstats;
@@ -209,7 +223,7 @@ void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics,
   md.AddMetric("meshgen_method", MeshGenMethodToStrUtil());
   md.AddMetric("nrounds", std::to_string(num_obs_));
 
-  MetricUtils::LogBytes(gstats, md);
+  MetricUtils::LogComm(gstats, md);
   MetricUtils::LogTime(gstats, md);
 
   // Write to log file
@@ -228,4 +242,4 @@ int Logger::GetNumRanks() const {
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
   return num_ranks;
 }
-}  // namespace topo
+}  // namespace topoBytes

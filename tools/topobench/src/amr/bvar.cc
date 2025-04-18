@@ -107,6 +107,7 @@ void BoundaryVariable::SendBoundaryBuffers() {
 
     MLOGIFR0(MLOG_DBG1, "Rank %d - Send POSTED %d", Globals::my_rank,
              nb.buf_id);
+    sendcnt_++;
   }
 }
 
@@ -133,6 +134,7 @@ bool BoundaryVariable::ReceiveBoundaryBuffers() {
 
     bd_var_.flag[nb.buf_id] = BoundaryStatus::arrived;
     bytes_rcvd_ += bd_var_.recvbufsz[nb.buf_id];
+    recvcnt_++;
   }
 
   return bflag;
@@ -150,6 +152,7 @@ void BoundaryVariable::ReceiveBoundaryBuffersWithWait() {
     // redundant; guaranteed with MPI_Wait
     bd_var_.flag[nb.buf_id] = BoundaryStatus::arrived;
     bytes_rcvd_ += bd_var_.recvbufsz[nb.buf_id];
+    recvcnt_++;
   }
 
   // XXX: we explicitly add sends in receive boundary buffers

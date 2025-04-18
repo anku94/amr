@@ -141,6 +141,12 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
   // BytesRcvd: wraps bvar BytesRcvd
   uint64_t BytesRcvd() const { return pbval_->bytes_rcvd_; }
 
+  // CountSent: wraps bvar CountSent
+  uint64_t CountSent() const { return pbval_->sendcnt_; }
+
+  // CountRcvd: wraps bvar CountRcvd
+  uint64_t CountRcvd() const { return pbval_->recvcnt_; }
+
  private:
   friend class BoundaryVariable;
   int block_id_;                             // our block id [0, nblocks)

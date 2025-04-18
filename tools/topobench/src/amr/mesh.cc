@@ -102,6 +102,8 @@ std::vector<Loc> Mesh::GetChildLocs(const Loc& loc) {
 
 int Mesh::RefineToTargetLeafcnt(int tgt_leafcnt) {
   int cur_leafcnt = leaves_.size();
+  // Warning: can get stuck in an infinite loop if tgt_leafcnt is too high
+  // or if refinement is not possible. Just have generous limits.
   while (cur_leafcnt < tgt_leafcnt) {
     // Refine a random active block
     auto it = leaves_.begin();

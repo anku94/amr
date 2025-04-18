@@ -19,13 +19,7 @@ using ExtraMetricVec = std::vector<ExtraMetric>;
 //
 class Logger {
  public:
-  Logger()
-      : start_us_{},
-        end_us_{},
-        totbytes_sent_(0),
-        totbytes_rcvd_(0),
-        totdur_ms_(0),
-        num_obs_(0) {}
+  Logger() = default;
 
   // LogBegin: log the start time of the communication round
   void LogBegin() { start_us_ = NowMicros(); }
@@ -57,10 +51,13 @@ class Logger {
     return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3;
   }
 
-  uint64_t start_us_, end_us_;
-  uint64_t totbytes_sent_;
-  uint64_t totbytes_rcvd_;
-  double totdur_ms_;
-  uint64_t num_obs_;
+  uint64_t start_us_{0};
+  uint64_t end_us_{0};
+  uint64_t totbytes_sent_{0};
+  uint64_t totbytes_rcvd_{0};
+  uint64_t totcnt_sent_{0};
+  uint64_t totcnt_rcvd_{0};
+  double totdur_ms_{0};
+  uint64_t num_obs_{0};
 };
 }  // namespace topo

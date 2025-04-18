@@ -106,7 +106,8 @@ class BoundaryVariable {
 
   std::weak_ptr<MeshBlock> wpmb_;
   BoundaryData<> bd_var_, bd_var_flcor_;
-  uint64_t bytes_sent_, bytes_rcvd_;
+  uint64_t bytes_sent_, bytes_rcvd_; // msg sizes
+  uint64_t sendcnt_{0}, recvcnt_{0}; // msg count
 
   static constexpr int kMaxNeighbor = NMAX_NEIGHBORS;
   static constexpr int kMaxMsgSz = MAX_MSGSZ;
