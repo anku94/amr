@@ -115,10 +115,12 @@ class MetricUtils {
     const uint64_t bytes_per_mb = 1ull << 20;
     char buf[64];
 
+    double dursec = gstats.totdurms_max_ * 1.0 / 1000.0;
+
     double mbytes_sent = gstats.totbytes_sent_ * 1.0 / bytes_per_mb;
     double mbytes_recv = gstats.totbytes_rcvd_ * 1.0 / bytes_per_mb;
-    double mbps_sent = mbytes_sent / gstats.totdurms_max_;
-    double mbps_recv = mbytes_recv / gstats.totdurms_max_;
+    double mbps_sent = mbytes_sent / dursec;
+    double mbps_recv = mbytes_recv / dursec;
 
 #define FMT_AND_ADD(k, v, vfmtcsv, vfmtprint)             \
   {                                                       \
@@ -146,10 +148,12 @@ class MetricUtils {
   // - If the file does not exist, create it and write the header
   // - Append the data to the file
   static void WriteMetricData(const char *file, MetricData const &md) {
+    bool file_exists = FileExists(file);
+
     FILE *f = fopen(file, "a+");
     if (f == nullptr) return;
 
-    if (!FileExists(file)) {
+    if (!file_exists) {
       std::string header_str = JoinVec(md.header, ",");
       fprintf(f, "%s\n", header_str.c_str());
     }
