@@ -113,9 +113,8 @@ class MetricUtils {
   // LogBytes: log bytes sent/recvd, also compute mbps for both
   static void LogBytes(GlobStats const &gstats, MetricData &md) {
     const uint64_t bytes_per_mb = 1ull << 20;
-    char buf[64];
-
     double dursec = gstats.totdurms_max_ * 1.0 / 1000.0;
+    ABORTIF(dursec <= 0.0, "Duration is <= 0!");
 
     double mbytes_sent = gstats.totbytes_sent_ * 1.0 / bytes_per_mb;
     double mbytes_recv = gstats.totbytes_rcvd_ * 1.0 / bytes_per_mb;
