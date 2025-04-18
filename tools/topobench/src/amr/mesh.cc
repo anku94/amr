@@ -1,8 +1,8 @@
 #include "mesh.h"
 
+#include "logging.h"
 #include "mesh_utils.h"
 #include "print_utils.h"
-#include "logging.h"
 
 namespace topo {
 // Define the offset arrays
@@ -43,8 +43,8 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
       bool is_neighbor_by_type = AreNeighborsByType(loc, nl) == ntype;
 
       MLOG(MLOG_DBG2, "Loc: %s, nbrloc: %s, isntype:%s?::%s\n",
-          loc.ToString().c_str(), nl.ToString().c_str(),
-          NeighborTypeToString(ntype), is_neighbor_by_type ? "true" : "false");
+           loc.ToString().c_str(), nl.ToString().c_str(),
+           NeighborTypeToString(ntype), is_neighbor_by_type ? "true" : "false");
 
       if (is_neighbor_by_type) {
         nbrs.push_back(it->second);
@@ -56,7 +56,7 @@ void Mesh::ProcessOffset(const Loc& loc, int id, const LocToIdMap& idmap,
   nbrs.erase(std::unique(nbrs.begin(), nbrs.end()), nbrs.end());
 
   MLOG(MLOG_DBG3, "+ Gathered %zu nbrs: %s\n", nbrs.size(),
-      PrintUtils::SerializeVec(nbrs).c_str());
+       PrintUtils::SerializeVec(nbrs).c_str());
 }
 
 OrderedMesh Mesh::GetOrderedMesh() const {
@@ -106,7 +106,7 @@ int Mesh::RefineToTargetLeafcnt(int tgt_leafcnt) {
     // Refine a random active block
     auto it = leaves_.begin();
     std::advance(it, rand() % leaves_.size());
-    auto& leaf_loc = *it;
+    auto leaf_loc = *it;
     if (leaf_loc.level == max_level_) {
       continue;
     }
@@ -115,7 +115,6 @@ int Mesh::RefineToTargetLeafcnt(int tgt_leafcnt) {
     cur_leafcnt = leaves_.size();
     MLOG(MLOG_DBG0, "Refined block %s, now have %d leaves",
          leaf_loc.ToString().c_str(), cur_leafcnt);
-    sleep(1);
   }
 
   return cur_leafcnt;
