@@ -104,12 +104,17 @@ int Mesh::RefineToTargetLeafcnt(int tgt_leafcnt) {
   int cur_leafcnt = leaves_.size();
   while (cur_leafcnt < tgt_leafcnt) {
     // Refine a random active block
-    auto it = active_.begin();
-    std::advance(it, rand() % active_.size());
-    Refine(*it);
+    auto it = leaves_.begin();
+    std::advance(it, rand() % leaves_.size());
+    auto& leaf_loc = *it;
+    if (leaf_loc.level == max_level_) {
+      continue;
+    }
+
+    Refine(leaf_loc);
     cur_leafcnt = leaves_.size();
     MLOG(MLOG_DBG0, "Refined block %s, now have %d leaves",
-         it->ToString().c_str(), cur_leafcnt);
+         leaf_loc.ToString().c_str(), cur_leafcnt);
   }
 
   return cur_leafcnt;
