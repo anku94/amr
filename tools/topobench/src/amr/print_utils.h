@@ -49,17 +49,25 @@ struct PrintUtils {
   }
 
   template <typename T>
-  static std::string SerializeVec(std::vector<T>& vec, std::string sep = ", ") {
+  static std::string SerializeVec(std::vector<T>& vec, std::string sep = ", ", int max_elems = -1) {
     // sort vec first
     // std::sort(vec.begin(), vec.end());
     std::ostringstream oss;
 
     // serialize vec
     bool first_elem = true;
+    int count = 0;
+
     for (auto& elem : vec) {
       if (!first_elem) oss << sep;
       oss << elem;
       first_elem = false;
+      count++;
+
+      if (max_elems != -1 && count >= max_elems) {
+        oss << "...";
+        break;
+      }
     }
 
     return oss.str();

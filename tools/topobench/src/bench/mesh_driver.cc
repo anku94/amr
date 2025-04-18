@@ -98,10 +98,10 @@ int MeshDriver::AssignBlocks(std::vector<int>& ranklist, int nblocks,
 
   ABORTIF(rv, "Placement assignment failed!");
 
-  auto coststr = PrintUtils::SerializeVec(costlist);
+  auto coststr = PrintUtils::SerializeVec(costlist, ", ", 10);
   MLOGIFR0(MLOG_INFO, "AssignBlocks: costlist %s", coststr.c_str());
 
-  auto rankstr = PrintUtils::SerializeVec(ranklist);
+  auto rankstr = PrintUtils::SerializeVec(ranklist, ", ", 10);
   MLOGIFR0(MLOG_INFO, "AssignBlocks: ranklist %s", rankstr.c_str());
 
   return rv;
