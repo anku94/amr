@@ -7,56 +7,84 @@
 #include "amr_lb.h"
 #include "bench/comm_mesh.h"
 #include "bench/placement_utils.h"
+#include "distributions.h"
 #include "logging.h"
 
-using PlacementArgs = ::amr::lb::PlacementArgs;
-using LoadBalance = ::amr::lb::LoadBalance;
-using MeshBlockRef = std::shared_ptr<topo::amr::MeshBlock>;
+using MeshBlockRef = std::shared_ptr<topo::MeshBlock>;
+using DistributionUtils = amr::DistributionUtils;
 
-namespace topo::bench {
+namespace topo {
+MeshDriver::MeshDriver(const MeshDriverOpts& opts) : opts_(opts) {
+  Globals::my_rank = opts_.my_rank;
+  Globals::nranks = opts_.nranks;
+  PrintOpts();
+}
+
+
 void MeshDriver::Run() {
   MLOG(MLOG_INFO, "Running mesh driver");
   auto dims = opts_.mesh_dims;
   auto lvl = opts_.max_reflvl;
 
   // Create base mesh and print it
-  amr::Mesh mesh(dims.x, dims.y, dims.z, lvl);
-  amr::PrintUtils::PrintHierarchy(mesh, amr::Mesh::GetRootLoc());
+  Mesh mesh(dims.x, dims.y, dims.z, lvl);
+  PrintUtils::PrintHierarchy(mesh, Mesh::GetRootLoc());
 
   // Generate ordered mesh and print it
   auto omesh = mesh.GetOrderedMesh();
-  amr::PrintUtils::PrintOmesh(omesh);
+  PrintUtils::PrintOmesh(omesh);
 
+  RunWithOmesh(omesh);
+}
+
+void MeshDriver::RunWithOmesh(OrderedMesh& omesh) {
   // Compute load-balanced placement
-  auto nblocks = omesh.nblocks;
-  std::vector<double> costlist(nblocks, 1.0);
-  std::vector<int> ranklist(nblocks, 0);
-  int nranks = opts_.nranks;
-
-  amr::Globals::my_rank = opts_.my_rank;
-  amr::Globals::nranks = opts_.nranks;
-
-  PlacementArgs lb_args{"baseline", costlist, ranklist, nranks};
-  int rv = LoadBalance::AssignBlocks(lb_args);
+  int nblocks = omesh.nblocks;
+  std::vector<int> ranklist(nblocks, -1);
+  int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
   ABORTIF(rv, "Placement assignment failed!");
-  MLOG(MLOG_INFO, "Placement assignment complete.");
 
-  CommMesh comm_mesh;
-  rv = PlacementUtils::SetupCommMesh(comm_mesh, omesh, lb_args.ranklist);
+  rv = PlacementUtils::SetupCommMesh(comm_mesh_, omesh, ranklist);
   MLOGIF(rv, MLOG_ERRO, "SetupCommMesh failed!");
 
-//   // Allocate boundary variables for communication
-  auto s = comm_mesh.AllocateBvars();
+  // Allocate boundary variables for communication
+  auto s = comm_mesh_.AllocateBvars();
   MLOGIF(s != Status::OK, MLOG_ERRO, "Failed to allocate boundary variables!");
   MLOG(MLOG_INFO, "Allocated boundary variables");
 
-//   // Run one communication round
-  s = comm_mesh.DoCommunicationRound();
+  // Run one communication round
+  s = comm_mesh_.DoCommunicationRound();
   MLOGIF(s != Status::OK, MLOG_ERRO, "Communication round failed!");
   MLOG(MLOG_INFO, "Communication round complete.");
 
-//   // Print stats and cleanup
-  comm_mesh.PrintStats();
-  comm_mesh.ResetBvarsAndBlocks();
+  //   // Print stats and cleanup
+  comm_mesh_.PrintStats();
+  comm_mesh_.ResetBvarsAndBlocks();
 }
-}  // namespace topo::bench
+
+int MeshDriver::AssignBlocks(std::vector<int>& ranklist, int nblocks,
+                             int nranks) {
+  std::vector<double> costlist(nblocks, -1.0);
+  auto dopts = DistributionUtils::GetConfigOpts();
+  DistributionUtils::GenDistribution(dopts, costlist, nblocks);
+
+  MLOGIFR0(MLOG_INFO, "AssignBlocks: gen costs for %d blocks using distrib: %s",
+       nblocks, DistributionUtils::DistributionOptsToString(dopts).c_str());
+
+  auto policy = opts_.policy.c_str();
+  MLOGIFR0(MLOG_INFO, "AssignBlocks: using policy %s", policy);
+
+  auto lb_args = amr::lb::PlacementArgs{policy, costlist, ranklist, nranks};
+  int rv = amr::lb::LoadBalance::AssignBlocks(lb_args);
+
+  ABORTIF(rv, "Placement assignment failed!");
+
+  auto coststr = PrintUtils::SerializeVec(costlist);
+  MLOGIFR0(MLOG_INFO, "AssignBlocks: costlist %s", coststr.c_str());
+
+  auto rankstr = PrintUtils::SerializeVec(ranklist);
+  MLOGIFR0(MLOG_INFO, "AssignBlocks: ranklist %s", rankstr.c_str());
+
+  return rv;
+}
+}  // namespace topo

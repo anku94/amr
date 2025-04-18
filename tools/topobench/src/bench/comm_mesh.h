@@ -2,8 +2,9 @@
 
 #include "logger.h"
 #include "topo_types.h"
+#include "amr/block.h"
 
-namespace topo::bench {
+namespace topo {
 class CommMesh {
  public:
   Status AllocateBvars() {
@@ -82,4 +83,4 @@ class CommMesh {
   friend class MeshGenerator;
   friend class PlacementUtils;
 };
-}  // namespace topo::bench
+}  // namespace topo

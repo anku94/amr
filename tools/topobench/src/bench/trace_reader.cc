@@ -4,11 +4,11 @@
 
 #include "trace_reader.h"
 
-#include "amr/globals.h"
+#include "globals.h"
 #include "common.h"
 #include "logging.h"
 
-namespace topo::bench {
+namespace topo {
 Status TraceReader::Read(int rank) {
   Status s = Status::OK;
 
@@ -95,4 +95,4 @@ Status TraceReader::ParseLine(char *buf, size_t buf_sz, const int rank) {
   max_ts_ = std::max(ts, max_ts_);
   return s;
 }
-}  // namespace topo::bench
+}  // namespace topo

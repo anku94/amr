@@ -7,13 +7,13 @@
 #include <string>
 #include <vector>
 
-#include "amr/globals.h"
 #include "common.h"
+#include "globals.h"
 #include "logging.h"
 
 typedef std::pair<int, int> RankSizePair;
 
-namespace topo::bench {
+namespace topo {
 class SingleTimestepTraceReader {
  public:
   SingleTimestepTraceReader(const char *trace_file)
@@ -29,9 +29,8 @@ class SingleTimestepTraceReader {
   Status ParseLine(char *buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
-    MLOGIF(!amr::Globals::my_rank, MLOG_INFO,
-           "Send count: %zu, Recv count: %zu", send_map_.size(),
-           recv_map_.size());
+    MLOGIFR0(MLOG_INFO, "Send count: %zu, Recv count: %zu", send_map_.size(),
+             recv_map_.size());
   }
 
   std::string trace_file_;
@@ -39,4 +38,4 @@ class SingleTimestepTraceReader {
   std::vector<CommNeighbor> recv_map_;
   bool file_read_;
 };
-}  // namespace topo::bench
+}  // namespace topo

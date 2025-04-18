@@ -13,7 +13,7 @@
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
                                           std::chrono::duration<double>>;
 
-namespace topo::bench {
+namespace topo {
 class Logger {
  public:
   Logger()
@@ -35,7 +35,7 @@ class Logger {
   }
 
   // LogData: ??
-  void LogData(std::vector<std::shared_ptr<topo::amr::MeshBlock>> &blocks);
+  void LogData(std::vector<std::shared_ptr<topo::MeshBlock>> &blocks);
 
   // Aggregate: ??
   void Aggregate();
@@ -62,4 +62,4 @@ class Logger {
   double total_time_;
   uint64_t num_obs_;
 };
-}  // namespace topo::bench
+}  // namespace topo

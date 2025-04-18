@@ -10,7 +10,7 @@
 
 #include "mesh_utils.h"
 #include "logging.h"
-namespace topo::amr {
+namespace topo {
 enum class NeighborType {
   kFace,
   kEdge,

@@ -12,6 +12,13 @@ namespace amr {
 // fwd decl
 class ConfigUtils;
 
+//
+// ConfigParser: config mgmt util
+// Will read env var "AMRLB_CONFIG" if set, otherwise will return
+// default values for all parameters.
+// Config file format: key = value
+// (Comments start with #, empty lines are ignored)
+//
 class ConfigParser {
  private:
   explicit ConfigParser(const char* file_path) { Initialize(file_path); }
@@ -91,9 +98,9 @@ class ConfigUtils {
     }
 
     // Check if env var LB_CONFIG_PATH is set
-    const char* env_var = std::getenv("DISTRIB_CONFIG_FPATH");
+    const char* env_var = std::getenv("AMRLB_CONFIG");
     if (env_var == nullptr) {
-      MLOG(MLOG_DBG2, "DISTRIB_CONFIG_FPATH not set\n");
+      MLOG(MLOG_DBG2, "AMRLB_CONFIG not set\n");
       return;
     }
 

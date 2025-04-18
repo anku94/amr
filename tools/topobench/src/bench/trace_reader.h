@@ -8,13 +8,13 @@
 #include <string>
 #include <vector>
 
-#include "amr/globals.h"
-#include "logging.h"
 #include "common.h"
+#include "globals.h"
+#include "logging.h"
 
 typedef std::pair<int, int> RankSizePair;
 
-namespace topo::bench {
+namespace topo {
 class TraceReader {
  public:
   TraceReader(const char *trace_file)
@@ -32,8 +32,7 @@ class TraceReader {
   Status ParseLine(char *buf, size_t buf_sz, const int rank);
 
   void PrintSummary() {
-    MLOGIF(!amr::Globals::my_rank, MLOG_INFO, "Timesteps upto ts %d discovered",
-           max_ts_);
+    MLOGIFR0(MLOG_INFO, "Timesteps upto ts %d discovered", max_ts_);
     for (size_t t = 0; t <= max_ts_; t++) {
       auto msgs_ts = ts_snd_map_[t];
       MLOGIFR0(MLOG_DBG0, "[Send] TS %d: %zu msgs", t, msgs_ts.size());
@@ -51,4 +50,4 @@ class TraceReader {
   int max_ts_;
   bool file_read_;
 };
-}  // namespace topo::bench
+}  // namespace topo

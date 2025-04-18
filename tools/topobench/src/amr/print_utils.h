@@ -8,7 +8,7 @@
 
 #include "mesh.h"
 #include "logging.h"
-namespace topo::amr {
+namespace topo {
 struct PrintUtils {
   // Short code for a location: e.g. "012"
   static std::string Code(const Loc& loc) {
@@ -123,4 +123,4 @@ struct PrintUtils {
     MLOG(MLOG_INFO, "Validation passed\n");
   }
 };
-}  // namespace topo::amr
+}  // namespace topo

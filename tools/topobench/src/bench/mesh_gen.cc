@@ -1,10 +1,11 @@
 #include "mesh_gen.h"
+
 #include "amr/block.h"
-#include "amr/globals.h"
+#include "globals.h"
 
 namespace {
-// using namespace topo::bench;
-using namespace topo::amr;
+// using namespace topo;
+using namespace topo;
 
 static void GatherNeighborCounts(int count_local) {
   std::vector<int> counts(Globals::nranks);
@@ -22,7 +23,7 @@ static void GatherNeighborCounts(int count_local) {
 
   const char *fname = "neighbor_counts.txt";
   std::string fpath = std::string("/tmp/") + fname;
-      // std::string(amr::Globals::driver_opts.job_dir) + "/" + fname;
+  // std::string(amr::Globals::driver_opts.job_dir) + "/" + fname;
   FILE *f = fopen(fpath.c_str(), "w");
   if (f == nullptr) {
     MLOG(MLOG_ERRO, "Failed to open file: %s", fpath.c_str());
@@ -38,7 +39,7 @@ static void GatherNeighborCounts(int count_local) {
 }
 }  // namespace
 
-namespace topo::bench {
+namespace topo {
 std::unique_ptr<MeshGenerator> MeshGenerator::Create(const DriverOpts &opts) {
   MeshGenMethod t = opts.meshgen_method;
 
@@ -68,11 +69,10 @@ Status RingMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
     int ring_delta = i * Globals::nranks;
     int bid_rel = Globals::my_rank;
     int nbr_left =
-        ((bid_rel - 1) % Globals::nranks + Globals::nranks) %
-        Globals::nranks;
+        ((bid_rel - 1) % Globals::nranks + Globals::nranks) % Globals::nranks;
     int nbr_right = (bid_rel + 1) % Globals::nranks;
 
-    auto mb = std::make_shared<topo::amr::MeshBlock>(ring_delta + bid_rel);
+    auto mb = std::make_shared<topo::MeshBlock>(ring_delta + bid_rel);
     mb->AddNeighborSendRecv(nbr_left + ring_delta, nbr_left,
                             opts_.size_per_msg);
     mb->AddNeighborSendRecv(nbr_right + ring_delta, nbr_right,
@@ -109,8 +109,8 @@ Status AllToAllMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
       int bid_i_off = bid_i + off;
       int nrl_bid_off = nrl_bid + off;
       int nrr_bid_off = nrr_bid + off;
-      MLOG(MLOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off,
-           nrl_bid_off, nrr_bid_off);
+      MLOG(MLOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off, nrl_bid_off,
+           nrr_bid_off);
 
       auto mb = std::make_shared<MeshBlock>(bid_i_off);
       mb->AddNeighborSendRecv(nrl_bid_off, nrl, opts_.size_per_msg);
@@ -133,8 +133,7 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   auto msgs_rcv = reader_.GetMsgsRcvd();
 
   if (msgs_snd.size() != msgs_rcv.size()) {
-    MLOG(MLOG_WARN,
-         "[Rank %d] msg_send count is not the same as msg_rcv count",
+    MLOG(MLOG_WARN, "[Rank %d] msg_send count is not the same as msg_rcv count",
          Globals::my_rank);
 
     // in the trace replay mode, this is not a bug.
@@ -179,8 +178,7 @@ Status MultiTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   auto msgs_rcv = reader_.GetMsgsRcvd(ts);
 
   if (msgs_snd.size() != msgs_rcv.size()) {
-    MLOG(MLOG_WARN,
-         "[Rank %d] msg_send count is not the same as msg_rcv count",
+    MLOG(MLOG_WARN, "[Rank %d] msg_send count is not the same as msg_rcv count",
          Globals::my_rank);
 
     // in the trace replay mode, this is not a bug.
@@ -213,4 +211,4 @@ Status MultiTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
 
   return s;
 }
-}  // namespace topo::bench
+}  // namespace topo

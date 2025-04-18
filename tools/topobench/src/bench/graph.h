@@ -7,7 +7,7 @@
 #include <set>
 #include <vector>
 
-namespace topo::bench {
+namespace topo {
 class GraphGenerator {
  public:
   /* currently generates uniform outdegree; TODO non-uniform out-degree */
@@ -54,4 +54,4 @@ class LeastConnectedGraph : public Graph {
   typedef std::pair<int, int> PQNode;
   std::set<PQNode> least_conn_;
 };
-}  // namespace topo::bench
+}  // namespace topo

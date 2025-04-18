@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-namespace topo::amr {
+namespace topo {
 // OrderedID: single block's SFC ID
 using OrderedBlockVec = std::vector<int>;
 
@@ -116,4 +116,4 @@ struct LocHash {
     return h;
   }
 };
-}  // namespace topo::amr
+}  // namespace topo

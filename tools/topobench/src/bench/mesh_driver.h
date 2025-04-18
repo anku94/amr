@@ -6,26 +6,22 @@
 #include <vector>
 
 #include "amr/mesh_utils.h"
+#include "bench/comm_mesh.h"
 #include "logging.h"
 
-namespace topo::bench {
+namespace topo {
 struct MeshDriverOpts {
-  topo::amr::Vec3i mesh_dims;
+  topo::Vec3i mesh_dims;
   int max_reflvl;
   int my_rank = 0;  // local MPI rank
   int nranks = 1;   // total MPI ranks
-};
-
-struct BlockPlacement {
-  int nblocks;
-  int nranks;
-  std::vector<double> costlist;
-  std::vector<double> ranklist;
+  std::string policy = "baseline";
+  std::string jobdir = "/tmp";
 };
 
 class MeshDriver {
  public:
-  MeshDriver(const MeshDriverOpts &opts) : opts_(opts) { PrintOpts(); }
+  MeshDriver(const MeshDriverOpts& opts);
 
   void PrintOpts() {
     MLOG(MLOG_INFO, "Mesh dims: %s", opts_.mesh_dims.ToString().c_str());
@@ -36,7 +32,14 @@ class MeshDriver {
 
   void Run();
 
+  void RunWithOmesh(OrderedMesh& omesh);
+
+  // AssignBlocks: populate ranklist using a synthetic costlist
+  // generated using distribution, + placement scheme in opts.policy
+  int AssignBlocks(std::vector<int>& ranklist, int nblocks, int nranks);
+
  private:
   const MeshDriverOpts opts_;
+  CommMesh comm_mesh_;
 };
-}  // namespace topo::bench
+}  // namespace topo

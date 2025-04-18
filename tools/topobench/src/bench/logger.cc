@@ -5,7 +5,6 @@
 #include "logger.h"
 
 #include "amr/block.h"
-#include "amr/globals.h"
 
 #include <inttypes.h>
 #include <mpi.h>
@@ -26,7 +25,7 @@ std::string GetMPIStr() {
 }
 
 const std::string MeshGenMethodToStrUtil() {
-  // switch (topo::bench::Globals::driver_opts.meshgen_method) {
+  // switch (topo::Globals::driver_opts.meshgen_method) {
   // case MeshGenMethod::Ring:
   //   return "Ring";
   //   break;
@@ -34,10 +33,10 @@ const std::string MeshGenMethodToStrUtil() {
   //   return "AllToALl";
   //   break;
   // case MeshGenMethod::FromSingleTSTrace:
-  //   return std::string("SingleTS:") + topo::bench::Globals::driver_opts.trace_root;
+  //   return std::string("SingleTS:") + topo::Globals::driver_opts.trace_root;
   //   break;
   // case MeshGenMethod::FromMultiTSTrace:
-  //   return std::string("MultiTS:") + topo::bench::Globals::driver_opts.trace_root;
+  //   return std::string("MultiTS:") + topo::Globals::driver_opts.trace_root;
   //   break;
   // default:
   //   break;
@@ -47,8 +46,8 @@ const std::string MeshGenMethodToStrUtil() {
 }
 } // namespace
 
-namespace topo::bench {
-void Logger::LogData(std::vector<std::shared_ptr<topo::amr::MeshBlock>> &blocks) {
+namespace topo {
+void Logger::LogData(std::vector<std::shared_ptr<topo::MeshBlock>> &blocks) {
   total_sent_ = 0;
   total_rcvd_ = 0;
 
@@ -78,7 +77,7 @@ void Logger::Aggregate() {
   MPI_Reduce(&total_time_, &global_time_max, 1, MPI_DOUBLE, MPI_MAX, 0,
              MPI_COMM_WORLD);
 
-  if (amr::Globals::my_rank != 0)
+  if (Globals::my_rank != 0)
     return;
 
   const int nranks = GetNumRanks();
@@ -146,4 +145,4 @@ int Logger::GetNumRanks() const {
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
   return num_ranks;
 }
-}  // namespace topo::bench
+}  // namespace topo

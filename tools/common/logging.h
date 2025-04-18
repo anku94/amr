@@ -59,7 +59,7 @@ inline std::string fmtstr(const char *fmt, ...) {
   }
 
 #define MLOGIFR0(level, fmt, ...)                                              \
-  if (amr::Globals::my_rank == 0) {                                            \
+  if (Globals::my_rank == 0) {                                            \
     MLOG(level, fmt, ##__VA_ARGS__)                                            \
   } else {                                                                     \
     MLOG(level + 1, fmt, ##__VA_ARGS__)                                        \

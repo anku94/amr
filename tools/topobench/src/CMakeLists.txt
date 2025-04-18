@@ -16,7 +16,6 @@ set(topo_srcs
 
 set (amr_srcs 
     amr/bvar.cc
-    amr/globals.cc
     amr/mesh.cc)
 
 
@@ -25,7 +24,7 @@ target_include_directories(topo
   PUBLIC 
   "${CMAKE_CURRENT_SOURCE_DIR}" 
   "${common_include}")
-target_link_libraries(topo PRIVATE lb)
+target_link_libraries(topo PRIVATE lb lb_common)
 target_link_libraries(topo PUBLIC pdlfs-common glog::glog MPI::MPI_CXX)
 
 # add_executable(topobench bench/topobench.cc)

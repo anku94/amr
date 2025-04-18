@@ -8,7 +8,7 @@
 #include "print_utils.h"
 #include "logging.h"
 
-using namespace topo::amr;
+using namespace topo;
 
 int main() {
   // Create a small root mesh of 2x2x2 with max refinement level 2

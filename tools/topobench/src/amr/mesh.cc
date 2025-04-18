@@ -4,7 +4,7 @@
 #include "print_utils.h"
 #include "logging.h"
 
-namespace topo::amr {
+namespace topo {
 // Define the offset arrays
 inline const std::array<Vec3ll, 6> Mesh::kFaceOffsets_ = {
     {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
@@ -197,4 +197,4 @@ std::vector<Loc> Mesh::GetCoveringLeaves(const Loc& t) const {
   return leaves;
 }
 
-}  // namespace topo::amr
+}  // namespace topo

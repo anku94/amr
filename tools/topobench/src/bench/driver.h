@@ -6,12 +6,12 @@
 
 #include <mpi.h>
 
-#include "amr/globals.h"
-#include "logging.h"
 #include "comm_mesh.h"
+#include "globals.h"
+#include "logging.h"
 #include "mesh_gen.h"
 
-namespace topo::bench {
+namespace topo {
 class Driver {
  public:
   Driver(const DriverOpts &opts) : opts_(opts) {
@@ -23,12 +23,11 @@ class Driver {
       return Status::MPIError;
     }
 
-    if (MPI_Comm_rank(MPI_COMM_WORLD, &(amr::Globals::my_rank)) !=
-        MPI_SUCCESS) {
+    if (MPI_Comm_rank(MPI_COMM_WORLD, &(Globals::my_rank)) != MPI_SUCCESS) {
       return Status::MPIError;
     }
 
-    if (MPI_Comm_size(MPI_COMM_WORLD, &amr::Globals::nranks) != MPI_SUCCESS) {
+    if (MPI_Comm_size(MPI_COMM_WORLD, &Globals::nranks) != MPI_SUCCESS) {
       return Status::MPIError;
     }
 
@@ -49,7 +48,7 @@ class Driver {
 
     MLOGIFR0(MLOG_INFO, "[Comm Rounds] %d\n", opts_.comm_rounds);
     MLOGIFR0(MLOG_INFO, "[MeshGenMethod] %s\n",
-            MeshGenMethodToStr(opts_.meshgen_method).c_str());
+             MeshGenMethodToStr(opts_.meshgen_method).c_str());
     MLOGIFR0(MLOG_INFO, "[Job dir] %s\n", opts_.job_dir);
     MLOGIFR0(MLOG_INFO, "[Log output] %s\n", opts_.bench_log);
   }
@@ -136,4 +135,4 @@ class Driver {
   CommMesh mesh_;
   const DriverOpts opts_;
 };
-}  // namespace topo::bench
+}  // namespace topo

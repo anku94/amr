@@ -22,7 +22,7 @@
     MLOG(MLOG_ERRO, msg);      \
   }
 
-namespace topo::amr {
+namespace topo {
 //
 // NeighborBlock: represents a single neighbor relation
 //
@@ -155,4 +155,4 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
   std::vector<NeighborBlock> nbrvec_snd_;    // nbrs we send to
   std::vector<NeighborBlock> nbrvec_rcv_;    // nbrs we recv from
 };
-}  // namespace topo::amr
+}  // namespace topo
