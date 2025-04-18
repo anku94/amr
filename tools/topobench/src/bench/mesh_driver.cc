@@ -45,12 +45,12 @@ void MeshDriver::Run() {
       PrintUtils::PrintOmesh(omesh);
     }
 
-    // int nblocks = omesh.nblocks;
-    // std::vector<int> ranklist(nblocks, -1);
-    // int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
-    // ABORTIF(rv, "Placement assignment failed!");
+    int nblocks = omesh.nblocks;
+    std::vector<int> ranklist(nblocks, -1);
+    int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
+    ABORTIF(rv, "Placement assignment failed!");
 
-    // RunWithOmesh(omesh, ranklist);
+    RunWithOmesh(omesh, ranklist);
   }
 }
 
