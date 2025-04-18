@@ -22,7 +22,7 @@ struct PrintUtils {
     if (mesh.IsLeaf(loc)) return;
 
     if (indent == 0) {
-      MLOG(MLOG_INFO, "\n\n-- Mesh hierarchy (total %d blocks, %d leaves) --\n",
+      MLOG(MLOG_INFO, "-- Mesh hierarchy (total %d blocks, %d leaves) --\n",
            mesh.GetTotalBlockCount(), mesh.GetLeafBlockCount());
     }
     auto children = Mesh::GetChildLocs(loc);
@@ -81,7 +81,7 @@ struct PrintUtils {
   }
 
   static void PrintOmesh(OrderedMesh& om) {
-    MLOG(MLOG_INFO, "\n\n--- Ordered mesh with %d blocks ---\n", om.nblocks);
+    MLOG(MLOG_INFO, "--- Ordered mesh with %d blocks ---\n", om.nblocks);
     for (int i = 0; i < om.nblocks; ++i) {
       PrintOmeshBlock(om, i);
     }

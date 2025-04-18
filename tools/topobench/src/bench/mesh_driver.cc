@@ -26,7 +26,7 @@ void MeshDriver::Run() {
   auto lvl = opts_.max_reflvl;
 
   for (int ts = 0; ts < opts_.num_ts; ts++) {
-    MLOGIFR0(MLOG_INFO, "- Running timestep %d- ", ts);
+    MLOGIFR0(MLOG_INFO, "- Running timestep %d...", ts);
 
     // Create base mesh and print it
     Mesh mesh(dims.x, dims.y, dims.z, lvl);
@@ -39,7 +39,6 @@ void MeshDriver::Run() {
     }
 
     int nblocks = omesh.nblocks;
-    MLOGIFR0(MLOG_INFO, "Num blocks: %d", nblocks);
     std::vector<int> ranklist(nblocks, -1);
     int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
     ABORTIF(rv, "Placement assignment failed!");
@@ -51,7 +50,8 @@ void MeshDriver::Run() {
 void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
   // Compute load-balanced placement
   int nblocks = omesh.nblocks;
-  int rv = PlacementUtils::SetupCommMesh(comm_mesh_, omesh, ranklist);
+  int rv =
+      PlacementUtils::SetupCommMesh(comm_mesh_, omesh, ranklist, opts_.msgsz);
   MLOGIF(rv, MLOG_ERRO, "SetupCommMesh failed!");
 
   // Allocate boundary variables for communication
@@ -71,8 +71,13 @@ void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
   ExtraMetricVec extra_metrics{
       {"policy", opts_.policy},
       {"nblocks", std::to_string(nblocks)},
+      {"msgsz", opts_.msgsz.ToString()},
   };
-  comm_mesh_.GenerateStats(extra_metrics, GetLogPath().c_str());
+
+  {
+    PrintSectionUtil print_section(MLOG_INFO, "Run Stats", 10);
+    comm_mesh_.GenerateStats(extra_metrics, GetLogPath().c_str());
+  }
   comm_mesh_.ResetBvarsAndBlocks();
 }
 

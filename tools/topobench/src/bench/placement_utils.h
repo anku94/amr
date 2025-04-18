@@ -10,9 +10,10 @@ class PlacementUtils {
  public:
   // SetupCommMesh: setup comm mesh from ordered mesh after placement
   static int SetupCommMesh(CommMesh &comm_mesh, const OrderedMesh &omesh,
-                           std::vector<int> const &ranklist) {
+                           std::vector<int> const &ranklist,
+                           topo::Vec3i const &msgsz) {
     auto blocks_ =
-        CreateBlocksFromOmesh(omesh, ranklist, Globals::my_rank);
+        CreateBlocksFromOmesh(omesh, ranklist, Globals::my_rank, msgsz);
     for (const auto &block : blocks_) {
       Status s = comm_mesh.AddBlock(block);
       MLOGIF(s != Status::OK, MLOG_ERRO, "Block add failed");
@@ -25,20 +26,23 @@ class PlacementUtils {
   // CreateBlocksFromOmesh: create blocks from ordered mesh
   // and set their neighbors up
   static std::vector<MeshBlockRef> CreateBlocksFromOmesh(
-      const OrderedMesh &omesh, const std::vector<int> &ranklist,
-      int my_rank) {
+      const OrderedMesh &omesh, const std::vector<int> &ranklist, int my_rank,
+      topo::Vec3i const &msgsz) {
     std::vector<MeshBlockRef> blocks;
 
+    auto f_msgsz = msgsz.x;
+    auto e_msgsz = msgsz.y;
+    auto v_msgsz = msgsz.z;
+
     auto rank_bids = GetBlockidsByRank(ranklist, my_rank);
-    int msgsz = 1024;
 
     for (int bid : rank_bids) {
       auto block = std::make_shared<MeshBlock>(bid);
 
       MLOGIFR0(MLOG_DBG0, "Setting up nbrs for block %d", bid);
-      AddNeighborVec(block, omesh.nbrmap[bid].face, ranklist, msgsz);
-      AddNeighborVec(block, omesh.nbrmap[bid].edge, ranklist, msgsz);
-      AddNeighborVec(block, omesh.nbrmap[bid].vertex, ranklist, msgsz);
+      AddNeighborVec(block, omesh.nbrmap[bid].face, ranklist, f_msgsz);
+      AddNeighborVec(block, omesh.nbrmap[bid].edge, ranklist, e_msgsz);
+      AddNeighborVec(block, omesh.nbrmap[bid].vertex, ranklist, v_msgsz);
 
       blocks.push_back(block);
     }

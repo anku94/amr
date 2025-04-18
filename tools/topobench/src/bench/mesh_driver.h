@@ -11,15 +11,36 @@
 
 namespace topo {
 struct MeshDriverOpts {
-  topo::Vec3i mesh_dims;
-  int max_reflvl;
-  int my_rank;         // local MPI rank
-  int nranks;          // total MPI ranks
-  std::string policy;  // placement policy
-  std::string jobdir;  // job directory
+  topo::Vec3i mesh_dims;  // mesh dims as blocks in x,y,z
+  int max_reflvl;         // max refinement level
+  topo::Vec3i msgsz;      // face/edge/vertex msg sizes
+  int my_rank;            // local MPI rank
+  int nranks;             // total MPI ranks
+  std::string policy;     // placement policy
+  std::string jobdir;     // job directory
   std::string log_fname;  // log file name
-  int num_ts;          // num timesteps
-  int num_rounds;      // num rounds/timestep
+  int num_ts;             // num timesteps
+  int num_rounds;         // num rounds/timestep
+};
+
+class PrintSectionUtil {
+ public:
+  PrintSectionUtil(int loglvl, const std::string& section_name, int sep_len)
+      : loglvl_(loglvl),
+        name_len_(section_name.length()),
+        sep_(std::string(sep_len, '-')) {
+    MLOG(loglvl_, "%s%s%s", sep_.c_str(), section_name.c_str(), sep_.c_str());
+  }
+
+  ~PrintSectionUtil() {
+    MLOG(loglvl_, "%s%s%s", sep_.c_str(), std::string(name_len_, '-').c_str(),
+         sep_.c_str());
+  }
+
+ private:
+  int loglvl_;
+  int name_len_;
+  std::string sep_;
 };
 
 class MeshDriver {
@@ -27,10 +48,16 @@ class MeshDriver {
   MeshDriver(const MeshDriverOpts& opts);
 
   void PrintOpts() {
-    MLOG(MLOG_INFO, "Mesh dims: %s", opts_.mesh_dims.ToString().c_str());
-    MLOG(MLOG_INFO, "Max reflvl: %d", opts_.max_reflvl);
-    MLOG(MLOG_INFO, "My rank: %d", opts_.my_rank);
-    MLOG(MLOG_INFO, "Total ranks: %d", opts_.nranks);
+    PrintSectionUtil print_section(MLOG_INFO, "Meshdriver Opts", 10);
+
+    MLOG(MLOG_INFO, "%15s: %s", "Mesh dims",
+         opts_.mesh_dims.ToString().c_str());
+    MLOG(MLOG_INFO, "%15s: %d", "Max reflvl", opts_.max_reflvl);
+    MLOG(MLOG_INFO, "%15s: %s", "Msg sizes", opts_.msgsz.ToString().c_str());
+    MLOG(MLOG_INFO, "%15s: %s", "Policy", opts_.policy.c_str());
+    MLOG(MLOG_INFO, "%15s: %d", "Num ts", opts_.num_ts);
+    MLOG(MLOG_INFO, "%15s: %d", "Num rounds", opts_.num_rounds);
+    MLOG(MLOG_INFO, "%15s: %d", "Total ranks", opts_.nranks);
   }
 
   // Run: Run for num_ts timesteps

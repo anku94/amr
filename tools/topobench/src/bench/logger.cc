@@ -217,13 +217,10 @@ void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics,
   MetricUtils::WriteMetricData(log_fpath, md);
 
   // Also print to console
-  std::string sep(10, '-');
-  MLOGIFR0(MLOG_INFO, "%s Run stats %s", sep.c_str(), sep.c_str());
   for (int midx = 0; midx < md.fmtdata_csv.size(); ++midx) {
     MLOGIFR0(MLOG_INFO, "%15s: %s", md.header[midx].c_str(),
              md.fmtdata_print[midx].c_str());
   }
-  MLOGIFR0(MLOG_INFO, "%s-----------%s", sep.c_str(), sep.c_str());
 }
 
 int Logger::GetNumRanks() const {
