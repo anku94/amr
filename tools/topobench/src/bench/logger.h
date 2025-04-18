@@ -42,7 +42,7 @@ class Logger {
 
   // Aggregate: gather all stats using collectives, and print/log them
   // - Creates one row in the log csv (a "run")
-  void AggregateAndWrite(ExtraMetricVec &extra_metrics);
+  void AggregateAndWrite(ExtraMetricVec &extra_metrics, const char *log_fpath);
 
  private:
   // LogRun: add a run row to the log csv, called within Aggregate

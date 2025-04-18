@@ -65,7 +65,7 @@ class Driver {
     }
 
     ExtraMetricVec extra_metrics;
-    mesh_.GenerateStats(extra_metrics);
+    mesh_.GenerateStats(extra_metrics, opts_.bench_log);
     Destroy();
   }
 

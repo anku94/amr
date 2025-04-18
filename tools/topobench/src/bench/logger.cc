@@ -178,7 +178,8 @@ void Logger::DrainBlockData(std::vector<MeshBlockRef> &blocks) {
   totdur_ms_ += (delta / 1e3);  // us-to-ms
 }
 
-void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics) {
+void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics,
+                                const char *log_fpath) {
   MetricUtils::LocStats locstats{
       .totbytes_sent_ = totbytes_sent_,
       .totbytes_rcvd_ = totbytes_rcvd_,
@@ -209,7 +210,6 @@ void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics) {
   MetricUtils::LogTime(gstats, md);
 
   // Write to log file
-  const char *log_fpath = "/tmp/bench_log.csv";
   MLOGIFR0(MLOG_INFO, "Adding run stats to log file: %s", log_fpath);
   MetricUtils::WriteMetricData(log_fpath, md);
 

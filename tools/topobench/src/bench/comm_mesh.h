@@ -71,8 +71,8 @@ class CommMesh {
 
   // GenerateStats: Gather all stats using collectives, and print/log them
   // Creates one row in the log csv
-  void GenerateStats(ExtraMetricVec& extra_metrics) {
-    logger_.AggregateAndWrite(extra_metrics);
+  void GenerateStats(ExtraMetricVec& extra_metrics, const char* log_fpath) {
+    logger_.AggregateAndWrite(extra_metrics, log_fpath);
   }
 
   // PrintConfig: ??

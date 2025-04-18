@@ -72,7 +72,7 @@ void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
       {"policy", opts_.policy},
       {"nblocks", std::to_string(nblocks)},
   };
-  comm_mesh_.GenerateStats(extra_metrics);
+  comm_mesh_.GenerateStats(extra_metrics, GetLogPath().c_str());
   comm_mesh_.ResetBvarsAndBlocks();
 }
 

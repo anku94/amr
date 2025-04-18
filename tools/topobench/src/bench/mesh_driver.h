@@ -17,6 +17,7 @@ struct MeshDriverOpts {
   int nranks;          // total MPI ranks
   std::string policy;  // placement policy
   std::string jobdir;  // job directory
+  std::string log_fname;  // log file name
   int num_ts;          // num timesteps
   int num_rounds;      // num rounds/timestep
 };
@@ -46,5 +47,9 @@ class MeshDriver {
  private:
   const MeshDriverOpts opts_;
   CommMesh comm_mesh_;
+
+  std::string GetLogPath() const {
+    return opts_.jobdir + "/" + opts_.log_fname;
+  }
 };
 }  // namespace topo
