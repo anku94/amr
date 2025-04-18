@@ -112,10 +112,10 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
 
   // AllocateBoundaryVariables: allocate MPI requests
   Status AllocateBoundaryVariables() {
-    MLOG(MLOG_DBG0, "Allocating boundary variables");
+    MLOG(MLOG_DBG1, "Allocating boundary variables");
     pbval_ = std::make_unique<BoundaryVariable>(shared_from_this());
     pbval_->SetupPersistentMPI();
-    MLOG(MLOG_DBG0, "Allocating boundary variables - DONE!");
+    MLOG(MLOG_DBG2, "Allocating boundary variables - DONE!");
     return Status::OK;
   }
 

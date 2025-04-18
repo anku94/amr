@@ -39,6 +39,7 @@ class Mesh {
   int GetRootLevel() const { return root_level_; }
   int GetCurrentMaxLevel() const { return current_max_level_; }
   bool IsLeaf(const Loc& loc) const { return leaves_.count(loc) != 0; }
+  bool IsActive(const Loc& loc) const { return active_.count(loc) != 0; }
 
   void Refine(const Loc& loc) {
     assert(IsLeaf(loc) && loc.level < max_level_);

@@ -42,7 +42,7 @@ struct PrintUtils {
 
     // Recurse into non-leaf children
     for (auto& c : children) {
-      if (!mesh.IsLeaf(c)) {
+      if (!mesh.IsLeaf(c) && mesh.IsActive(c)) {
         PrintHierarchy(mesh, c, indent + 1);
       }
     }

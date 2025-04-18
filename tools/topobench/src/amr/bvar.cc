@@ -19,7 +19,7 @@ void BoundaryVariable::SetupPersistentMPI() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
   for (auto nb : pmb->nbrvec_snd_) {
-    MLOGIFR0(MLOG_DBG0, "[SEND] Us: %d, Neighbor: %d (bufid: %d)",
+    MLOGIFR0(MLOG_DBG1, "[SEND] Us: %d, Neighbor: %d (bufid: %d)",
              Globals::my_rank, nb.peer_rank, nb.buf_id);
 
     if (bd_var_.req_send[nb.buf_id] != MPI_REQUEST_NULL)
@@ -32,7 +32,7 @@ void BoundaryVariable::SetupPersistentMPI() {
   }
 
   for (auto nb : pmb->nbrvec_rcv_) {
-    MLOGIFR0(MLOG_DBG0, "[RECV] Us: %d, Neighbor: %d (bufid: %d)",
+    MLOGIFR0(MLOG_DBG1, "[RECV] Us: %d, Neighbor: %d (bufid: %d)",
              Globals::my_rank, nb.peer_rank, nb.buf_id);
 
     if (bd_var_.req_recv[nb.buf_id] != MPI_REQUEST_NULL)
