@@ -30,27 +30,6 @@ void BoundaryVariable::InitBoundaryData(BoundaryData<>& bd) {
   }
 }
 
-/* XXX: changing MPI_CHAR to MPI_BYTE because we were getting
- * ABORTs with MPI_CHAR, and quick-and-dirty search suggested this
- * to be appropriate.
- *
- * frame #2: 0x0000000100030a6c
- * meshdriver_main`topo::BoundaryVariable::ReceiveBoundaryBuffers(this=0x0000000148000000)
- * at bvar.cc:129:5 126      rv = MPI_Test(&(bd_var_.req_recv[nb.buf_id]),
- * &test, &status); 127 128      MPI_CHECK_STATUS(rv, "MPI Test Failed");
- * -> 129      MPI_CHECK_STATUS(status.MPI_ERROR, "MPI Test Failed");
- *  130
- *  131      if (!static_cast<bool>(test)) {
- *  132        bflag = false;
- * (lldb) p status
- * (MPI_Status) {
- *   count_lo = 20480
- *   count_hi_and_cancelled = 0
- *   MPI_SOURCE = 0
- *   MPI_TAG = 1
- *   MPI_ERROR = 5456768
- */
-
 void BoundaryVariable::SetupPersistentMPI() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
