@@ -1,12 +1,16 @@
 #pragma once
 
+#include "amr/block.h"
 #include "logger.h"
 #include "topo_types.h"
-#include "amr/block.h"
 
 namespace topo {
 class CommMesh {
  public:
+  // CommMesh: constructor
+  CommMesh() = default;
+
+  // AllocateBvars: allocate boundary variables for all blocks
   Status AllocateBvars() {
     for (const auto& b : blocks_) {
       Status s = b->AllocateBoundaryVariables();
@@ -16,6 +20,7 @@ class CommMesh {
     return Status::OK;
   }
 
+  // ResetBvarsAndBlocks: reset boundary variables and blocks
   Status ResetBvarsAndBlocks() {
     MLOGIFR0(MLOG_INFO, "Resetting bvars and blocks");
 
@@ -29,6 +34,7 @@ class CommMesh {
     return Status::OK;
   }
 
+  // DoCommunicationRound: do and log a comm round
   Status DoCommunicationRound() {
     logger_.LogBegin();
 
@@ -58,13 +64,18 @@ class CommMesh {
     }
 
     logger_.LogEnd();
-    logger_.LogData(blocks_);
+    logger_.DrainBlockData(blocks_);
 
     return Status::OK;
   }
 
-  void PrintStats() { logger_.Aggregate(); }
+  // GenerateStats: Gather all stats using collectives, and print/log them
+  // Creates one row in the log csv
+  void GenerateStats(ExtraMetricVec& extra_metrics) {
+    logger_.AggregateAndWrite(extra_metrics);
+  }
 
+  // PrintConfig: ??
   void PrintConfig() {
     for (const auto& block : blocks_) {
       block->Print();
@@ -72,13 +83,15 @@ class CommMesh {
   }
 
  private:
+  // AddBlock: Add a preconfigured block to the list
   Status AddBlock(const MeshBlockRef& block) {
     blocks_.push_back(block);
     return Status::OK;
   }
 
-  std::vector<MeshBlockRef> blocks_;
-  Logger logger_;
+  int nblocks_global_ = 0;            // total block count, only for logger
+  std::vector<MeshBlockRef> blocks_;  // mesh blocks
+  Logger logger_;                     // data logger
 
   friend class MeshGenerator;
   friend class PlacementUtils;

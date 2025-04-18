@@ -4,14 +4,13 @@
 
 #include "logger.h"
 
-#include "amr/block.h"
-
 #include <inttypes.h>
 #include <mpi.h>
-
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include "amr/block.h"
 
 namespace {
 std::string GetMPIStr() {
@@ -44,100 +43,184 @@ const std::string MeshGenMethodToStrUtil() {
 
   return "UNKNOWN";
 }
-} // namespace
+}  // namespace
+
+class MetricUtils {
+ public:
+  // LocStats: local stats for a single rank
+  struct LocStats {
+    uint64_t totbytes_sent_;
+    uint64_t totbytes_rcvd_;
+    double totdur_ms_;
+  };
+
+  // GlobStats: global stats across all ranks
+  struct GlobStats {
+    uint64_t totbytes_sent_;
+    uint64_t totbytes_rcvd_;
+    double totdurms_avg_;
+    double totdurms_min_;
+    double totdurms_max_;
+  };
+
+  struct MetricData {
+    std::vector<std::string> header;         // key
+    std::vector<std::string> fmtdata_csv;    // fmt for csv
+    std::vector<std::string> fmtdata_print;  // fmt for printing
+
+    void AddMetric(std::string key, std::string val_csv,
+                   std::string val_print = "") {
+      header.push_back(key);
+      fmtdata_csv.push_back(val_csv);
+      if (!val_print.empty()) {
+        fmtdata_print.push_back(val_print);
+      } else {
+        fmtdata_print.push_back(val_csv);
+      }
+    }
+  };
+
+  static int AggregateStats(LocStats const &local_stats,
+                            GlobStats &global_stats) {
+    MPI_Reduce(&local_stats.totbytes_sent_, &global_stats.totbytes_sent_, 1,
+               MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_stats.totbytes_rcvd_, &global_stats.totbytes_rcvd_, 1,
+               MPI_UINT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    MPI_Reduce(&local_stats.totdur_ms_, &global_stats.totdurms_avg_, 1,
+               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_stats.totdur_ms_, &global_stats.totdurms_min_, 1,
+               MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_stats.totdur_ms_, &global_stats.totdurms_max_, 1,
+               MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    return 0;
+  }
+
+  // JoinVec: join a vector of strings with a delimiter
+  static std::string JoinVec(const std::vector<std::string> &vec,
+                             const std::string &delim) {
+    std::ostringstream oss;
+    for (size_t i = 0; i < vec.size(); ++i) {
+      oss << vec[i];
+      if (i != vec.size() - 1) {
+        oss << delim;
+      }
+    }
+    return oss.str();
+  }
+
+  // LogBytes: log bytes sent/recvd, also compute mbps for both
+  static void LogBytes(GlobStats const &gstats, MetricData &md) {
+    const uint64_t bytes_per_mb = 1ull << 20;
+    char buf[64];
+
+    double mbytes_sent = gstats.totbytes_sent_ * 1.0 / bytes_per_mb;
+    double mbytes_recv = gstats.totbytes_rcvd_ * 1.0 / bytes_per_mb;
+    double mbps_sent = mbytes_sent / gstats.totdurms_max_;
+    double mbps_recv = mbytes_recv / gstats.totdurms_max_;
+
+#define FMT_AND_ADD(k, v, vfmtcsv, vfmtprint)             \
+  {                                                       \
+    char vbufcsv[1024];                                   \
+    char vbufprint[1024];                                 \
+    snprintf(vbufcsv, sizeof(vbufcsv), vfmtcsv, v);       \
+    snprintf(vbufprint, sizeof(vbufprint), vfmtprint, v); \
+    md.AddMetric(k, vbufcsv, vbufprint);                  \
+  }
+
+    FMT_AND_ADD("mbytes_sent", mbytes_sent, "%.2lf", "%.2lf MB");
+    FMT_AND_ADD("mbytes_recv", mbytes_recv, "%.2lf", "%.2lf MB");
+    FMT_AND_ADD("mbps_sent", mbps_sent, "%.4lf", "%.4lf MB/s");
+    FMT_AND_ADD("mbps_recv", mbps_recv, "%.4lf", "%.4lf MB/s");
+  }
+
+  // LogTime: log durms avg/min/max
+  static void LogTime(GlobStats const &gstats, MetricData &md) {
+    FMT_AND_ADD("time_avg_ms", gstats.totdurms_avg_, "%.3lf", "%.3lf ms");
+    FMT_AND_ADD("time_min_ms", gstats.totdurms_min_, "%.3lf", "%.3lf ms");
+    FMT_AND_ADD("time_max_ms", gstats.totdurms_max_, "%.3lf", "%.3lf ms");
+  }
+
+  // WriteMetricData: write the metric data to a file
+  // - If the file does not exist, create it and write the header
+  // - Append the data to the file
+  static void WriteMetricData(const char *file, MetricData const &md) {
+    FILE *f = fopen(file, "a+");
+    if (f == nullptr) return;
+
+    if (!FileExists(file)) {
+      std::string header_str = JoinVec(md.header, ",");
+      fprintf(f, "%s\n", header_str.c_str());
+    }
+
+    std::string data_str = JoinVec(md.fmtdata_csv, ",");
+    fprintf(f, "%s\n", data_str.c_str());
+  }
+
+  static bool FileExists(const char *file) {
+    struct stat statbuf;
+    return stat(file, &statbuf) == 0;
+  }
+};
 
 namespace topo {
-void Logger::LogData(std::vector<std::shared_ptr<topo::MeshBlock>> &blocks) {
-  total_sent_ = 0;
-  total_rcvd_ = 0;
+void Logger::DrainBlockData(std::vector<MeshBlockRef> &blocks) {
+  totbytes_sent_ = 0;
+  totbytes_rcvd_ = 0;
 
   for (auto b : blocks) {
-    total_sent_ += b->BytesSent();
-    total_rcvd_ += b->BytesRcvd();
+    totbytes_sent_ += b->BytesSent();
+    totbytes_rcvd_ += b->BytesRcvd();
   }
 
-  auto delta = end_ms_ - start_ms_;
-  total_time_ += (delta / 1000.0); // ms-to-s
+  auto delta = end_us_ - start_us_;
+  totdur_ms_ += (delta / 1e3);  // us-to-ms
 }
 
-void Logger::Aggregate() {
-  uint64_t global_sent, global_rcvd;
+void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics) {
+  MetricUtils::LocStats locstats{
+      .totbytes_sent_ = totbytes_sent_,
+      .totbytes_rcvd_ = totbytes_rcvd_,
+      .totdur_ms_ = totdur_ms_,
+  };
+  MetricUtils::GlobStats gstats;
 
-  double global_time_avg, global_time_min, global_time_max;
-
-  MPI_Reduce(&total_sent_, &global_sent, 1, MPI_UINT64_T, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&total_rcvd_, &global_rcvd, 1, MPI_UINT64_T, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-
-  MPI_Reduce(&total_time_, &global_time_avg, 1, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&total_time_, &global_time_min, 1, MPI_DOUBLE, MPI_MIN, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&total_time_, &global_time_max, 1, MPI_DOUBLE, MPI_MAX, 0,
-             MPI_COMM_WORLD);
-
-  if (Globals::my_rank != 0)
-    return;
+  // Aggregate global stats
+  int rv = MetricUtils::AggregateStats(locstats, gstats);
+  ABORTIF(rv, "MPI_Reduce failed!");
+  if (Globals::my_rank != 0) return;
 
   const int nranks = GetNumRanks();
-  global_time_avg /= nranks;
+  gstats.totdurms_avg_ /= nranks;
 
-  const uint64_t bytes_per_mb = 1ull << 30;
-  double global_sent_mb = global_sent * 1.0 / bytes_per_mb;
-  double global_rcvd_mb = global_rcvd * 1.0 / bytes_per_mb;
+  MetricUtils::MetricData md;
 
-  double sent_mbps = global_sent_mb / global_time_avg;
-  double rcvd_mbps = global_rcvd_mb / global_time_avg;
-  MLOGIFR0(MLOG_INFO, "Bytes Exchanged: %" PRIu64 " B/%" PRIu64 " B",
-       global_sent, global_rcvd);
-  MLOGIFR0(MLOG_INFO, "Bytes Exchanged: %.2lf MB/%.2lf MB",
-       global_sent_mb, global_rcvd_mb);
-  MLOGIFR0(MLOG_INFO, "Effective b/w SEND: %.4lf MB/s RECV: %.4lf MB/s", sent_mbps, rcvd_mbps);
-  MLOGIFR0(MLOG_INFO, "Time Avg: %.2lf ms, Min: %.2lf ms, Max: %.2lf ms (%d rounds)",
-       global_time_avg * 1e3, global_time_min * 1e3, global_time_max * 1e3,
-       num_obs_);
-
-  LogRun(global_sent_mb, sent_mbps, global_rcvd_mb, rcvd_mbps,
-         global_time_avg * 1e3, global_time_min * 1e3, global_time_max * 1e3,
-         num_obs_);
-}
-
-void Logger::LogRun(double send_mb, double send_mbps, double recv_mb,
-                    double recv_mbps, double time_avg_ms, double time_min_ms,
-                    double time_max_ms, int num_obs) {
-  struct stat statbuf;
-
-  // auto log_fpath = std::string(Globals::driver_opts.job_dir) + "/bench_log.csv";
-  auto log_fpath = std::string("/tmp/bench_log.csv");
-
-  if (stat(log_fpath.c_str(), &statbuf) != 0) {
-    FILE *f = fopen(log_fpath.c_str(), "w");
-    if (f == nullptr)
-      return;
-
-    fprintf(f, "mpi_prov,send_mb,send_mbps,recv_mb,recv_mbps,"
-               "time_avg_ms,time_min_ms,time_max_ms,num_obs,meshgen_method\n");
-    fclose(f);
+  // Add extra metrics first
+  for (const auto &em : extra_metrics) {
+    md.AddMetric(em.first, em.second);
   }
 
-  FILE *f = fopen(log_fpath.c_str(), "a+");
-  if (f == nullptr)
-    return;
+  md.AddMetric("nranks", std::to_string(nranks));
+  md.AddMetric("meshgen_method", MeshGenMethodToStrUtil());
+  md.AddMetric("nrounds", std::to_string(num_obs_));
 
-  const std::string mpi_str = ::GetMPIStr();
-  const std::string topo_str = ::MeshGenMethodToStrUtil();
+  MetricUtils::LogBytes(gstats, md);
+  MetricUtils::LogTime(gstats, md);
 
-  fprintf(f,
-          "%s,%.6lf,%.6lf,%.6lf,%.6lf," // send-recv mb/mbps
-          "%.3lf,%.3lf,%.3lf,%d,"       // time avg-min-max, num_obs
-          "%s\n",                       // time avg-min-max
-          mpi_str.c_str(), send_mb, send_mbps, recv_mb, recv_mbps, time_avg_ms,
-          time_min_ms, time_max_ms, num_obs, topo_str.c_str());
+  // Write to log file
+  const char *log_fpath = "/tmp/bench_log.csv";
+  MLOGIFR0(MLOG_INFO, "Adding run stats to log file: %s", log_fpath);
+  MetricUtils::WriteMetricData(log_fpath, md);
 
-  fclose(f);
-
-  return;
+  // Also print to console
+  std::string sep(10, '-');
+  MLOGIFR0(MLOG_INFO, "%s Run stats %s", sep.c_str(), sep.c_str());
+  for (int midx = 0; midx < md.fmtdata_csv.size(); ++midx) {
+    MLOGIFR0(MLOG_INFO, "%15s: %s", md.header[midx].c_str(),
+             md.fmtdata_print[midx].c_str());
+  }
+  MLOGIFR0(MLOG_INFO, "%s-----------%s", sep.c_str(), sep.c_str());
 }
 
 int Logger::GetNumRanks() const {

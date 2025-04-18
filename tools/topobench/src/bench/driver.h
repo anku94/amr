@@ -64,7 +64,8 @@ class Driver {
       RunInternalNonTrace();
     }
 
-    mesh_.PrintStats();
+    ExtraMetricVec extra_metrics;
+    mesh_.GenerateStats(extra_metrics);
     Destroy();
   }
 

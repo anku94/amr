@@ -10,56 +10,58 @@
 #include "amr/block.h"
 #include "logging.h"
 
-using TimePoint = std::chrono::time_point<std::chrono::steady_clock,
-                                          std::chrono::duration<double>>;
-
 namespace topo {
+using ExtraMetric = std::pair<std::string, std::string>;
+using ExtraMetricVec = std::vector<ExtraMetric>;
+
+//
+// Logger: log stats for a communication round
+//
 class Logger {
  public:
   Logger()
-      : start_ms_{},
-        end_ms_{},
-        total_sent_(0),
-        total_rcvd_(0),
-        total_time_(0),
+      : start_us_{},
+        end_us_{},
+        totbytes_sent_(0),
+        totbytes_rcvd_(0),
+        totdur_ms_(0),
         num_obs_(0) {}
 
   // LogBegin: log the start time of the communication round
-  void LogBegin() { start_ms_ = Now(); }
+  void LogBegin() { start_us_ = NowMicros(); }
 
   // LogEnd: log the total time taken for the communication round
   void LogEnd() {
-    end_ms_ = Now();
-    MLOGIFR0(MLOG_INFO, "Total time: %.2f us", (end_ms_ - start_ms_) * 1e3);
+    end_us_ = NowMicros();
+    MLOGIFR0(MLOG_INFO, "Total time: %.2f us", (end_us_ - start_us_));
     num_obs_++;
   }
 
-  // LogData: ??
-  void LogData(std::vector<std::shared_ptr<topo::MeshBlock>> &blocks);
+  // LogData: drain bytes sent/rcvd from blocks
+  void DrainBlockData(std::vector<std::shared_ptr<topo::MeshBlock>> &blocks);
 
-  // Aggregate: ??
-  void Aggregate();
-
-  // LogRun: ??
-  void LogRun(double send_mb, double send_mbps, double recv_mb,
-              double recv_mbps, double time_avg_ms, double time_min_ms,
-              double time_max_ms, int num_obs);
+  // Aggregate: gather all stats using collectives, and print/log them
+  // - Creates one row in the log csv (a "run")
+  void AggregateAndWrite(ExtraMetricVec &extra_metrics);
 
  private:
+  // LogRun: add a run row to the log csv, called within Aggregate
+  // void LogRun();
+
+  // static std::vector<std::string> GetHeader();
+
   int GetNumRanks() const;
 
-  uint64_t Now() const {
-    // https://stackoverflow.com/questions/31255486/c-how-do-i-convert-a-stdchronotime-point-to-long-and-back
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::time_point_cast<std::chrono::milliseconds>(
-                   std::chrono::high_resolution_clock::now())
-                   .time_since_epoch())
-        .count();
+  uint64_t NowMicros() const {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3;
   }
-  uint64_t start_ms_, end_ms_;
-  uint64_t total_sent_;
-  uint64_t total_rcvd_;
-  double total_time_;
+
+  uint64_t start_us_, end_us_;
+  uint64_t totbytes_sent_;
+  uint64_t totbytes_rcvd_;
+  double totdur_ms_;
   uint64_t num_obs_;
 };
 }  // namespace topo
