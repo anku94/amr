@@ -5,6 +5,7 @@
 #include "lb_policies.h"
 
 #include <algorithm>
+#include <cmath>
 #include <numeric>
 
 #include "assignment_cache.h"

@@ -2,6 +2,7 @@
 
 #include <glog/logging.h> // IWYU pragma: export
 #include <mpi.h>
+#include <stdarg.h>
 
 inline std::string fmtstr(int bufsz, const char *fmt, ...) {
   char buf[bufsz];
@@ -25,22 +26,22 @@ inline std::string fmtstr(int bufsz, const char *fmt, ...) {
   do {                                                                         \
     switch (lvl) {                                                             \
     case MLOG_ERRO:                                                            \
-      LOG(ERROR) << fmtstr(MLOG_BUFSZ, "[ERRO] " fmt, ##__VA_ARGS__);         \
+      LOG(ERROR) << fmtstr(MLOG_BUFSZ, "[ERRO] " fmt, ##__VA_ARGS__);          \
       break;                                                                   \
     case MLOG_WARN:                                                            \
-      LOG(WARNING) << fmtstr(MLOG_BUFSZ, "[WARN] " fmt, ##__VA_ARGS__);       \
+      LOG(WARNING) << fmtstr(MLOG_BUFSZ, "[WARN] " fmt, ##__VA_ARGS__);        \
       break;                                                                   \
     case MLOG_INFO:                                                            \
-      LOG(INFO) << fmtstr(MLOG_BUFSZ, "[INFO] " fmt, ##__VA_ARGS__);          \
+      LOG(INFO) << fmtstr(MLOG_BUFSZ, "[INFO] " fmt, ##__VA_ARGS__);           \
       break;                                                                   \
     case MLOG_DBG0:                                                            \
-      VLOG(0) << fmtstr(MLOG_BUFSZ, "[DBG0] " fmt, ##__VA_ARGS__);            \
+      VLOG(0) << fmtstr(MLOG_BUFSZ, "[DBG0] " fmt, ##__VA_ARGS__);             \
       break;                                                                   \
     case MLOG_DBG1:                                                            \
-      VLOG(1) << fmtstr(MLOG_BUFSZ, "[DBG1] " fmt, ##__VA_ARGS__);            \
+      VLOG(1) << fmtstr(MLOG_BUFSZ, "[DBG1] " fmt, ##__VA_ARGS__);             \
       break;                                                                   \
     case MLOG_DBG2:                                                            \
-      VLOG(2) << fmtstr(MLOG_BUFSZ, "[DBG2] " fmt, ##__VA_ARGS__);            \
+      VLOG(2) << fmtstr(MLOG_BUFSZ, "[DBG2] " fmt, ##__VA_ARGS__);             \
       break;                                                                   \
     case MLOG_DBG3:                                                            \
     default:                                                                   \
@@ -60,7 +61,7 @@ inline std::string fmtstr(int bufsz, const char *fmt, ...) {
   }
 
 #define MLOGIFR0(level, fmt, ...)                                              \
-  if (Globals::my_rank == 0) {                                            \
+  if (Globals::my_rank == 0) {                                                 \
     MLOG(level, fmt, ##__VA_ARGS__)                                            \
   } else {                                                                     \
     MLOG(level + 1, fmt, ##__VA_ARGS__)                                        \
@@ -68,12 +69,12 @@ inline std::string fmtstr(int bufsz, const char *fmt, ...) {
 
 #define ABORTIF(cond, msg)                                                     \
   if (cond) {                                                                  \
-    LOG(FATAL) << fmtstr(MLOG_BUFSZ, "[ERRO] %s", msg);                                       \
+    LOG(FATAL) << fmtstr(MLOG_BUFSZ, "[ERRO] %s", msg);                        \
     MPI_Abort(MPI_COMM_WORLD, 1);                                              \
   }
 
 #define ABORT(msg)                                                             \
   {                                                                            \
-    LOG(FATAL) << fmtstr(MLOG_BUFSZ, "[ERRO] %s", msg);                                       \
+    LOG(FATAL) << fmtstr(MLOG_BUFSZ, "[ERRO] %s", msg);                        \
     MPI_Abort(MPI_COMM_WORLD, 1);                                              \
   }

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <cinttypes>
 #include <cstdint>
 #include <functional>
-#include <sstream>
 #include <string>
 
 namespace amr {
@@ -52,8 +52,8 @@ struct Loc {
 
   std::string ToString() const {
     char buf[128];
-    snprintf(buf, sizeof(buf), "Loc[L%d]: %lld, %lld, %lld", level, locv.x,
-             locv.y, locv.z);
+    snprintf(buf, sizeof(buf), "Loc[L%d]: %" PRId64 ", %" PRId64 ", %" PRId64,
+             level, locv.x, locv.y, locv.z);
     return std::string(buf);
   }
 

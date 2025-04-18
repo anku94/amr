@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <numeric>
+#include <cmath>
 
 namespace topo {
 void GraphGenerator::GenerateDynamic(int nnodes, int avg_deg) {

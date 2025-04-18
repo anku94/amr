@@ -4,11 +4,12 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <numeric>
 #include <vector>
 
-#include "logging.h"
 #include "lb_policies.h"
+#include "logging.h"
 
 namespace {
 double GetTimeMs() {
@@ -35,8 +36,8 @@ void GetRollingSum(std::vector<double> const& v, std::vector<double>& sum,
   double rolling_max = *std::max_element(sum.begin(), sum.end());
   double rolling_min = *std::min_element(sum.begin(), sum.end());
 
-  MLOG(MLOG_DBG2, "K: %d, Rolling Max: %.2lf, Rolling Min: %.2lf",
-       k, rolling_max, rolling_min);
+  MLOG(MLOG_DBG2, "K: %d, Rolling Max: %.2lf, Rolling Min: %.2lf", k,
+       rolling_max, rolling_min);
 }
 
 bool IsRangeAvailable(std::vector<int> const& ranklist, int start, int end) {
@@ -49,8 +50,7 @@ bool IsRangeAvailable(std::vector<int> const& ranklist, int start, int end) {
 }
 
 bool MarkRange(std::vector<int>& ranklist, int start, int end, int flag) {
-  MLOG(MLOG_DBG3, "MarkRange marking [%d, %d] with %d", start, end,
-       flag);
+  MLOG(MLOG_DBG3, "MarkRange marking [%d, %d] with %d", start, end, flag);
 
   for (int i = start; i <= end; i++) {
     ranklist[i] = flag;
@@ -66,9 +66,8 @@ double GetSumRange(std::vector<double> const& cum_sum, int a, int b) {
   }
 }
 
-#define LOG_TIME(evt)                                                \
-  MLOG(MLOG_DBG0, "Time taken until %s: %.2lf ms", evt, \
-       GetTimeMs() - _ts_beg);
+#define LOG_TIME(evt) \
+  MLOG(MLOG_DBG0, "Time taken until %s: %.2lf ms", evt, GetTimeMs() - _ts_beg);
 
 int AssignBlocksDP(std::vector<double> const& costlist,
                    std::vector<int>& ranklist, int nranks) {
@@ -85,8 +84,7 @@ int AssignBlocksDP(std::vector<double> const& costlist,
   int nalloc_b = nblocks % nranks;
   int nalloc_a = nranks - nalloc_b;
 
-  MLOG(MLOG_DBG0, "nalloc_a: %d, nalloc_b: %d", nalloc_a,
-       nalloc_b);
+  MLOG(MLOG_DBG0, "nalloc_a: %d, nalloc_b: %d", nalloc_a, nalloc_b);
 
   for (int i = 1; i < nblocks; i++) {
     cum_costlist[i] += cum_costlist[i - 1];
@@ -169,13 +167,11 @@ int AssignBlocksDP(std::vector<double> const& costlist,
     // should not encounter invalid solutions while backtracking
     assert(dp_cost != kBigDouble);
     if (dp_cost == opt1_cost) {
-      MLOG(MLOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j,
-           i - 1, j);
+      MLOG(MLOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j, i - 1, j);
       MarkRange(ranklist, l - n_a, l - 1, cur_rank);
       i--;
     } else {
-      MLOG(MLOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j, i,
-           j - 1);
+      MLOG(MLOG_DBG3, "Backtracking [%d][%d]->[%d][%d]", i, j, i, j - 1);
       MarkRange(ranklist, l - n_b, l - 1, cur_rank);
       j--;
     }
