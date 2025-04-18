@@ -1,5 +1,0 @@
-build/*
-build-vsci/*
-compile_commands.json
-.cache/*
-install/*
