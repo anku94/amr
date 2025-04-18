@@ -69,10 +69,6 @@ class MeshDriver {
   // (with a single mesh)
   void RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist);
 
-  // AssignBlocks: populate ranklist using a synthetic costlist
-  // generated using distribution, + placement scheme in opts.policy
-  int AssignBlocks(std::vector<int>& ranklist, int nblocks, int nranks);
-
  private:
   const MeshDriverOpts opts_;
   CommMesh comm_mesh_;
@@ -80,5 +76,18 @@ class MeshDriver {
   std::string GetLogPath() const {
     return opts_.jobdir + "/" + opts_.log_fname;
   }
+
+  // AssignBlocksSync: broadcasting wrapper around AssignBlocksSingle
+  int AssignBlocksSync(std::vector<int>& ranklist, int nblocks, int nranks);
+
+  // AssignBlocksSingle: populate ranklist using a synthetic costlist
+  // generated using distribution, + placement scheme in opts.policy
+  int AssignBlocksSingle(std::vector<int>& ranklist, int nblocks, int nranks);
+
+  // PrepareOmeshSync: broadcast wrapper around PrepareOmeshSingle
+  OrderedMesh PrepareOmeshSync() const;
+
+  // PrepareOmeshSingle: create a single mesh and refine to tgt_leafcnt
+  OrderedMesh PrepareOmeshSingle() const;
 };
 }  // namespace topo

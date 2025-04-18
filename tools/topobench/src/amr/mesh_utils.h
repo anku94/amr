@@ -15,14 +15,62 @@ using OrderedBlockVec = std::vector<int>;
 //
 struct OrderedMeshNode {
   OrderedBlockVec face, edge, vertex;
+
+  // PackOne: pack a single vector into a stream for MPI bcast
+  static void PackOne(const OrderedBlockVec& vec, std::vector<int>& pack_out) {
+    pack_out.push_back(vec.size());
+    pack_out.insert(pack_out.end(), vec.begin(), vec.end());
+  }
+
+  // Pack: pack all ovecs into streams
+  void Pack(std::vector<int>& pack_out) const {
+    PackOne(face, pack_out);
+    PackOne(edge, pack_out);
+    PackOne(vertex, pack_out);
+  }
+
+  // UnpackOne: unpack one ovec from stream
+  static void UnpackOne(OrderedBlockVec& vec, std::vector<int> const& pack_in,
+                        int& cur) {
+    int n = pack_in[cur++];
+    vec.resize(n);
+    std::copy(pack_in.begin() + cur, pack_in.begin() + cur + n, vec.begin());
+    cur += n;
+  }
+
+  // Unpack: unpack all ovecs from stream
+  void Unpack(std::vector<int> const& pack_in, int& cur) {
+    UnpackOne(face, pack_in, cur);
+    UnpackOne(edge, pack_in, cur);
+    UnpackOne(vertex, pack_in, cur);
+  }
 };
 
 //
 // OrderedMesh: mesh structure in SFC block IDs
 //
 struct OrderedMesh {
-  int nblocks;
-  std::vector<OrderedMeshNode> nbrmap;
+  int nblocks;                          // total leaf blocks
+  std::vector<OrderedMeshNode> nbrmap;  // [blockid] -> nbrs[]
+
+  // Pack: pack all vectors into a stream for MPI bcast
+  void Pack(std::vector<int>& pack_out) const {
+    pack_out.clear();
+    pack_out.push_back(nblocks);
+    for (const auto& node : nbrmap) {
+      node.Pack(pack_out);
+    }
+  }
+
+  // Unpack: unpack all vectors from a stream
+  void Unpack(std::vector<int> const& pack_in) {
+    int cur = 0;
+    nblocks = pack_in[cur++];
+    nbrmap.resize(nblocks);
+    for (auto& node : nbrmap) {
+      node.Unpack(pack_in, cur);
+    }
+  }
 };
 
 // Vec3: 3D vector utility class

@@ -13,6 +13,37 @@
 using MeshBlockRef = std::shared_ptr<topo::MeshBlock>;
 using DistributionUtils = amr::DistributionUtils;
 
+namespace {
+template <typename T>
+MPI_Datatype GetMpiType() {
+  if (std::is_same<T, int>::value) {
+    return MPI_INT;
+  } else if (std::is_same<T, double>::value) {
+    return MPI_DOUBLE;
+  }else  if (std::is_same<T, float>::value) {
+    return MPI_FLOAT;
+  } else {
+    static_assert(std::is_same<T, T>::value, "should not reach here");
+  }
+}
+
+template <typename T>
+void BroadcastVec(std::vector<T>& vec, int root) {
+  int vecsz = vec.size();
+  int rv = 0;
+
+  rv = MPI_Bcast(&vecsz, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_CHECK(rv, "MPI_Bcast failed!");
+
+  if (Globals::my_rank != root) {
+    vec.resize(vecsz);
+  }
+
+  rv = MPI_Bcast(vec.data(), vecsz, GetMpiType<T>(), root, MPI_COMM_WORLD);
+  MPI_CHECK(rv, "MPI_Bcast failed!");
+}
+}  // namespace
+
 namespace topo {
 MeshDriver::MeshDriver(const MeshDriverOpts& opts) : opts_(opts) {
   Globals::my_rank = opts_.my_rank;
@@ -28,26 +59,15 @@ void MeshDriver::Run() {
   for (int ts = 0; ts < opts_.num_ts; ts++) {
     MLOGIFR0(MLOG_INFO, "- Running timestep %d...", ts);
 
-    // Create base mesh and print it
-    Mesh mesh(dims.x, dims.y, dims.z, lvl);
-
-    // Refine to target leaf count
-    int tgt_leafcnt = opts_.tgt_leafcnt;
-    int cur_leafcnt = mesh.RefineToTargetLeafcnt(tgt_leafcnt);
-    MLOGIFR0(MLOG_INFO, "Refined to %d leaves", cur_leafcnt);
-
-    // Print hierarchy
-    PrintUtils::PrintHierarchy(mesh, Mesh::GetRootLoc());
-
     // Generate ordered mesh and print it
-    auto omesh = mesh.GetOrderedMesh();
+    auto omesh = PrepareOmeshSync();
     if (Globals::my_rank == 0) {
       PrintUtils::PrintOmesh(omesh);
     }
 
     int nblocks = omesh.nblocks;
     std::vector<int> ranklist(nblocks, -1);
-    int rv = AssignBlocks(ranklist, nblocks, opts_.nranks);
+    int rv = AssignBlocksSync(ranklist, nblocks, opts_.nranks);
     ABORTIF(rv, "Placement assignment failed!");
 
     RunWithOmesh(omesh, ranklist);
@@ -88,7 +108,14 @@ void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
   comm_mesh_.ResetBvarsAndBlocks();
 }
 
-int MeshDriver::AssignBlocks(std::vector<int>& ranklist, int nblocks,
+int MeshDriver::AssignBlocksSync(std::vector<int>& ranklist, int nblocks,
+                                  int nranks) {
+  int rv = AssignBlocksSingle(ranklist, nblocks, nranks);
+  BroadcastVec(ranklist, 0);
+  return rv;
+}
+
+int MeshDriver::AssignBlocksSingle(std::vector<int>& ranklist, int nblocks,
                              int nranks) {
   std::vector<double> costlist(nblocks, -1.0);
   auto dopts = DistributionUtils::GetConfigOpts();
@@ -113,4 +140,40 @@ int MeshDriver::AssignBlocks(std::vector<int>& ranklist, int nblocks,
 
   return rv;
 }
+
+OrderedMesh MeshDriver::PrepareOmeshSync() const {
+  // Rank 0 creates a base mesh and broadcasts it to all ranks
+  std::vector<int> packed_omesh;
+
+  if (Globals::my_rank == 0) {
+    auto omesh = PrepareOmeshSingle();
+    omesh.Pack(packed_omesh);
+  }
+
+  BroadcastVec(packed_omesh, 0);
+
+  OrderedMesh omesh_recv;
+  omesh_recv.Unpack(packed_omesh);
+  return omesh_recv;
+}
+
+OrderedMesh MeshDriver::PrepareOmeshSingle() const {
+  auto dims = opts_.mesh_dims;
+  auto lvl = opts_.max_reflvl;
+
+  // Create base mesh
+  Mesh mesh(dims.x, dims.y, dims.z, lvl);
+
+  // Refine to target leaf count
+  int tgt_leafcnt = opts_.tgt_leafcnt;
+  int cur_leafcnt = mesh.RefineToTargetLeafcnt(tgt_leafcnt);
+  MLOGIFR0(MLOG_INFO, "Refined to %d leaves", cur_leafcnt);
+
+  // Print hierarchy
+  PrintUtils::PrintHierarchy(mesh, Mesh::GetRootLoc());
+
+  auto omesh = mesh.GetOrderedMesh();
+  return omesh;
+}
+
 }  // namespace topo

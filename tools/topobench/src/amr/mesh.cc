@@ -115,6 +115,7 @@ int Mesh::RefineToTargetLeafcnt(int tgt_leafcnt) {
     cur_leafcnt = leaves_.size();
     MLOG(MLOG_DBG0, "Refined block %s, now have %d leaves",
          leaf_loc.ToString().c_str(), cur_leafcnt);
+    sleep(1);
   }
 
   return cur_leafcnt;
