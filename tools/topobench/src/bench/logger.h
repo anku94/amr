@@ -33,7 +33,8 @@ class Logger {
   // LogEnd: log the total time taken for the communication round
   void LogEnd() {
     end_us_ = NowMicros();
-    MLOGIFR0(MLOG_INFO, "Total time: %.2f us", (end_us_ - start_us_));
+    auto dur_us = end_us_ - start_us_;
+    MLOGIFR0(MLOG_INFO, "- Last round time: %" PRIu64 " us", dur_us);
     num_obs_++;
   }
 
@@ -45,13 +46,11 @@ class Logger {
   void AggregateAndWrite(ExtraMetricVec &extra_metrics, const char *log_fpath);
 
  private:
-  // LogRun: add a run row to the log csv, called within Aggregate
-  // void LogRun();
-
-  // static std::vector<std::string> GetHeader();
-
+  // GetNumRanks: uses MPI_Comm_size to get the number of ranks
+  // Not sure if needed
   int GetNumRanks() const;
 
+  // NowMicros: get the current time in microseconds
   uint64_t NowMicros() const {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
