@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "amr_types.h"
 #include "bvar.h"
 #include "common.h"
 #include "globals.h"
@@ -20,18 +21,10 @@
 #define MPI_CHECK(status, msg) \
   if (status != MPI_SUCCESS) { \
     MLOG(MLOG_ERRO, msg);      \
+    ABORT(msg);                \
   }
 
 namespace topo {
-//
-// NeighborBlock: represents a single neighbor relation
-//
-struct NeighborBlock {
-  int block_id;   // our block id
-  int peer_rank;  // rank hosting nbr block
-  int buf_id;     // ??
-  int msg_sz;     // ??j
-};
 
 //
 // MeshBlock: represents a single AMR block
@@ -47,19 +40,19 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
 
   // AddNeighborSendRecv: add a neighbor to send to and recv from
   // (Note that this currently takes two buf id's, even though we could share)
-  Status AddNeighborSendRecv(int block_id, int peer_rank, int msg_sz) {
+  Status AddNeighborSendRecv(int block_id, int peer_rank, int msg_sz, int tag) {
     Status s;
-    s = AddNeighborSend(block_id, peer_rank, msg_sz);
+    s = AddNeighborSend(block_id, peer_rank, msg_sz, tag);
     if (s != Status::OK) return s;
-    s = AddNeighborRecv(block_id, peer_rank, msg_sz);
+    s = AddNeighborRecv(block_id, peer_rank, msg_sz, tag);
     return s;
   }
 
   // AddNeighborSend: add a neighbor to send to
   // For convenience we only use one of sendbuf and recvbuf from a buf_id
-  Status AddNeighborSend(int block_id, int peer_rank, int msg_sz) {
+  Status AddNeighborSend(int block_id, int peer_rank, int msg_sz, int tag) {
     int buf_id = nbrvec_snd_.size() + nbrvec_rcv_.size();
-    nbrvec_snd_.push_back({block_id, peer_rank, buf_id, msg_sz});
+    nbrvec_snd_.push_back({block_id, peer_rank, buf_id, msg_sz, tag});
 
     int total = nbrvec_snd_.size() + nbrvec_rcv_.size();
 
@@ -75,9 +68,9 @@ class MeshBlock : public std::enable_shared_from_this<MeshBlock> {
 
   // AddNeighborRecv: add a neighbor to recv from
   // For convenience we only use one of sendbuf and recvbuf from a buf_id
-  Status AddNeighborRecv(int block_id, int peer_rank, int msg_sz) {
+  Status AddNeighborRecv(int block_id, int peer_rank, int msg_sz, int tag) {
     int buf_id = nbrvec_snd_.size() + nbrvec_rcv_.size();
-    nbrvec_rcv_.push_back({block_id, peer_rank, buf_id, msg_sz});
+    nbrvec_rcv_.push_back({block_id, peer_rank, buf_id, msg_sz, tag});
 
     int total = nbrvec_snd_.size() + nbrvec_rcv_.size();
 

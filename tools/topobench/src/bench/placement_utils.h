@@ -1,5 +1,6 @@
 #pragma once
 
+#include "amr/amr_types.h"
 #include "amr/block.h"
 #include "amr_lb.h"
 #include "bench/comm_mesh.h"
@@ -40,9 +41,17 @@ class PlacementUtils {
       auto block = std::make_shared<MeshBlock>(bid);
 
       MLOGIFR0(MLOG_DBG0, "Setting up nbrs for block %d", bid);
-      AddNeighborVec(block, omesh.nbrmap[bid].face, ranklist, f_msgsz);
-      AddNeighborVec(block, omesh.nbrmap[bid].edge, ranklist, e_msgsz);
-      AddNeighborVec(block, omesh.nbrmap[bid].vertex, ranklist, v_msgsz);
+      auto &fvec = omesh.nbrmap[bid].face;
+      auto ftag = static_cast<int>(CommTags::kFaceTag);
+      AddNeighborVec(block, fvec, ranklist, f_msgsz, ftag);
+
+      auto &evec = omesh.nbrmap[bid].edge;
+      auto etag = static_cast<int>(CommTags::kEdgeTag);
+      AddNeighborVec(block, evec, ranklist, e_msgsz, etag);
+
+      auto &vvec = omesh.nbrmap[bid].vertex;
+      auto vtag = static_cast<int>(CommTags::kVertexTag);
+      AddNeighborVec(block, vvec, ranklist, v_msgsz, vtag);
 
       blocks.push_back(block);
     }
@@ -52,12 +61,12 @@ class PlacementUtils {
 
   // AddNeighbor: add a neighbor vec (face/edge/vtx) to the block
   static void AddNeighborVec(MeshBlockRef &block, std::vector<int> bids,
-                             std::vector<int> ranklist, int msg_sz) {
+                             std::vector<int> ranklist, int msg_sz, int tag) {
     MLOGIFR0(MLOG_DBG1, "- Adding %zu nbrs", bids.size());
 
     for (int bid : bids) {
       int peer_rank = ranklist[bid];
-      block->AddNeighborSendRecv(bid, peer_rank, msg_sz);
+      block->AddNeighborSendRecv(bid, peer_rank, msg_sz, tag);
     }
   }
 

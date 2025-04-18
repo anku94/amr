@@ -12,8 +12,8 @@
 #include "logging.h"
 #include "globals.h"
 
-#define NMAX_NEIGHBORS 2048
-#define MAX_MSGSZ 16384
+#define NMAX_NEIGHBORS 512
+#define MAX_MSGSZ 32768
 
 namespace topo {
 class MeshBlock;
@@ -107,5 +107,8 @@ class BoundaryVariable {
   std::weak_ptr<MeshBlock> wpmb_;
   BoundaryData<> bd_var_, bd_var_flcor_;
   uint64_t bytes_sent_, bytes_rcvd_;
+
+  static constexpr int kMaxNeighbor = NMAX_NEIGHBORS;
+  static constexpr int kMaxMsgSz = MAX_MSGSZ;
 };
 }  // namespace topo

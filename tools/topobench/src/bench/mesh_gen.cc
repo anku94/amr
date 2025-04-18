@@ -72,11 +72,13 @@ Status RingMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
         ((bid_rel - 1) % Globals::nranks + Globals::nranks) % Globals::nranks;
     int nbr_right = (bid_rel + 1) % Globals::nranks;
 
+    auto nbr_tag = static_cast<int>(CommTags::kFaceTag);
+
     auto mb = std::make_shared<topo::MeshBlock>(ring_delta + bid_rel);
-    mb->AddNeighborSendRecv(nbr_left + ring_delta, nbr_left,
-                            opts_.size_per_msg);
+    mb->AddNeighborSendRecv(nbr_left + ring_delta, nbr_left, opts_.size_per_msg,
+                            nbr_tag);
     mb->AddNeighborSendRecv(nbr_right + ring_delta, nbr_right,
-                            opts_.size_per_msg);
+                            opts_.size_per_msg, nbr_tag);
 
     MeshGenerator::AddMeshBlock(mesh, mb);
   }
@@ -112,9 +114,12 @@ Status AllToAllMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
       MLOG(MLOG_DBG2, "Block %d, Neighbors %d-%d", bid_i_off, nrl_bid_off,
            nrr_bid_off);
 
+      // Assume all msgs are face msgs
+      auto nbr_tag = static_cast<int>(CommTags::kFaceTag);
+
       auto mb = std::make_shared<MeshBlock>(bid_i_off);
-      mb->AddNeighborSendRecv(nrl_bid_off, nrl, opts_.size_per_msg);
-      mb->AddNeighborSendRecv(nrr_bid_off, nrr, opts_.size_per_msg);
+      mb->AddNeighborSendRecv(nrl_bid_off, nrl, opts_.size_per_msg, nbr_tag);
+      mb->AddNeighborSendRecv(nrr_bid_off, nrr, opts_.size_per_msg, nbr_tag);
 
       MeshGenerator::AddMeshBlock(mesh, mb);
     }
@@ -145,14 +150,16 @@ Status SingleTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   std::vector<std::shared_ptr<MeshBlock>> mb_vec;
   auto mb = std::make_shared<MeshBlock>(0);
 
+  int nbr_tag =
+      static_cast<int>(CommTags::kFaceTag);  // Assume all msgs are face msgs
   int nbr_idx = 0;
 
   for (auto it : msgs_snd) {
-    mb->AddNeighborSend(nbr_idx++, it.peer_rank, it.msg_sz);
+    mb->AddNeighborSend(nbr_idx++, it.peer_rank, it.msg_sz, nbr_tag);
   }
 
   for (auto it : msgs_rcv) {
-    mb->AddNeighborRecv(nbr_idx++, it.peer_rank, it.msg_sz);
+    mb->AddNeighborRecv(nbr_idx++, it.peer_rank, it.msg_sz, nbr_tag);
   }
 
   MeshGenerator::AddMeshBlock(mesh, mb);
@@ -191,13 +198,15 @@ Status MultiTimestepTraceMeshGenerator::GenerateMesh(CommMesh &mesh, int ts) {
   auto mb = std::make_shared<MeshBlock>(0);
 
   int nbr_idx = 0;
+  // Assume all msgs are face msgs
+  int nbr_tag = static_cast<int>(CommTags::kFaceTag);
 
   for (auto it : msgs_snd) {
-    mb->AddNeighborSend(nbr_idx++, it.peer_rank, it.msg_sz);
+    mb->AddNeighborSend(nbr_idx++, it.peer_rank, it.msg_sz, nbr_tag);
   }
 
   for (auto it : msgs_rcv) {
-    mb->AddNeighborRecv(nbr_idx++, it.peer_rank, it.msg_sz);
+    mb->AddNeighborRecv(nbr_idx++, it.peer_rank, it.msg_sz, nbr_tag);
   }
 
   MeshGenerator::AddMeshBlock(mesh, mb);

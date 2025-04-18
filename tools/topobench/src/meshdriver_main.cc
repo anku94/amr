@@ -5,7 +5,6 @@
 #include "amr/mesh_utils.h"
 #include "bench/mesh_driver.h"
 #include "config_parser.h"
-#include "globals.h"
 #include "logging.h"
 
 // using namespace topo;
