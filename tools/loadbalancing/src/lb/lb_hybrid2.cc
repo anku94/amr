@@ -227,7 +227,12 @@ int HybridAssignmentCppFirst::AssignBlocksV2(
   std::vector<double> rank_times;
   double rank_time_max, rank_time_avg;
 
-  if (comm == MPI_COMM_NULL) {
+  // 20250418: CDP Chunked fails for small nranks, so use CDP?
+  if (comm == MPI_COMM_NULL and nranks <= 512) {
+    static auto cdp_policy = amr::PolicyUtils::GetPolicy("cdp");
+    rv = LoadBalancePolicies::AssignBlocks(cdp_policy, costlist, ranklist,
+                                           nranks);
+  } else if (comm == MPI_COMM_NULL) {
     static auto cdp_policy = amr::PolicyUtils::GetPolicy(kCDPPolicyStr);
     rv = LoadBalancePolicies::AssignBlocks(cdp_policy, costlist, ranklist,
                                            nranks);
@@ -436,6 +441,11 @@ std::vector<int> HybridAssignmentCppFirst::GetLPTRanksV3(
     std::vector<double> const& costlist, std::vector<int> const& ranklist,
     std::vector<double> const& rank_costs, const int nmax) {
   int nranks = rank_costs.size();
+
+  if (nmax <= 0) {
+    MLOG(MLOG_DBG0, "[GetLPTRanksV3] nmax is <= 0, possibly tiny problem");
+    return std::vector<int>();
+  }
 
   std::vector<std::pair<double, int>> cost_ranks;  // costs + idxes to sort
 

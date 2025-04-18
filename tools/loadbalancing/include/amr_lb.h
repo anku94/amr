@@ -12,7 +12,7 @@ struct PlacementArgs {
   std::string policy_name;              // preconfigured policy name
   std::vector<double> const& costlist;  // size assumed to be nblocks
   std::vector<int>& ranklist;           // will be resized to nblocks
-  int nranks;                           // number of MPI ranks
+  int nranks;                           // number of policy ranks
 };
 
 // PlacementArgsMpi: PlacementArgs + MPI info for parallel placement

@@ -378,7 +378,7 @@ const LBPolicyWithOpts PolicyUtils::GenHybrid(const std::string& policy_str) {
   }
 
   std::string policy_name_friendly =
-      "Hybrid (" + std::to_string(hcf_opts.lpt_frac) + "%)";
+      "Hybrid (" + std::to_string(hcf_opts.lpt_frac * 100) + "%)";
 
   LBPolicyWithOpts policy = {
       .id = policy_str,
