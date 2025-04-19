@@ -87,8 +87,13 @@ run_single() {
     message "Running with policy $policy"
 
     # gen a config
-    cfg_template=$AMRLB_INSTALLDIR/config/template.cfg
-    cfg_out=$AMRLB_INSTALLDIR/config/cfg-test.cfg
+    cfg_template=$AMRLB_INSTALLDIR/config/topo_template.cfg
+    cfg_out=$AMRLB_INSTALLDIR/config/topo_${policy}.cfg
+    [ ! -f $cfg_template ] && {
+        message "Config template $cfg_template does not exist"
+        exit 1
+    }
+
     gen_config $cfg_template $cfg_out
 
     # set env vars for exec
