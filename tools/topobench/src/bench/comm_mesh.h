@@ -36,7 +36,7 @@ class CommMesh {
 
   // DoCommunicationRound: do and log a comm round
   Status DoCommunicationRound() {
-    logger_.LogBegin();
+    // logger_.LogBegin();
 
     MLOGIFR0(MLOG_DBG0, "Start Receiving...");
     for (const auto& b : blocks_) {
@@ -63,8 +63,8 @@ class CommMesh {
       b->ClearBoundary();
     }
 
-    logger_.LogEnd();
-    logger_.DrainBlockData(blocks_);
+    // logger_.LogEnd();
+    // logger_.DrainBlockData(blocks_);
 
     return Status::OK;
   }
@@ -72,7 +72,7 @@ class CommMesh {
   // GenerateStats: Gather all stats using collectives, and print/log them
   // Creates one row in the log csv
   void GenerateStats(ExtraMetricVec& extra_metrics, const char* log_fpath) {
-    logger_.AggregateAndWrite(extra_metrics, log_fpath);
+    // logger_.AggregateAndWrite(extra_metrics, log_fpath);
   }
 
   // PrintConfig: ??
@@ -89,9 +89,11 @@ class CommMesh {
     return Status::OK;
   }
 
-  int nblocks_global_ = 0;            // total block count, only for logger
+  int nblocks_global_ = 0;  // total block count, only for logger
+ public:
   std::vector<MeshBlockRef> blocks_;  // mesh blocks
-  Logger logger_;                     // data logger
+ private:
+  Logger logger_;  // data logger
 
   friend class MeshGenerator;
   friend class PlacementUtils;

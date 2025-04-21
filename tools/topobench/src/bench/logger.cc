@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "amr/block.h"
+#include "metric_utils.h"
 
 namespace {
 std::string GetMPIStr() {
@@ -45,7 +46,7 @@ const std::string MeshGenMethodToStrUtil() {
 }
 }  // namespace
 
-class MetricUtils {
+class LoggerUtils {
  public:
   // LocStats: local stats for a single rank
   struct LocStats {
@@ -65,23 +66,6 @@ class MetricUtils {
     double totdurms_avg_;
     double totdurms_min_;
     double totdurms_max_;
-  };
-
-  struct MetricData {
-    std::vector<std::string> header;         // key
-    std::vector<std::string> fmtdata_csv;    // fmt for csv
-    std::vector<std::string> fmtdata_print;  // fmt for printing
-
-    void AddMetric(std::string key, std::string val_csv,
-                   std::string val_print = "") {
-      header.push_back(key);
-      fmtdata_csv.push_back(val_csv);
-      if (!val_print.empty()) {
-        fmtdata_print.push_back(val_print);
-      } else {
-        fmtdata_print.push_back(val_csv);
-      }
-    }
   };
 
   static int AggregateStats(LocStats const &local_stats,
@@ -105,21 +89,8 @@ class MetricUtils {
     return 0;
   }
 
-  // JoinVec: join a vector of strings with a delimiter
-  static std::string JoinVec(const std::vector<std::string> &vec,
-                             const std::string &delim) {
-    std::ostringstream oss;
-    for (size_t i = 0; i < vec.size(); ++i) {
-      oss << vec[i];
-      if (i != vec.size() - 1) {
-        oss << delim;
-      }
-    }
-    return oss.str();
-  }
-
   // LogComm: log bytes sent/recvd, also compute mbps for both
-  static void LogComm(GlobStats const &gstats, MetricData &md) {
+  static void LogComm(GlobStats const &gstats, topo::MetricUtils::MetricData &md) {
     const uint64_t bytes_per_mb = 1ull << 20;
     double dursec = gstats.totdurms_max_ * 1.0 / 1000.0;
     ABORTIF(dursec <= 0.0, "Duration is <= 0!");
@@ -147,33 +118,10 @@ class MetricUtils {
   }
 
   // LogTime: log durms avg/min/max
-  static void LogTime(GlobStats const &gstats, MetricData &md) {
+  static void LogTime(GlobStats const &gstats, topo::MetricUtils::MetricData &md) {
     FMT_AND_ADD("time_avg_ms", gstats.totdurms_avg_, "%.3lf", "%.3lf ms");
     FMT_AND_ADD("time_min_ms", gstats.totdurms_min_, "%.3lf", "%.3lf ms");
     FMT_AND_ADD("time_max_ms", gstats.totdurms_max_, "%.3lf", "%.3lf ms");
-  }
-
-  // WriteMetricData: write the metric data to a file
-  // - If the file does not exist, create it and write the header
-  // - Append the data to the file
-  static void WriteMetricData(const char *file, MetricData const &md) {
-    bool file_exists = FileExists(file);
-
-    FILE *f = fopen(file, "a+");
-    if (f == nullptr) return;
-
-    if (!file_exists) {
-      std::string header_str = JoinVec(md.header, ",");
-      fprintf(f, "%s\n", header_str.c_str());
-    }
-
-    std::string data_str = JoinVec(md.fmtdata_csv, ",");
-    fprintf(f, "%s\n", data_str.c_str());
-  }
-
-  static bool FileExists(const char *file) {
-    struct stat statbuf;
-    return stat(file, &statbuf) == 0;
   }
 };
 
@@ -195,24 +143,24 @@ void Logger::DrainBlockData(std::vector<MeshBlockRef> &blocks) {
 
 void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics,
                                 const char *log_fpath) {
-  MetricUtils::LocStats locstats{
+  LoggerUtils::LocStats locstats{
       .totbytes_sent_ = totbytes_sent_,
       .totbytes_rcvd_ = totbytes_rcvd_,
       .totcnt_sent_ = totcnt_sent_,
       .totcnt_rcvd_ = totcnt_rcvd_,
       .totdur_ms_ = totdur_ms_,
   };
-  MetricUtils::GlobStats gstats;
+  LoggerUtils::GlobStats gstats;
 
   // Aggregate global stats
-  int rv = MetricUtils::AggregateStats(locstats, gstats);
+  int rv = LoggerUtils::AggregateStats(locstats, gstats);
   ABORTIF(rv, "MPI_Reduce failed!");
   if (Globals::my_rank != 0) return;
 
   const int nranks = GetNumRanks();
   gstats.totdurms_avg_ /= nranks;
 
-  MetricUtils::MetricData md;
+  topo::MetricUtils::MetricData md;
 
   // Add extra metrics first
   for (const auto &em : extra_metrics) {
@@ -223,8 +171,8 @@ void Logger::AggregateAndWrite(ExtraMetricVec &extra_metrics,
   md.AddMetric("meshgen_method", MeshGenMethodToStrUtil());
   md.AddMetric("nrounds", std::to_string(num_obs_));
 
-  MetricUtils::LogComm(gstats, md);
-  MetricUtils::LogTime(gstats, md);
+  LoggerUtils::LogComm(gstats, md);
+  LoggerUtils::LogTime(gstats, md);
 
   // Write to log file
   MLOGIFR0(MLOG_INFO, "Adding run stats to log file: %s", log_fpath);

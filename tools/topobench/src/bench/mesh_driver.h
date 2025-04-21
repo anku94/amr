@@ -8,6 +8,7 @@
 #include "amr/mesh_utils.h"
 #include "bench/comm_mesh.h"
 #include "logging.h"
+#include "newlogger.h"
 
 namespace topo {
 struct MeshDriverOpts {
@@ -67,11 +68,12 @@ class MeshDriver {
 
   // RunWithOmesh: Run with an ordered mesh for nrounds
   // (with a single mesh)
-  void RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist);
+  void RunWithOmesh(int ts, OrderedMesh& omesh, std::vector<int>& ranklist);
 
  private:
   const MeshDriverOpts opts_;
   CommMesh comm_mesh_;
+  NewLogger logger_;
 
   std::string GetLogPath() const {
     return opts_.jobdir + "/" + opts_.log_fname;

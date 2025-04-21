@@ -9,10 +9,11 @@
 
 #include "amr/block.h"
 #include "logging.h"
+#include "metric_utils.h"
 
 namespace topo {
-using ExtraMetric = std::pair<std::string, std::string>;
-using ExtraMetricVec = std::vector<ExtraMetric>;
+// using ExtraMetric = std::pair<std::string, std::string>;
+// using ExtraMetricVec = std::vector<ExtraMetric>;
 
 //
 // Logger: log stats for a communication round

@@ -12,6 +12,7 @@ set(topo_srcs
         bench/trace_reader.cc
         bench/single_ts_trace_reader.cc
         bench/mesh_driver.cc
+        bench/newlogger.cc
       )
 
 set (amr_srcs 

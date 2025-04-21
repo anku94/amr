@@ -6,6 +6,8 @@
 #include "amr/print_utils.h"
 #include "amr_lb.h"
 #include "bench/comm_mesh.h"
+#include "bench/metric_utils.h"
+#include "bench/newlogger.h"
 #include "bench/placement_utils.h"
 #include "distributions.h"
 #include "logging.h"
@@ -70,11 +72,23 @@ void MeshDriver::Run() {
     int rv = AssignBlocksSync(ranklist, nblocks, opts_.nranks);
     ABORTIF(rv, "Placement assignment failed!");
 
-    RunWithOmesh(omesh, ranklist);
+    RunWithOmesh(ts, omesh, ranklist);
+  }
+
+  {
+    PrintSectionUtil print_section(MLOG_INFO, "Run Stats", 10);
+    ExtraMetricVec extra_metrics{
+        {"policy", opts_.policy},
+        {"msgsz-f-e-v", fmtstr(MLOG_BUFSZ, "%d-%d-%d", opts_.msgsz.x,
+                               opts_.msgsz.y, opts_.msgsz.z)},
+    };
+
+    logger_.AggregateAndWrite(extra_metrics, GetLogPath().c_str());
   }
 }
 
-void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
+void MeshDriver::RunWithOmesh(int ts, OrderedMesh& omesh,
+                              std::vector<int>& ranklist) {
   // Compute load-balanced placement
   int nblocks = omesh.nblocks;
   int rv =
@@ -88,24 +102,16 @@ void MeshDriver::RunWithOmesh(OrderedMesh& omesh, std::vector<int>& ranklist) {
 
   for (int rnum = 0; rnum < opts_.num_rounds; rnum++) {
     // Run one communication round
+    logger_.LogRoundBegin();
     s = comm_mesh_.DoCommunicationRound();
+    logger_.LogCommEnd();
     MPI_Barrier(MPI_COMM_WORLD);
+    logger_.LogBarrierEnd(ts, rnum, nblocks, comm_mesh_.blocks_);
+
     MLOGIF(s != Status::OK, MLOG_ERRO, "Communication round failed!");
     MLOGIFR0(MLOG_INFO, "Communication round complete.");
   }
 
-  //   // Print stats and cleanup
-  ExtraMetricVec extra_metrics{
-      {"policy", opts_.policy},
-      {"nblocks", std::to_string(nblocks)},
-      {"msgsz-f-e-v", fmtstr(MLOG_BUFSZ, "%d-%d-%d", opts_.msgsz.x,
-                             opts_.msgsz.y, opts_.msgsz.z)},
-  };
-
-  {
-    PrintSectionUtil print_section(MLOG_INFO, "Run Stats", 10);
-    comm_mesh_.GenerateStats(extra_metrics, GetLogPath().c_str());
-  }
   comm_mesh_.ResetBvarsAndBlocks();
 }
 
