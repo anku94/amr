@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <mpi.h>
+
 namespace topo {
 //
 // NeighborBlock: represents a single neighbor relation
@@ -20,5 +23,7 @@ enum class CommTags {
     kEdgeTag = 2,
     kVertexTag = 3,
 };
+
+using MpiReqUref = std::unique_ptr<MPI_Request, void (*)(MPI_Request*)>;
 
 }

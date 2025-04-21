@@ -4,13 +4,15 @@
 
 #pragma once
 
-#include "logging.h"
-
-#include <memory>
 #include <mpi.h>
 
-#include "logging.h"
+#include <memory>
+
+#include "amr_types.h"
+#include "drain_queue.h"
 #include "globals.h"
+#include "logging.h"
+#include "persistent_req.h"
 
 #define NMAX_NEIGHBORS 512
 #define MAX_MSGSZ 32768
@@ -42,11 +44,11 @@ template <int n = NMAX_NEIGHBORS>
 struct BoundaryData {
   static constexpr int kMaxNeighbor = n;
   BoundaryStatus flag[kMaxNeighbor], sflag[kMaxNeighbor];
-  char sendbuf[kMaxNeighbor][MAX_MSGSZ]; // used by MPI_Send
+  char sendbuf[kMaxNeighbor][MAX_MSGSZ];  // used by MPI_Send
   char recvbuf[kMaxNeighbor][MAX_MSGSZ];
   int sendbufsz[kMaxNeighbor];
   int recvbufsz[kMaxNeighbor];
-  MPI_Request req_send[kMaxNeighbor], req_recv[kMaxNeighbor];
+  PersistentReq req_send[kMaxNeighbor], req_recv[kMaxNeighbor];
 };
 
 //
@@ -96,6 +98,8 @@ class BoundaryVariable {
 
  private:
   friend class MeshBlock;
+  SendDrainQueue dq_;  // Drain queue for incomplete sends
+
   std::shared_ptr<MeshBlock> GetBlockPointer() {
     if (wpmb_.expired()) {
       ABORT("Invalid pointer to MeshBlock!");
@@ -106,8 +110,8 @@ class BoundaryVariable {
 
   std::weak_ptr<MeshBlock> wpmb_;
   BoundaryData<> bd_var_, bd_var_flcor_;
-  uint64_t bytes_sent_, bytes_rcvd_; // msg sizes
-  uint64_t sendcnt_{0}, recvcnt_{0}; // msg count
+  uint64_t bytes_sent_, bytes_rcvd_;  // msg sizes
+  uint64_t sendcnt_{0}, recvcnt_{0};  // msg count
 
   static constexpr int kMaxNeighbor = NMAX_NEIGHBORS;
   static constexpr int kMaxMsgSz = MAX_MSGSZ;
