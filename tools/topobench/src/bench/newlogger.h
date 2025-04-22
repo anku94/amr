@@ -30,8 +30,15 @@ class NewLogger {
 
   void LogCommEnd() { comm_end_us_ = NowMicros(); }
 
-  void LogBarrierEnd(int ts, int round, int nblocks, std::vector<MeshBlockRef> &blocks) {
+  void LogBarrierEnd(int ts, int round, int nblocks,
+                     std::vector<MeshBlockRef> &blocks) {
     auto barend_us = NowMicros();
+
+    auto commdur_ms = (comm_end_us_ - start_us_) * 1e-3;
+    auto bardur_ms = (barend_us - start_us_) * 1e-3;
+
+    MLOGIFR0(MLOG_INFO, "TS%d/R%2d: comm time %.2lf ms, bar time %.2lf ms", ts,
+             round, commdur_ms, bardur_ms);
 
     RoundStats rs;
     rs.ts = ts;

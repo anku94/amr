@@ -129,6 +129,11 @@ void NewLogger::AggregateAndWrite(ExtraMetricVec &extra_metrics,
   std::vector<topo::MetricUtils::MetricData> md_vec =
       Utils::GetMetricDataVec(gs_vec, extra_metrics);
 
+  if (Globals::my_rank != 0) {
+    // Non-master ranks do not write to file
+    return;
+  }
+
   // Write stats to file
   for (auto &mdobj : md_vec) {
     MetricUtils::WriteMetricData(log_fpath, mdobj);

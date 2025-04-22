@@ -59,6 +59,8 @@ class MetricUtils {
 
     std::string data_str = JoinVec(md.fmtdata_csv, ",");
     fprintf(f, "%s\n", data_str.c_str());
+
+    fclose(f);
   }
 
   // FileExists: check if a file exists
