@@ -52,7 +52,7 @@ class SendDrainQueue {
         it = queue_.erase(it);
       } else {
         it->ntests++;
-        if (it->ntests > 10) {
+        if (it->ntests > 100) {
           MLOGIFR0(MLOG_INFO, "[DrainQueue] MPI_Test failed for %d tries!",
                    it->ntests);
           continue;
@@ -73,7 +73,7 @@ class SendDrainQueue {
 
     for (auto it = queue_.begin(); it != queue_.end();) {
       MPI_Status status;
-      MLOGIFR0(MLOG_INFO, "Not calling MPI_Wait() because PSM is a moron!");
+      // MLOGIFR0(MLOG_INFO, "Not calling MPI_Wait() because PSM is a moron!");
       int rv = MPI_Wait(it->request.get(), &status);
       MPI_CHECK_STATUS(rv, status.MPI_ERROR, "MPI_Wait failed!");
       it++;

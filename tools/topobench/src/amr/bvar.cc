@@ -3,17 +3,14 @@
 //
 
 #include "block.h"
-#include "globals.h"
 #include "drain_queue.h"
-
+#include "globals.h"
 
 namespace topo {
 void BoundaryVariable::InitBoundaryData(BoundaryData<>& bd) {
   for (int n = 0; n < bd.kMaxNeighbor; n++) {
     bd.flag[n] = BoundaryStatus::waiting;
     bd.sflag[n] = BoundaryStatus::waiting;
-    bd.req_send[n].Reset();
-    bd.req_recv[n].Reset();
   }
 }
 
@@ -29,8 +26,8 @@ void BoundaryVariable::SetupPersistentMPI() {
 
     auto& preq = bd_var_.req_send[nb.buf_id];
     // buffer, msgsize, datatype, dest, tag, comm, req
-    preq.InitSend(bd_var_.sendbuf[nb.buf_id], nb.msg_sz,
-                                   MPI_CHAR, nb.peer_rank, nb.tag, MPI_COMM_WORLD);
+    preq.InitSend(bd_var_.sendbuf[nb.buf_id], nb.msg_sz, MPI_CHAR, nb.peer_rank,
+                  nb.tag, MPI_COMM_WORLD);
     bd_var_.sendbufsz[nb.buf_id] = nb.msg_sz;
   }
 
@@ -39,8 +36,8 @@ void BoundaryVariable::SetupPersistentMPI() {
              Globals::my_rank, nb.peer_rank, nb.buf_id);
 
     auto& preq = bd_var_.req_recv[nb.buf_id];
-    preq.InitRecv(bd_var_.recvbuf[nb.buf_id], nb.msg_sz,
-                                   MPI_CHAR, nb.peer_rank, nb.tag, MPI_COMM_WORLD);
+    preq.InitRecv(bd_var_.recvbuf[nb.buf_id], nb.msg_sz, MPI_CHAR, nb.peer_rank,
+                  nb.tag, MPI_COMM_WORLD);
     bd_var_.recvbufsz[nb.buf_id] = nb.msg_sz;
   }
 }
@@ -62,9 +59,7 @@ void BoundaryVariable::ClearBoundary() {
   for (auto nb : pmb->nbrvec_snd_) {
     bd_var_.flag[nb.buf_id] = BoundaryStatus::waiting;
     bd_var_.sflag[nb.buf_id] = BoundaryStatus::waiting;
-
-    bd_var_.req_send[nb.buf_id].Wait();
-
+    // bd_var_.req_send[nb.buf_id].Wait();
     bytes_sent_ += bd_var_.sendbufsz[nb.buf_id];
   }
 
@@ -78,13 +73,18 @@ void BoundaryVariable::SendBoundaryBuffers() {
   std::shared_ptr<MeshBlock> pmb = GetBlockPointer();
 
   for (auto nb : pmb->nbrvec_snd_) {
-    // some fence
-    MLOGIFR0(MLOG_DBG1, "Rank %d - Send START %d", Globals::my_rank, nb.buf_id);
+    auto& preq = bd_var_.req_send[nb.buf_id];
+    // Move incomplete requests to drain queue
+    if (!preq.Test()) {
+      // Still incomplete
+      dq_.AddSendRequest(preq.Release());
+      preq.InitSend(bd_var_.sendbuf[nb.buf_id], bd_var_.sendbufsz[nb.buf_id],
+                    MPI_CHAR, nb.peer_rank, nb.tag, MPI_COMM_WORLD);
+    }
 
+    MLOGIFR0(MLOG_DBG1, "R%d - Send START %d", Globals::my_rank, nb.buf_id);
     bd_var_.req_send[nb.buf_id].Start();
-
-    MLOGIFR0(MLOG_DBG1, "Rank %d - Send POSTED %d", Globals::my_rank,
-             nb.buf_id);
+    MLOGIFR0(MLOG_DBG1, "R%d - Send POSTED %d", Globals::my_rank, nb.buf_id);
     sendcnt_++;
   }
 }
@@ -97,8 +97,8 @@ bool BoundaryVariable::ReceiveBoundaryBuffers() {
   for (auto nb : pmb->nbrvec_rcv_) {
     if (bd_var_.flag[nb.buf_id] == BoundaryStatus::arrived) continue;
     int test;
-    int rv = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &test,
-                        &status);
+    int rv =
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &test, &status);
     MPI_CHECK_STATUS(rv, status.MPI_ERROR, "MPI Iprobe Failed");
 
     bool done = bd_var_.req_recv[nb.buf_id].Test();
@@ -129,22 +129,11 @@ void BoundaryVariable::ReceiveBoundaryBuffersWithWait() {
     recvcnt_++;
   }
 
-  // XXX: we explicitly add sends in receive boundary buffers
-  // instead of the clearboundary thing (todo: remove at clearboundary)
-  for (auto nb : pmb->nbrvec_snd_) {
-    if (bd_var_.flag[nb.buf_id] == BoundaryStatus::arrived) continue;
-    bd_var_.req_send[nb.buf_id].Wait();
-
-    bd_var_.flag[nb.buf_id] = BoundaryStatus::arrived;
-  }
+  dq_.TryDraining();
 }
 
 void BoundaryVariable::DestroyBoundaryData(BoundaryData<>& bd) {
   MLOGIFR0(MLOG_DBG2, "Destroying boundary data");
-
-  for (int n = 0; n < bd.kMaxNeighbor; n++) {
-    bd.req_send[n].Reset();
-    bd.req_recv[n].Reset();
-  }
+  // We do not explicitly destroy now as PersistentReq is RAII-safe
 }
 }  // namespace topo
