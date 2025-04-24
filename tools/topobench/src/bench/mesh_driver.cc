@@ -101,10 +101,15 @@ void MeshDriver::RunWithOmesh(int ts, OrderedMesh& omesh,
   MLOGIFR0(MLOG_INFO, "Allocated boundary variables");
 
   for (int rnum = 0; rnum < opts_.num_rounds; rnum++) {
+    // Barrier to synchronize all ranks
+    MPI_Barrier(MPI_COMM_WORLD);
+
     // Run one communication round
     logger_.LogRoundBegin();
     s = comm_mesh_.DoCommunicationRound();
     logger_.LogCommEnd();
+
+    // Barrier to synchronize all ranks
     MPI_Barrier(MPI_COMM_WORLD);
     logger_.LogBarrierEnd(ts, rnum, nblocks, comm_mesh_.blocks_);
 

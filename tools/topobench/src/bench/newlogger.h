@@ -16,8 +16,8 @@ struct RoundStats {
   uint64_t totbytes_rcvd;  // total bytes received
   uint64_t totcnt_sent;    // total count sent
   uint64_t totcnt_rcvd;    // total count received
-  double totdur_msg_comm;  // dur of msg comm
-  double totdur_ms_bar;    // dur at rank0 after bar
+  double totdurms_msg_comm;  // dur of msg comm
+  double totdurms_mpi_bar;    // dur at rank0 after bar
 };
 
 class NewLogger {
@@ -48,8 +48,8 @@ class NewLogger {
     rs.totbytes_rcvd = 0;
     rs.totcnt_sent = 0;
     rs.totcnt_rcvd = 0;
-    rs.totdur_msg_comm = comm_end_us_ - start_us_;
-    rs.totdur_ms_bar = barend_us - start_us_;
+    rs.totdurms_msg_comm = commdur_ms;
+    rs.totdurms_mpi_bar = bardur_ms;
 
     for (auto &b : blocks) {
       rs.totbytes_sent += b->BytesSent();

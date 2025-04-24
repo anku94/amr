@@ -13,17 +13,17 @@ class Utils {
     uint64_t totbytes_rcvd;     // total bytes received
     uint64_t totcnt_sent;       // total count sent
     uint64_t totcnt_rcvd;       // total count received
-    double totdur_msgcomm_avg;  // dur of msg comm
-    double totdur_msgcomm_min;  // min dur of msg comm
-    double totdur_msgcomm_max;  // max dur of msg comm
-    double totdur_ms_bar;       // dur at rank0 after bar
+    double totdurms_msgcomm_avg;  // dur of msg comm
+    double totdurms_msgcomm_min;  // min dur of msg comm
+    double totdurms_msgcomm_max;  // max dur of msg comm
+    double totdurms_mpi_bar;       // dur at rank0 after bar
   };
 
   static int AggregateStats(int nranks, topo::RoundStats const &ls,
                             AggRoundStats &gs) {
     gs.ts = ls.ts;
     gs.round = ls.round;
-    gs.totdur_ms_bar = ls.totdur_ms_bar;
+    gs.totdurms_mpi_bar = ls.totdurms_mpi_bar;
     gs.nblocks = ls.nblocks;
 
     MPI_Reduce(&ls.totbytes_sent, &gs.totbytes_sent, 1, MPI_UINT64_T, MPI_SUM,
@@ -34,14 +34,14 @@ class Utils {
                MPI_COMM_WORLD);
     MPI_Reduce(&ls.totcnt_rcvd, &gs.totcnt_rcvd, 1, MPI_UINT64_T, MPI_SUM, 0,
                MPI_COMM_WORLD);
-    MPI_Reduce(&ls.totdur_msg_comm, &gs.totdur_msgcomm_avg, 1, MPI_DOUBLE,
+    MPI_Reduce(&ls.totdurms_msg_comm, &gs.totdurms_msgcomm_avg, 1, MPI_DOUBLE,
                MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&ls.totdur_msg_comm, &gs.totdur_msgcomm_min, 1, MPI_DOUBLE,
+    MPI_Reduce(&ls.totdurms_msg_comm, &gs.totdurms_msgcomm_min, 1, MPI_DOUBLE,
                MPI_MIN, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&ls.totdur_msg_comm, &gs.totdur_msgcomm_max, 1, MPI_DOUBLE,
+    MPI_Reduce(&ls.totdurms_msg_comm, &gs.totdurms_msgcomm_max, 1, MPI_DOUBLE,
                MPI_MAX, 0, MPI_COMM_WORLD);
 
-    gs.totdur_msgcomm_avg /= nranks;
+    gs.totdurms_msgcomm_avg /= nranks;
 
     return 0;
   }
@@ -81,10 +81,10 @@ class Utils {
       md.AddMetric("totbytes_rcvd", std::to_string(gs.totbytes_rcvd));
       md.AddMetric("totcnt_sent", std::to_string(gs.totcnt_sent));
       md.AddMetric("totcnt_rcvd", std::to_string(gs.totcnt_rcvd));
-      md.AddMetric("totdur_msgcomm_avg", std::to_string(gs.totdur_msgcomm_avg));
-      md.AddMetric("totdur_msgcomm_min", std::to_string(gs.totdur_msgcomm_min));
-      md.AddMetric("totdur_msgcomm_max", std::to_string(gs.totdur_msgcomm_max));
-      md.AddMetric("totdur_ms_bar", std::to_string(gs.totdur_ms_bar));
+      md.AddMetric("totdurms_msgcomm_avg", std::to_string(gs.totdurms_msgcomm_avg));
+      md.AddMetric("totdurms_msgcomm_min", std::to_string(gs.totdurms_msgcomm_min));
+      md.AddMetric("totdurms_msgcomm_max", std::to_string(gs.totdurms_msgcomm_max));
+      md.AddMetric("totdurms_mpi_bar", std::to_string(gs.totdurms_mpi_bar));
       md_vec.push_back(md);
     }
 
@@ -96,10 +96,10 @@ class Utils {
   MLOGIFR0(MLOG_INFO, "  %20s = %s", key, val.c_str());
 
     double totbytes_sent = 0;
-    double totdur_ms_bar = 0;
+    double totdurms_mpi_bar = 0;
     for (auto &gs : gs_vec) {
       totbytes_sent += gs.totbytes_sent;
-      totdur_ms_bar += gs.totdur_ms_bar;
+      totdurms_mpi_bar += gs.totdurms_mpi_bar;
     }
 
     int max_ts = gs_vec.back().ts;
@@ -111,7 +111,7 @@ class Utils {
     LOG_KVSTAT("Num rounds", fmtstr(64, "%d", max_round + 1));
     LOG_KVSTAT("Total data sent",
                fmtstr(64, "%.2f MB", totbytes_sent / (1 << 20)));
-    LOG_KVSTAT("Total round time", fmtstr(64, "%.2f ms", totdur_ms_bar));
+    LOG_KVSTAT("Total round time", fmtstr(64, "%.2f ms", totdurms_mpi_bar));
   }
 };
 
