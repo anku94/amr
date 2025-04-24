@@ -61,6 +61,11 @@ class MeshDriver {
     MLOG(MLOG_INFO, "%15s: %d", "Num ts", opts_.num_ts);
     MLOG(MLOG_INFO, "%15s: %d", "Num rounds", opts_.num_rounds);
     MLOG(MLOG_INFO, "%15s: %d", "Total ranks", opts_.nranks);
+
+    int nranks;
+    MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+    MLOG(MLOG_INFO, "%15s: %d", "MPI ranks", nranks);
+    ABORTIF(nranks != opts_.nranks, "MPI ranks != nranks in opts");
   }
 
   // Run: Run for num_ts timesteps
