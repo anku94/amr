@@ -1,13 +1,14 @@
 #pragma once
 
-#include "logging.h"
+#include "amr_opts.h"
+#include "common.h"
 #include "detailed_logger.h"
-#include "logging.h"
 #include "metric.h"
 #include "metric_util.h"
 #include "mpi_async.h"
 #include "p2p.h"
 #include "print_utils.h"
+#include "tools-common/logging.h"
 #include "tracer.h"
 #include "types.h"
 
@@ -21,13 +22,10 @@ namespace amr {
 #define TRACER_FILE_ARG AMROptUtils::GetTracerOutputFile(amr_opts, env_, rank_)
 
 class AMRMonitor {
- public:
-  AMRMonitor(pdlfs::Env* env, int rank, int nranks)
-      : env_(env),
-        rank_(rank),
-        nranks_(nranks),
-        tswise_logger_(TSWISE_FILE_ARG, rank),
-        tracer_(TRACER_FILE_ARG, rank) {
+public:
+  AMRMonitor(pdlfs::Env *env, int rank, int nranks)
+      : env_(env), rank_(rank), nranks_(nranks),
+        tswise_logger_(TSWISE_FILE_ARG, rank), tracer_(TRACER_FILE_ARG, rank) {
     if (rank == 0) {
       MLOG(MLOG_INFO, "AMRMonitor initializing.");
       AMROptUtils::LogOpts(amr_opts);
@@ -39,8 +37,7 @@ class AMRMonitor {
       }
 
       if (amr_opts.tracing_enabled) {
-        MLOG(MLOG_WARN,
-             "Tracing is enabled! This may produce lots of data!!");
+        MLOG(MLOG_WARN, "Tracing is enabled! This may produce lots of data!!");
       }
     }
 
@@ -53,7 +50,7 @@ class AMRMonitor {
     }
 
     LogMetrics();
-    logvat0(__LOG_ARGS__, LOG_INFO, "AMRMonitor destroyed on rank %d", rank_);
+    MLOGIF(!rank_, MLOG_INFO, "AMRMonitor destroyed on rank %d", rank_);
   }
 
   void LogInitInfo() {
@@ -80,35 +77,35 @@ class AMRMonitor {
     return now;
   }
 
-  void LogMPICollectiveBegin(const char* type) {
+  void LogMPICollectiveBegin(const char *type) {
     tswise_logger_.LogBegin(type);
     tracer_.LogFuncBeginCoalesced(type);
   }
 
-  void LogMPICollectiveEnd(const char* type, uint64_t time) {
+  void LogMPICollectiveEnd(const char *type, uint64_t time) {
     tswise_logger_.LogEnd(type, time);
     LogKey(times_us_, type, time);
     tracer_.LogFuncEndCoalesced(type);
   }
 
-  void LogStackBegin(const char* type, const char* key) {
+  void LogStackBegin(const char *type, const char *key) {
     if (stack_map_.find(type) == stack_map_.end()) {
       stack_map_[type] = ProfStack();
     }
 
-    auto& s = stack_map_[type];
+    auto &s = stack_map_[type];
     s.push(StackOpenPair(key, Now()));
     tswise_logger_.LogBegin(key);
     tracer_.LogFuncBeginCoalesced(key);
   }
 
-  void LogStackEnd(const char* type) {
+  void LogStackEnd(const char *type) {
     if (stack_map_.find(type) == stack_map_.end()) {
       MLOG(MLOG_WARN, "type %s not found in stack_map_.", type);
       return;
     }
 
-    auto& s = stack_map_[type];
+    auto &s = stack_map_[type];
     if (s.empty()) {
       MLOG(MLOG_WARN, "Rank %d: stack %s is empty.", rank_, type);
       sleep(1000);
@@ -154,9 +151,9 @@ class AMRMonitor {
     p2p_comm_.LogRecv(src_rank, size);
   }
 
-  void LogKey(MetricMap& map, const char* key, uint64_t val) {
-    logvat0(__LOG_ARGS__, LOG_DBG2, "Rank %d: key %s, val: %" PRIu64 "\n",
-            rank_, key, val);
+  void LogKey(MetricMap &map, const char *key, uint64_t val) {
+    MLOGIF(!rank_, MLOG_DBG2, "Rank %d: key %s, val: %" PRIu64 "\n", rank_, key,
+           val);
     // must use iterators because Metric class has const variables,
     // and therefore can not be assigned to and all
     auto it = map.find(key);
@@ -169,22 +166,22 @@ class AMRMonitor {
   }
 
   StringVec GetCommonMetrics() {
-    logvat0(__LOG_ARGS__, LOG_DBUG, "Entering GetCommonMetrics.");
+    MLOGIF(!rank_, MLOG_DBG0, "Entering GetCommonMetrics.");
 
     StringVec local_metrics;
-    for (auto& kv : times_us_) {
+    for (auto &kv : times_us_) {
       local_metrics.push_back(kv.first);
     }
 
     auto intersection_computer = CommonComputer(local_metrics, rank_, nranks_);
     auto intersection = intersection_computer.Compute();
 
-    logvat0(__LOG_ARGS__, LOG_DBUG, "Exiting GetCommonMetrics.");
+    MLOGIF(!rank_, MLOG_DBG0, "Exiting GetCommonMetrics.");
     return intersection;
   }
 
   void LogMetrics() {
-    logvat0(__LOG_ARGS__, LOG_DBUG, "Entering LogMetrics.");
+    MLOGIF(!rank_, MLOG_DBG0, "Entering LogMetrics.");
 
     // First, need to get metrics that are logged on all ranks
     // as collectives will block on ranks that are missing a given metric
@@ -204,7 +201,7 @@ class AMRMonitor {
     }
 
     if (amr_opts.p2p_enable_matrix_put) {
-      logvat0(__LOG_ARGS__, LOG_DBUG, "Collecting P2P matrix with RMA PUT.");
+      MLOGIF(!rank_, MLOG_DBG0, "Collecting P2P matrix with RMA PUT.");
 
       auto p2p_matrix_str = p2p_comm_.CollectAndAnalyze(rank_, nranks_, true);
       if (rank_ == 0) {
@@ -213,7 +210,7 @@ class AMRMonitor {
     }
 
     if (amr_opts.p2p_enable_matrix_reduce) {
-      logvat0(__LOG_ARGS__, LOG_DBUG, "Collecting P2P matrix with RMA PUT.");
+      MLOGIF(!rank_, MLOG_DBG0, "Collecting P2P matrix with RMA PUT.");
 
       auto p2p_matrix_str = p2p_comm_.CollectAndAnalyze(rank_, nranks_, false);
       if (rank_ == 0) {
@@ -221,11 +218,11 @@ class AMRMonitor {
       }
     }
 
-    logvat0(__LOG_ARGS__, LOG_DBUG, "Exiting LogMetrics.");
+    MLOGIF(!rank_, MLOG_DBG0, "Exiting LogMetrics.");
   }
 
-  void CollectMetricsDetailed(StringVec const& metrics) {
-    pdlfs::WritableFile* f;
+  void CollectMetricsDetailed(StringVec const &metrics) {
+    pdlfs::WritableFile *f;
     pdlfs::Status s =
         env_->NewWritableFile(amr_opts.rankwise_fpath.c_str(), &f);
     if (!s.ok()) {
@@ -234,7 +231,7 @@ class AMRMonitor {
       return;
     }
 
-    for (auto& m : metrics) {
+    for (auto &m : metrics) {
       auto it = times_us_.find(m);
       if (it != times_us_.end()) {
         auto metric_str = it->second.GetMetricRankwise(nranks_);
@@ -245,10 +242,9 @@ class AMRMonitor {
     }
   }
 
-  void LogAsyncMPIRequest(const char* key, MPI_Request* request) {
+  void LogAsyncMPIRequest(const char *key, MPI_Request *request) {
     async_assist_.LogAsyncBegin(key, request);
   }
-
 
   //
   // elapsed is used as a signalling mechanism for the MPI_Async tracker
@@ -256,8 +252,8 @@ class AMRMonitor {
   // for async collectives. This logic is incorrect if they change to also
   // using MPI_Wait, or if we start tracking collectives other than MPI
   // IAllgather for the "MPI_Async" bucket
-  // 
-  void LogMPITestEnd(int flag, MPI_Request* request) {
+  //
+  void LogMPITestEnd(int flag, MPI_Request *request) {
     double elapsed_ms = 0;
     int rv = async_assist_.LogMPITestEnd(flag, request, &elapsed_ms);
 
@@ -266,7 +262,7 @@ class AMRMonitor {
     }
   }
 
- private:
+private:
   MetricMap times_us_;
   StackMap stack_map_;
 
@@ -276,14 +272,14 @@ class AMRMonitor {
 
   std::unordered_map<std::string, uint64_t> begin_times_us_;
 
-  pdlfs::Env* const env_;
+  pdlfs::Env *const env_;
   const int rank_;
   const int nranks_;
   TimestepwiseLogger tswise_logger_;
 
   MPIAsync async_assist_;
 
- public:
+public:
   Tracer tracer_;
 };
-}  // namespace amr
+} // namespace amr

@@ -4,6 +4,9 @@ project(amr-tools)
 # To be able to use TAU_ROOT
 cmake_policy(SET CMP0074 NEW)
 
+# For find modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 find_package(GTest)
 if (NOT GTEST_FOUND)
   message(STATUS "GoogleTest not found: skipping tests")
@@ -46,4 +49,4 @@ endif ()
 # add_subdirectory(tools)
 add_subdirectory(tools-common)
 add_subdirectory(lb)
-add_subdirectory(tools-new)
+add_subdirectory(tools)

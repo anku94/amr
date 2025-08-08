@@ -1,20 +1,19 @@
 #include "p2p.h"
 
-#include "logging.h"
-#include "logging.h"
+#include "tools-common/logging.h"
 #include "print_utils.h"
 
 #include <memory>
 #include <mpi.h>
 #include <vector>
 
-#define SAFE_MPI(call, ret_val)                                   \
-  do {                                                            \
-    int rv = call;                                                \
-    if (rv != MPI_SUCCESS) {                                      \
-      MLOG(MLOG_ERRO, "MPI call failed: %s", #call); \
-      return ret_val;                                             \
-    }                                                             \
+#define SAFE_MPI(call, ret_val)                                                \
+  do {                                                                         \
+    int rv = call;                                                             \
+    if (rv != MPI_SUCCESS) {                                                   \
+      MLOG(MLOG_ERRO, "MPI call failed: %s", #call);                           \
+      return ret_val;                                                          \
+    }                                                                          \
   } while (0)
 
 namespace amr {
@@ -37,13 +36,13 @@ int ComputeRanksPerNode(int nranks) {
   }
 
   std::unordered_map<int, int> count_of_counts;
-  for (const auto& kv : node_counts) {
+  for (const auto &kv : node_counts) {
     count_of_counts[kv.second]++;
   }
 
   int count_mostcommon = -1;
   int countfreq_mostcommon = 0;
-  for (const auto& kv : count_of_counts) {
+  for (const auto &kv : count_of_counts) {
     if (kv.second > countfreq_mostcommon) {
       count_mostcommon = kv.first;
       countfreq_mostcommon = kv.second;
@@ -53,7 +52,7 @@ int ComputeRanksPerNode(int nranks) {
   return count_mostcommon;
 }
 
-MatrixAnalysis AnalyzeMatrix(uint64_t* matrix, int nranks, int npernode) {
+MatrixAnalysis AnalyzeMatrix(uint64_t *matrix, int nranks, int npernode) {
   MatrixAnalysis ma;
 
   uint64_t sum_local = 0;
@@ -90,7 +89,7 @@ MatrixAnalysis AnalyzeMatrix(uint64_t* matrix, int nranks, int npernode) {
   return ma;
 }
 
-void MPIMemDeleter(void* ptr) {
+void MPIMemDeleter(void *ptr) {
   if (ptr == nullptr) {
     return;
   }
@@ -115,10 +114,10 @@ int GetIdx(int my_rank, int other_rank, int nranks, bool is_send) {
   return idx;
 }
 
-std::vector<uint64_t> MapToMatrix(const std::unordered_map<int, uint64_t>& m,
+std::vector<uint64_t> MapToMatrix(const std::unordered_map<int, uint64_t> &m,
                                   int my_rank, int nranks, bool is_send) {
   std::vector<uint64_t> matrix(nranks * nranks, 0);
-  for (const auto& kv : m) {
+  for (const auto &kv : m) {
     int idx = GetIdx(my_rank, kv.first, nranks, is_send);
     matrix[idx] = kv.second;
   }
@@ -127,7 +126,7 @@ std::vector<uint64_t> MapToMatrix(const std::unordered_map<int, uint64_t>& m,
 }
 
 MatrixAnalysis P2PCommCollector::CollectMatrixWithReduce(
-    const std::unordered_map<int, uint64_t>& m, bool is_send) {
+    const std::unordered_map<int, uint64_t> &m, bool is_send) {
   std::vector<uint64_t> matrix_global(nranks_ * nranks_, 0);
   auto matrix_local = MapToMatrix(m, my_rank_, nranks_, is_send);
 
@@ -149,10 +148,10 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithReduce(
 }
 
 MatrixAnalysis P2PCommCollector::CollectMatrixWithPuts(
-    const std::unordered_map<int, uint64_t>& map, bool is_send) {
+    const std::unordered_map<int, uint64_t> &map, bool is_send) {
   int rv = 0;
   MatrixAnalysis analysis;
-  uint64_t* matrix_global = nullptr;
+  uint64_t *matrix_global = nullptr;
 
   MPI_Win win;
   size_t matsz = nranks_ * nranks_ * sizeof(uint64_t);
@@ -166,14 +165,14 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithPuts(
   std::unique_ptr<uint64_t, decltype(&MPIMemDeleter)> matrix_global_ptr(
       matrix_global, MPIMemDeleter);
 
-  SAFE_MPI(
-      PMPI_Win_create(matrix_global, my_rank_ == 0 ? matsz : 0,
-                      sizeof(uint64_t), MPI_INFO_NULL, MPI_COMM_WORLD, &win),
-      analysis);
+  SAFE_MPI(PMPI_Win_create(matrix_global, my_rank_ == 0 ? matsz : 0,
+                           sizeof(uint64_t), MPI_INFO_NULL, MPI_COMM_WORLD,
+                           &win),
+           analysis);
 
   SAFE_MPI(PMPI_Win_fence(0, win), analysis);
 
-  for (const auto& kv : map) {
+  for (const auto &kv : map) {
     int idx = GetIdx(my_rank_, kv.first, nranks_, is_send);
     auto val = kv.second;
 
@@ -191,7 +190,8 @@ MatrixAnalysis P2PCommCollector::CollectMatrixWithPuts(
   return analysis;
 }
 
-std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks, bool use_rma_put) {
+std::string P2PCommCollector::CollectAndAnalyze(int my_rank, int nranks,
+                                                bool use_rma_put) {
   my_rank_ = my_rank;
   nranks_ = nranks;
   npernode_ = ComputeRanksPerNode(nranks);
@@ -239,4 +239,4 @@ std::string P2PCommCollector::CollectWithPuts() {
   return analysis_str;
 }
 
-}  // namespace amr
+} // namespace amr

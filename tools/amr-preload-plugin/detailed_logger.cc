@@ -1,18 +1,16 @@
 #include "detailed_logger.h"
 
-#include "logging.h"
+#include "tools-common/logging.h"
 
 namespace amr {
-TimestepwiseLogger::TimestepwiseLogger(pdlfs::WritableFile* fout, int rank)
-    : fout_(fout),
-      rank_(rank),
-      metric_ids_(0),
-      coalesce_(true) {
+TimestepwiseLogger::TimestepwiseLogger(pdlfs::WritableFile *fout, int rank)
+    : fout_(fout), rank_(rank), metric_ids_(0), coalesce_(true) {
   metric_lines_.reserve(kFlushLimit);
 };
 
-void TimestepwiseLogger::LogBegin(const char* key) {
-  if (fout_ == nullptr) return;
+void TimestepwiseLogger::LogBegin(const char *key) {
+  if (fout_ == nullptr)
+    return;
 
   int metric_id = GetMetricId(key);
   bool coalesce = CoalesceStackKey(key);
@@ -22,8 +20,9 @@ void TimestepwiseLogger::LogBegin(const char* key) {
   }
 }
 
-void TimestepwiseLogger::LogEnd(const char* key, uint64_t duration) {
-  if (fout_ == nullptr) return;
+void TimestepwiseLogger::LogEnd(const char *key, uint64_t duration) {
+  if (fout_ == nullptr)
+    return;
 
   int metric_id = GetMetricId(key);
   bool coalesce = CoalesceStackKey(key);
@@ -47,9 +46,8 @@ void TimestepwiseLogger::LogEnd(const char* key, uint64_t duration) {
   }
 
   if ((metric_lines_.size() >= kFlushLimit) and isFlushKey) {
-    logvat0(__LOG_ARGS__, LOG_INFO, "Flushing %d metric lines",
-            metric_lines_.size());
+    MLOGIF(!rank_, MLOG_INFO, "Flushing %d metric lines", metric_lines_.size());
     HandleFlushing(fout_);
   }
 }
-}  // namespace amr
+} // namespace amr

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "logging.h"
+#include "tools-common/logging.h"
 #include "types.h"
 
 #include <mpi.h>
@@ -9,10 +9,10 @@
 
 namespace amr {
 class CommonComputer {
- public:
-  CommonComputer(StringVec& vec, int rank, int nranks)
+public:
+  CommonComputer(StringVec &vec, int rank, int nranks)
       : rank_(rank), nranks_(nranks) {
-    for (auto& s : vec) {
+    for (auto &s : vec) {
       str_map_[s] = 1;
     }
 
@@ -27,8 +27,7 @@ class CommonComputer {
       return StringVec();
     }
 
-    MLOG(MLOG_DBG0, "[Rank %d] Number of items: %d", rank_,
-         num_items);
+    MLOG(MLOG_DBG0, "[Rank %d] Number of items: %d", rank_, num_items);
 
     StringVec common_strings;
     for (int i = 0; i < num_items; ++i) {
@@ -48,7 +47,7 @@ class CommonComputer {
     return common_strings;
   }
 
- private:
+private:
   const int rank_, nranks_;
   std::unordered_map<std::string, int> str_map_;
   StringVec local_strings_;
@@ -68,7 +67,7 @@ class CommonComputer {
     return num_items;
   }
 
-  std::string RunRound(const char* key) {
+  std::string RunRound(const char *key) {
     const size_t bufsz = 256;
     char buf[bufsz];
     memset(buf, 0, bufsz);
@@ -83,8 +82,7 @@ class CommonComputer {
 
       size_t key_len = strlen(key);
       if (key_len >= bufsz) {
-        MLOG(MLOG_ERRO, "Key too long: %s. Will be truncated.",
-             key);
+        MLOG(MLOG_ERRO, "Key too long: %s. Will be truncated.", key);
       }
 
       strncpy(buf, key, bufsz);
@@ -109,8 +107,7 @@ class CommonComputer {
 
     if (exists_globally) {
       if (rank_ == 0) {
-        MLOG(MLOG_DBG2, "Key %s exists globally: %d", buf,
-             exists_globally);
+        MLOG(MLOG_DBG2, "Key %s exists globally: %d", buf, exists_globally);
       }
       return std::string(buf);
     }
@@ -119,4 +116,4 @@ class CommonComputer {
     return "";
   }
 };
-}  // namespace amr
+} // namespace amr

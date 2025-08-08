@@ -1,5 +1,3 @@
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 find_package(MPI REQUIRED)
 find_package(pdlfs-common CONFIG REQUIRED)
 find_package(GUROBI)

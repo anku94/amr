@@ -1,5 +1,4 @@
-#include "logging.h"
-#include "logging.h"
+#include "tools-common/logging.h"
 
 #include <pdlfs-common/env.h>
 #include <pdlfs-common/slice.h>
@@ -23,14 +22,12 @@ struct MetricWithTimestamp {
   }
 
   MetricWithTimestamp(int metric_id, bool is_open, uint64_t duration)
-      : ts_micros(CurrentNs()),
-        metric_id(metric_id),
-        is_open(is_open),
+      : ts_micros(CurrentNs()), metric_id(metric_id), is_open(is_open),
         duration(duration) {}
 
-  void Serialize(char* buf, int bufsz) {
-    int n = snprintf(buf, bufsz, "%lu %d %d %lu\n", ts_micros, metric_id,
-                     is_open ? 1 : 0, duration);
+  void Serialize(char *buf, int bufsz) {
+    int n = snprintf(buf, bufsz, "%" PRIu64 " %d %d %" PRIu64 "\n", ts_micros,
+                     metric_id, is_open ? 1 : 0, duration);
     if (n >= bufsz) {
       MLOG(MLOG_ERRO, "Buffer overflow in MetricWithTimestamp");
     }
@@ -43,30 +40,32 @@ struct MetricWithTimestamp {
 };
 
 class TimestepwiseLogger {
- public:
-  TimestepwiseLogger(pdlfs::WritableFile* fout, int rank);
+public:
+  TimestepwiseLogger(pdlfs::WritableFile *fout, int rank);
 
   ~TimestepwiseLogger() {
-    if (fout_ == nullptr) return;
+    if (fout_ == nullptr)
+      return;
 
     HandleFinalFlushing(fout_);
     fout_->Close();
   }
 
   void FinalFlush() {
-    if (fout_ == nullptr) return;
+    if (fout_ == nullptr)
+      return;
 
     HandleFinalFlushing(fout_);
     fout_->Close();
     fout_ = nullptr;
   }
 
-  void LogBegin(const char* key);
+  void LogBegin(const char *key);
 
-  void LogEnd(const char* key, uint64_t duration);
+  void LogEnd(const char *key, uint64_t duration);
 
- private:
-  pdlfs::WritableFile* fout_;
+private:
+  pdlfs::WritableFile *fout_;
   const int rank_;
 
   int metric_ids_;
@@ -84,7 +83,7 @@ class TimestepwiseLogger {
 
   int flush_key_count_ = 0;
 
-  int GetMetricId(const char* key) {
+  int GetMetricId(const char *key) {
     auto it = metrics_.find(key);
     if (it == metrics_.end()) {
       metrics_[key] = metric_ids_++;
@@ -94,12 +93,12 @@ class TimestepwiseLogger {
     return it->second;
   }
 
-  void HandleFlushing(pdlfs::WritableFile* f) {
+  void HandleFlushing(pdlfs::WritableFile *f) {
     FlushTimestampDataToFile(f);
     metric_lines_.clear();
   }
 
-  void HandleFinalFlushing(pdlfs::WritableFile* f) {
+  void HandleFinalFlushing(pdlfs::WritableFile *f) {
     if (!metric_lines_.empty()) {
       FlushTimestampDataToFile(f);
       metric_lines_.clear();
@@ -108,11 +107,10 @@ class TimestepwiseLogger {
     FlushMetricsToFile(f);
   }
 
-  void FlushTimestampDataToFile(pdlfs::WritableFile* f) {
-    MLOG(MLOG_DBG2, "Flushing %d metric lines",
-         metric_lines_.size());
+  void FlushTimestampDataToFile(pdlfs::WritableFile *f) {
+    MLOG(MLOG_DBG2, "Flushing %d metric lines", metric_lines_.size());
 
-    for (auto& l : metric_lines_) {
+    for (auto &l : metric_lines_) {
       char buf[256];
       l.Serialize(buf, sizeof(buf));
       f->Append(pdlfs::Slice(buf, strlen(buf)));
@@ -120,10 +118,10 @@ class TimestepwiseLogger {
     }
   }
 
-  void FlushMetricsToFile(pdlfs::WritableFile* f) {
+  void FlushMetricsToFile(pdlfs::WritableFile *f) {
     MLOG(MLOG_DBG2, "Flushing %d metric names", metrics_.size());
 
-    for (auto& m : metrics_) {
+    for (auto &m : metrics_) {
       char buf[4096];
       int bufsz =
           snprintf(buf, sizeof(buf), "%d %s\n", m.second, m.first.c_str());
@@ -132,12 +130,17 @@ class TimestepwiseLogger {
     }
   }
 
-  inline bool CoalesceStackKey(const char* key) {
-    if (!coalesce_) return false;
-    if (metric_lines_.size() < 2) return false;
-    if (strncmp(key, "MPI_All", 7) == 0) return false;
-    if (strncmp(key, "MPI_Bar", 7) == 0) return false;
-    if (strncmp(key, "Mesh::", 6) == 0) return false;
+  inline bool CoalesceStackKey(const char *key) {
+    if (!coalesce_)
+      return false;
+    if (metric_lines_.size() < 2)
+      return false;
+    if (strncmp(key, "MPI_All", 7) == 0)
+      return false;
+    if (strncmp(key, "MPI_Bar", 7) == 0)
+      return false;
+    if (strncmp(key, "Mesh::", 6) == 0)
+      return false;
 
     int metric_id = GetMetricId(key);
     // return true iff last two entries are the same metric, one is open, the
@@ -154,4 +157,4 @@ class TimestepwiseLogger {
     return false;
   }
 };
-}  // namespace amr
+} // namespace amr

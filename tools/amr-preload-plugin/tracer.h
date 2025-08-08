@@ -1,15 +1,17 @@
-#include "logging.h"
+#include "tools-common/logging.h"
 
 #include <ctime>
 #include <mpi.h>
+#include <pdlfs-common/env.h>
+#include <pdlfs-common/slice.h>
 #include <unordered_map>
 
 namespace amr {
 class Tracer {
- public:
-  Tracer(pdlfs::WritableFile* fout, int rank) : fout_(fout), rank_(rank) {
-    logvat0(__LOG_ARGS__, LOG_INFO, "Tracer initializing on rank %d:%p", rank_,
-            fout_)
+public:
+  Tracer(pdlfs::WritableFile *fout, int rank) : fout_(fout), rank_(rank) {
+    MLOGIF(!rank_, MLOG_INFO, "Tracer initializing on rank %d:%p", rank_,
+           fout_);
   }
 
   static double GetNowMs() {
@@ -19,7 +21,7 @@ class Tracer {
     return now;
   }
 
-  void LogFuncBegin(const char* func_name) {
+  void LogFuncBegin(const char *func_name) {
     if (!fout_) {
       return;
     }
@@ -31,7 +33,7 @@ class Tracer {
     fout_->Append(pdlfs::Slice(buf, bufwr));
   }
 
-  void LogFuncEnd(const char* func_name) {
+  void LogFuncEnd(const char *func_name) {
     if (!fout_) {
       return;
     }
@@ -43,18 +45,17 @@ class Tracer {
     fout_->Append(pdlfs::Slice(buf, bufwr));
   }
 
-  void LogInner(const char* func_name, int is_closed, double ts) {
+  void LogInner(const char *func_name, int is_closed, double ts) {
     if (!fout_) {
       return;
     }
 
     char buf[1024];
     int bufwr =
-      snprintf(buf, sizeof(buf), "\"%s\",%d,%lf\n", func_name, is_closed, ts);
+        snprintf(buf, sizeof(buf), "\"%s\",%d,%lf\n", func_name, is_closed, ts);
 
     fout_->Append(pdlfs::Slice(buf, bufwr));
   }
-
 
   //
   // Used for coalescing, writes prev func from maps and clears it
@@ -83,8 +84,9 @@ class Tracer {
     prev_ = "";
   }
 
-  void LogFuncBeginCoalesced(const char* func_name) {
-    if (!fout_) return;
+  void LogFuncBeginCoalesced(const char *func_name) {
+    if (!fout_)
+      return;
 
     if (prev_ != "" and prev_ != func_name) {
       FlushPrev();
@@ -98,8 +100,9 @@ class Tracer {
     }
   }
 
-  void LogFuncEndCoalesced(const char* func_name) {
-    if (!fout_) return;
+  void LogFuncEndCoalesced(const char *func_name) {
+    if (!fout_)
+      return;
 
     if (prev_ != "" and prev_ != func_name) {
       FlushPrev();
@@ -111,7 +114,7 @@ class Tracer {
     func_end_[func_name] = GetNowMs();
   }
 
-  void LogMPIIsend(void* reqptr, int count, int dest, int tag) {
+  void LogMPIIsend(void *reqptr, int count, int dest, int tag) {
     if (!fout_) {
       return;
     }
@@ -125,7 +128,7 @@ class Tracer {
     fout_->Append(pdlfs::Slice(buf, bufwr));
   }
 
-  void MPIIrecv(void* reqptr, int count, int source, int tag) {
+  void MPIIrecv(void *reqptr, int count, int source, int tag) {
     if (!fout_) {
       return;
     }
@@ -139,7 +142,7 @@ class Tracer {
     fout_->Append(pdlfs::Slice(buf, bufwr));
   }
 
-  void LogMPITestEnd(void* reqptr, int flag) {
+  void LogMPITestEnd(void *reqptr, int flag) {
     if (!fout_) {
       return;
     }
@@ -153,7 +156,7 @@ class Tracer {
     fout_->Append(pdlfs::Slice(buf, bufwr));
   }
 
-  void LogMPIWait(void* reqptr) {
+  void LogMPIWait(void *reqptr) {
     if (!fout_) {
       return;
     }
@@ -163,10 +166,10 @@ class Tracer {
     char buf[1024];
     int bufwr =
         snprintf(buf, sizeof(buf), "MPI_Wait,%lf,%p\n", GetNowMs(), reqptr);
-fout_->Append(pdlfs::Slice(buf, bufwr));
+    fout_->Append(pdlfs::Slice(buf, bufwr));
   }
 
-  void LogMPIWaitall(MPI_Request* reqptr, int count) {
+  void LogMPIWaitall(MPI_Request *reqptr, int count) {
     if (!fout_) {
       return;
     }
@@ -180,7 +183,7 @@ fout_->Append(pdlfs::Slice(buf, bufwr));
   }
 
   ~Tracer() {
-    logvat0(__LOG_ARGS__, LOG_DBUG, "Tracer destroyed on rank %d", rank_);
+    MLOGIF(!rank_, MLOG_DBG0, "Tracer destroyed on rank %d", rank_);
 
     if (fout_ != nullptr) {
       FlushPrev();
@@ -190,13 +193,13 @@ fout_->Append(pdlfs::Slice(buf, bufwr));
     }
   }
 
- private:
+private:
   // for coalescing consecutive calls
   std::unordered_map<std::string, double> func_start_;
   std::unordered_map<std::string, double> func_end_;
   std::string prev_;
 
-  pdlfs::WritableFile* fout_;
+  pdlfs::WritableFile *fout_;
   int rank_;
 };
-}  // namespace amr
+} // namespace amr
