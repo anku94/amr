@@ -1,18 +1,17 @@
 set (install-programs-in
-    newscripts/amr-minimal.sh.in 
-    newscripts/run_amr_test.sh.in
-    newscripts/amr_job_template.txt.in
-    newscripts/run_topo_test.sh.in
-    newscripts/topo_job_template.txt.in
+    amr-minimal.sh.in 
+    run_amr_test.sh.in
+    amr_job_template.txt.in
+    run_topo_test.sh.in
+    topo_job_template.txt.in
   )
 
 set (install-programs
-  newscripts/amr_common.sh
-  newscripts/amr_suite.csv
-  newscripts/gen_amr_jobs.py
-  newscripts/gen_topo_jobs.py
-  perffd_wrapper.sh
-  )
+  amr_common.sh
+  amr_suite.csv
+  gen_amr_jobs.py
+  gen_topo_jobs.py
+)
 
 foreach (lcv ${install-programs-in})
   string (REGEX REPLACE "\\.in$" "" out "${lcv}")
