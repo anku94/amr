@@ -5,9 +5,9 @@
 #include <list>
 #include <memory>
 
-#include "globals.h"
-#include "logging.h"
 #include "amr_types.h"
+#include "tools-common/globals.h"
+#include "tools-common/logging.h"
 
 #define MPI_CHECK_STATUS(rv, mpi_status, msg) \
   if (rv != MPI_SUCCESS) {                    \
@@ -27,7 +27,7 @@ inline void CheckMpiStatus(int rv, int mpi_status, const char* msg) {
 namespace topo {
 struct SendDrainQueueElement {
   MpiReqUref request;
-  int ntests;      // Number of MPI_Tests
+  int ntests;  // Number of MPI_Tests
 
   SendDrainQueueElement(MpiReqUref request, int ntests)
       : request(std::move(request)), ntests(ntests) {}

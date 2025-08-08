@@ -4,7 +4,7 @@
 #include "amr/block.h"
 #include "amr_lb.h"
 #include "bench/comm_mesh.h"
-#include "globals.h"
+#include "tools-common/globals.h"
 
 namespace topo {
 class PlacementUtils {

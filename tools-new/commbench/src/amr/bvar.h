@@ -10,9 +10,9 @@
 
 #include "amr_types.h"
 #include "drain_queue.h"
-#include "globals.h"
-#include "logging.h"
 #include "persistent_req.h"
+#include "tools-common/globals.h"
+#include "tools-common/logging.h"
 
 #define NMAX_NEIGHBORS 512
 #define MAX_MSGSZ 32768

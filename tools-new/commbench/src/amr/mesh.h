@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "mesh_utils.h"
-#include "logging.h"
+#include "tools-common/logging.h"
 namespace topo {
 enum class NeighborType {
   kFace,

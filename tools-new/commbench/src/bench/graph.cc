@@ -4,7 +4,7 @@
 
 #include "graph.h"
 
-#include "logging.h"
+#include "tools-common/logging.h"
 
 #include <assert.h>
 #include <limits.h>

@@ -9,8 +9,8 @@
 #include "bench/metric_utils.h"
 #include "bench/newlogger.h"
 #include "bench/placement_utils.h"
-#include "distributions.h"
-#include "logging.h"
+#include "tools-common/distributions.h"
+#include "tools-common/logging.h"
 
 using MeshBlockRef = std::shared_ptr<topo::MeshBlock>;
 using DistributionUtils = amr::DistributionUtils;

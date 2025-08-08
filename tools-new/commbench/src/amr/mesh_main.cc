@@ -6,7 +6,7 @@
 
 #include "mesh.h"
 #include "print_utils.h"
-#include "logging.h"
+#include "tools-common/logging.h"
 
 using namespace topo;
 

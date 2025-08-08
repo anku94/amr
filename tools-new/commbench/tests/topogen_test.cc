@@ -2,13 +2,13 @@
 // Created by Ankush J on 8/12/22.
 //
 
-#include "bench/single_ts_trace_reader.h"
-#include "bench/trace_reader.h"
-
-#include "bench/graph.h"
-#include "logging.h"
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+
+#include "bench/graph.h"
+#include "bench/single_ts_trace_reader.h"
+#include "bench/trace_reader.h"
+#include "tools-common/logging.h"
 
 // TEST(Topogen_Test, GenerateMesh) {
 //  Globals::nranks = 512;
@@ -35,14 +35,12 @@ TEST(Topogen_Test, NormalGenerator) {
 
   for (int i = 0; i < reps; i++) {
     double num = ng.GenInt();
-    if (num >= (mean - std) and num < (mean + std))
-      w1sd++;
+    if (num >= (mean - std) and num < (mean + std)) w1sd++;
   }
 
   double prop_1sd = w1sd * 1.0 / reps;
 
-  MLOG(MLOG_INFO, "Normal Generator Test: +-1std: %d/%d", w1sd,
-       reps);
+  MLOG(MLOG_INFO, "Normal Generator Test: +-1std: %d/%d", w1sd, reps);
 
   ASSERT_TRUE(prop_1sd > 0.6 and prop_1sd < 0.8);
 }

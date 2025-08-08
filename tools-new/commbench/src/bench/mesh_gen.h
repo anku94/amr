@@ -1,12 +1,13 @@
-#include "logging.h"
+#include "amr/block.h"
 #include "comm_mesh.h"
 #include "single_ts_trace_reader.h"
+#include "tools-common/globals.h"
+#include "tools-common/logging.h"
 #include "trace_reader.h"
-#include "amr/block.h"
 
 namespace topo {
 class MeshGenerator {
-protected:
+ protected:
   MeshGenerator(const DriverOpts &opts) : opts_(opts) {}
 
   void AddMeshBlock(CommMesh &mesh, std::shared_ptr<MeshBlock> block) {
@@ -15,7 +16,7 @@ protected:
 
   const DriverOpts &opts_;
 
-public:
+ public:
   virtual int GetNumTimesteps() = 0;
 
   virtual Status GenerateMesh(CommMesh &mesh, int ts) = 0;
@@ -26,7 +27,7 @@ public:
 };
 
 class RingMeshGenerator : public MeshGenerator {
-public:
+ public:
   RingMeshGenerator(const DriverOpts &opts) : MeshGenerator(opts) {}
 
   int GetNumTimesteps() override { return 1; }
@@ -35,7 +36,7 @@ public:
 };
 
 class AllToAllMeshGenerator : public MeshGenerator {
-public:
+ public:
   AllToAllMeshGenerator(const DriverOpts &opts) : MeshGenerator(opts) {}
 
   int GetNumTimesteps() override { return 1; }
@@ -44,7 +45,7 @@ public:
 };
 
 class SingleTimestepTraceMeshGenerator : public MeshGenerator {
-public:
+ public:
   SingleTimestepTraceMeshGenerator(const DriverOpts &opts)
       : MeshGenerator(opts), reader_(opts.trace_root) {}
 
@@ -55,12 +56,12 @@ public:
 
   Status GenerateMesh(CommMesh &mesh, int ts) override;
 
-private:
+ private:
   SingleTimestepTraceReader reader_;
 };
 
 class MultiTimestepTraceMeshGenerator : public MeshGenerator {
-public:
+ public:
   MultiTimestepTraceMeshGenerator(const DriverOpts &opts)
       : MeshGenerator(opts), reader_(opts.trace_root) {}
 
@@ -71,7 +72,7 @@ public:
 
   Status GenerateMesh(CommMesh &mesh, int ts) override;
 
-private:
+ private:
   TraceReader reader_;
 };
 }  // namespace topo

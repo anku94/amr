@@ -7,9 +7,9 @@
 #include <mpi.h>
 
 #include "comm_mesh.h"
-#include "globals.h"
-#include "logging.h"
 #include "mesh_gen.h"
+#include "tools-common/globals.h"
+#include "tools-common/logging.h"
 
 namespace topo {
 class Driver {

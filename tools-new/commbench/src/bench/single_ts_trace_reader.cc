@@ -1,7 +1,7 @@
 #include "single_ts_trace_reader.h"
 
-#include "common.h"
-#include "logging.h"
+#include "tools-common/common.h"
+#include "tools-common/logging.h"
 
 namespace topo {
 Status SingleTimestepTraceReader::Read(int rank) {

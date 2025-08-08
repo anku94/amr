@@ -7,8 +7,8 @@
 
 #include "amr/mesh_utils.h"
 #include "bench/comm_mesh.h"
-#include "logging.h"
 #include "newlogger.h"
+#include "tools-common/logging.h"
 
 namespace topo {
 struct MeshDriverOpts {

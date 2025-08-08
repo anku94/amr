@@ -1,7 +1,7 @@
 #include "mesh_gen.h"
 
 #include "amr/block.h"
-#include "globals.h"
+#include "tools-common/globals.h"
 
 namespace {
 // using namespace topo;

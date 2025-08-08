@@ -4,8 +4,8 @@
 
 #include "amr/mesh_utils.h"
 #include "bench/mesh_driver.h"
-#include "config_parser.h"
-#include "logging.h"
+#include "tools-common/config_parser.h"
+#include "tools-common/logging.h"
 
 // using namespace topo;
 // using namespace topo;
@@ -14,7 +14,8 @@
 topo::MeshDriverOpts GetOpts() {
   auto dims_xyz = amr::ConfigUtils::GetParamOrDefault<int>("dims_xyz", 2);
   auto max_reflvl = amr::ConfigUtils::GetParamOrDefault<int>("max_reflvl", 4);
-  auto tgt_leafcnt = amr::ConfigUtils::GetParamOrDefault<int>("target_leafcnt", 15);
+  auto tgt_leafcnt =
+      amr::ConfigUtils::GetParamOrDefault<int>("target_leafcnt", 15);
 
   auto f_msgsz =
       amr::ConfigUtils::GetParamOrDefault<int>("f_msgsz_bytes", 1024);

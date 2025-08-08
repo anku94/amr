@@ -12,10 +12,10 @@
 
 #include "amr_types.h"
 #include "bvar.h"
-#include "common.h"
-#include "globals.h"
-#include "logging.h"
 #include "mesh_utils.h"
+#include "tools-common/common.h"
+#include "tools-common/globals.h"
+#include "tools-common/logging.h"
 #include "topo_types.h"
 
 #define MPI_CHECK(status, msg) \

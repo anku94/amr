@@ -3,7 +3,7 @@
 #include <mpi.h>
 
 #include "amr_types.h"
-#include "logging.h"
+#include "tools-common/logging.h"
 
 namespace topo {
 class PersistentReq {

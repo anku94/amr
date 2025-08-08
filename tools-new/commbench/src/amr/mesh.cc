@@ -1,6 +1,6 @@
 #include "mesh.h"
 
-#include "logging.h"
+#include "tools-common/logging.h"
 #include "mesh_utils.h"
 #include "print_utils.h"
 

@@ -4,7 +4,7 @@
 
 #include "block.h"
 #include "drain_queue.h"
-#include "globals.h"
+#include "tools-common/globals.h"
 
 namespace topo {
 void BoundaryVariable::InitBoundaryData(BoundaryData<>& bd) {
