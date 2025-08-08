@@ -8,7 +8,7 @@
 #include <climits>
 #include <string>
 
-#include "logging.h"
+#include "tools-common/logging.h"
 #include "reader_base.h"
 
 #define FAILIO_IFLT(x, y)                                                     \

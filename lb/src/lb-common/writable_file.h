@@ -7,7 +7,7 @@
 #include <pdlfs-common/env.h>
 #include <pdlfs-common/status.h>
 
-#include "logging.h"
+#include "tools-common/logging.h"
 
 #define SAFE_IO(func, msg) \
   s = func;                \

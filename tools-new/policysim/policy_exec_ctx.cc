@@ -4,8 +4,8 @@
 
 #include "policy_exec_ctx.h"
 
-#include "policy.h"
-#include "policy_wopts.h"
+#include "lb-common/policy.h"
+#include "lb-common/policy_wopts.h"
 
 namespace amr {
 

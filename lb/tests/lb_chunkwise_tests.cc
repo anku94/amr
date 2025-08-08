@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "lb/lb_chunkwise.h"
+#include "lb_chunkwise.h"
 
 namespace amr {
 class LBChunkwiseTest : public ::testing::Test {

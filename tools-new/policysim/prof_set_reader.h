@@ -1,9 +1,9 @@
 #pragma once
 
-#include "policy.h"
+#include "lb-common/policy.h"
 #include "prof_base.h"
 #include "prof_reader.h"
-#include "trace_utils.h"
+#include "lb-common/trace_utils.h"
 
 namespace amr {
 class ProfSetReader {

@@ -4,13 +4,13 @@
 
 #include <gtest/gtest.h>
 
-#include "common.h"
-#include "common/lb_policies.h"
-#include "logging.h"
+#include "lb-common/lb_policies.h"
+#include "tools-common/common.h"
+#include "tools-common/logging.h"
 
 namespace amr {
 class LoadBalancingPoliciesTest : public ::testing::Test {
- protected:
+protected:
   template <typename T>
   static void AssertEqual(const std::vector<T> a, const std::vector<T> b) {
     ASSERT_EQ(a.size(), b.size());
@@ -19,23 +19,23 @@ class LoadBalancingPoliciesTest : public ::testing::Test {
     }
   }
 
-  void AssignBlocksSPT(std::vector<double> const& costlist,
-                       std::vector<int>& ranklist, int nranks) {
+  void AssignBlocksSPT(std::vector<double> const &costlist,
+                       std::vector<int> &ranklist, int nranks) {
     LoadBalancePolicies::AssignBlocksSPT(costlist, ranklist, nranks);
   }
 
-  void AssignBlocksLPT(std::vector<double> const& costlist,
-                       std::vector<int>& ranklist, int nranks) {
+  void AssignBlocksLPT(std::vector<double> const &costlist,
+                       std::vector<int> &ranklist, int nranks) {
     LoadBalancePolicies::AssignBlocksLPT(costlist, ranklist, nranks);
   }
 
-  void AssignBlocksContigImproved(std::vector<double> const& costlist,
-                                  std::vector<int>& ranklist, int nranks) {
+  void AssignBlocksContigImproved(std::vector<double> const &costlist,
+                                  std::vector<int> &ranklist, int nranks) {
     LoadBalancePolicies::AssignBlocksContigImproved(costlist, ranklist, nranks);
   }
 
-  void AssignBlocksContigImproved2(std::vector<double> const& costlist,
-                                   std::vector<int>& ranklist, int nranks) {
+  void AssignBlocksContigImproved2(std::vector<double> const &costlist,
+                                   std::vector<int> &ranklist, int nranks) {
     LoadBalancePolicies::AssignBlocksContigImproved2(costlist, ranklist,
                                                      nranks);
   }
@@ -102,4 +102,4 @@ TEST_F(LoadBalancingPoliciesTest, CDPTest1) {
   AssignBlocksContigImproved(costlist, ranklist, nranks);
   AssignBlocksContigImproved2(costlist, ranklist, nranks);
 }
-}  // namespace amr
+} // namespace amr

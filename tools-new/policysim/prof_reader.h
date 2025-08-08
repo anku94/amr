@@ -1,31 +1,26 @@
 #include "prof_base.h"
 
-#include <common.h>
+#include "tools-common/common.h"
 #include <cstdio>
 #include <string>
 #include <vector>
 
 namespace amr {
 class CSVProfileReader : public ProfileReader {
- public:
-  explicit CSVProfileReader(const char* prof_csv_path,
+public:
+  explicit CSVProfileReader(const char *prof_csv_path,
                             ProfTimeCombinePolicy combine_policy)
-      : ProfileReader(prof_csv_path, combine_policy),
-        ts_(-1),
-        eof_(false),
-        prev_ts_(-1),
-        prev_sub_ts_(-1),
-        prev_bid_(-1),
-        prev_time_(-1),
-        first_read_(true),
-        prev_set_(false) {
+      : ProfileReader(prof_csv_path, combine_policy), ts_(-1), eof_(false),
+        prev_ts_(-1), prev_sub_ts_(-1), prev_bid_(-1), prev_time_(-1),
+        first_read_(true), prev_set_(false) {
     Reset();
   }
 
-  CSVProfileReader(const CSVProfileReader& other) = delete;
+  CSVProfileReader(const CSVProfileReader &other) = delete;
 
-  int ReadNextTimestep(std::vector<int>& times) override {
-    if (eof_) return -1;
+  int ReadNextTimestep(std::vector<int> &times) override {
+    if (eof_)
+      return -1;
 
     int nlines_read = 0;
     int nblocks = 0;
@@ -57,9 +52,9 @@ class CSVProfileReader : public ProfileReader {
     prev_ts_ = prev_bid_ = prev_time_ = -1;
   }
 
- private:
-  void ReadLine(char* buf, int max_sz) const {
-    char* ret = fgets(buf, max_sz, fd_);
+private:
+  void ReadLine(char *buf, int max_sz) const {
+    char *ret = fgets(buf, max_sz, fd_);
     int nbread = strlen(ret);
     if (ret[nbread - 1] != '\n') {
       ABORT("buffer too small for line");
@@ -73,17 +68,19 @@ class CSVProfileReader : public ProfileReader {
     ReadLine(header, 1024);
   }
 
- public:
+public:
   /* Caller must zero the vector if needed!!
    * Returns: Number of blocks in current ts
    * (assuming contiguous bid allocation)
    */
-  int ReadTimestep(int ts_to_read, std::vector<int>& times,
-                   int& nlines_read) override {
-    if (eof_) return -1;
+  int ReadTimestep(int ts_to_read, std::vector<int> &times,
+                   int &nlines_read) override {
+    if (eof_)
+      return -1;
 
     // Initialization hack
-    if (fd_ == nullptr) Reset();
+    if (fd_ == nullptr)
+      Reset();
 
     if (first_read_) {
       ReadHeader();
@@ -105,7 +102,8 @@ class CSVProfileReader : public ProfileReader {
 
         max_bid = std::max(max_bid, prev_bid_);
       } else if (prev_sub_ts_ < ts_to_read) {
-        MLOG(MLOG_WARN, "Somehow skipped ts %d data. Dropping...", prev_sub_ts_);
+        MLOG(MLOG_WARN, "Somehow skipped ts %d data. Dropping...",
+             prev_sub_ts_);
       } else if (prev_sub_ts_ > ts_to_read) {
         // Wait for ts to catch up
         return max_bid;
@@ -154,4 +152,4 @@ class CSVProfileReader : public ProfileReader {
   bool first_read_;
   bool prev_set_;
 };
-}  // namespace amr
+} // namespace amr

@@ -2,7 +2,7 @@
 
 #include <pdlfs-common/env.h>
 
-#include "logging.h"
+#include "tools-common/logging.h"
 
 extern const char* policy_file;
 

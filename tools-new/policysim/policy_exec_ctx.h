@@ -6,10 +6,10 @@
 
 #include <pdlfs-common/env.h>
 
-#include "logging.h"
+#include "tools-common/logging.h"
 #include "cost_cache.h"
-#include "policy_utils.h"
-#include "policy_wopts.h"
+#include "lb-common/policy_utils.h"
+#include "lb-common/policy_wopts.h"
 
 namespace amr {
 

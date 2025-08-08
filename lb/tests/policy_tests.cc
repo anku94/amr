@@ -2,9 +2,9 @@
 // Created by Ankush J on 5/8/23.
 //
 
-#include "logging.h"
-#include "lb_policies.h"
-#include "lb/iterative/solver.h"
+#include "tools-common/logging.h"
+#include "lb-common/lb_policies.h"
+#include "lb-common/solver.h"
 
 #include <gtest/gtest.h>
 #include <vector>

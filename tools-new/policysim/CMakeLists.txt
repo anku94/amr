@@ -1,22 +1,17 @@
 find_package(pdlfs-common REQUIRED)
-# find_package(lb REQUIRED)
 
-set(blocksim_srcs
-    block_alloc_sim.cc
-    policy_exec_ctx.cc
-    policy_stats.cc)
+set(blocksim_srcs block_alloc_sim.cc policy_exec_ctx.cc policy_stats.cc)
 
-message(STATUS "Blocksim should include: ${CMAKE_CURRENT_SOURCE_DIR}/../common")
+add_executable(policysim block_sim_main.cc ${blocksim_srcs})
+target_link_libraries(policysim pdlfs-common lb tools-common)
 
-add_executable(block-sim block_sim_main.cc ${blocksim_srcs})
-target_link_libraries(block-sim pdlfs-common lb)
-target_include_directories(block-sim PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common)
+add_executable(simplesim simple_sim.cc)
+target_link_libraries(simplesim pdlfs-common lb tools-common)
 
-add_executable(simple-sim simple_sim.cc)
-target_link_libraries(simple-sim pdlfs-common lb)
-target_include_directories(simple-sim PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common)
+add_executable(policysim-test policysim_tests.cc ${blocksim_srcs})
+target_link_libraries(policysim-test pdlfs-common lb tools-common
+                      GTest::gtest_main)
 
-install(TARGETS block-sim DESTINATION bin)
-install(TARGETS simple-sim DESTINATION bin)
+install(TARGETS policysim DESTINATION bin)
+install(TARGETS simplesim DESTINATION bin)
+install(TARGETS policysim-test DESTINATION bin)

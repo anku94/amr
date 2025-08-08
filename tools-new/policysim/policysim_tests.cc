@@ -8,7 +8,7 @@
 
 #include "bin_readers.h"
 #include "block_alloc_sim.h"
-#include "distributions.h"
+#include "tools-common/distributions.h"
 #include "prof_set_reader.h"
 
 namespace amr {

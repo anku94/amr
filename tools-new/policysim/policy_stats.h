@@ -6,9 +6,9 @@
 
 #include <pdlfs-common/env.h>
 
-#include "policy_utils.h"
-#include "tabular_data.h"
-#include "writable_file.h"
+#include "lb-common/policy_utils.h"
+#include "lb-common/tabular_data.h"
+#include "lb-common/writable_file.h"
 
 namespace amr {
 // fwd decl

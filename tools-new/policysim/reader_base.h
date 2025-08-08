@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "logging.h"
+#include "tools-common/logging.h"
 
 namespace amr {
 class ReaderBase {

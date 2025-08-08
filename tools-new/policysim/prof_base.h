@@ -4,17 +4,16 @@
 
 #pragma once
 
-#include "common.h"
-#include "logging.h"
-#include "policy.h"
+#include "lb-common/policy.h"
+#include "tools-common/common.h"
+#include "tools-common/logging.h"
 
 namespace amr {
 class ProfileReader {
- public:
-  explicit ProfileReader(const char* prof_csv_path,
+public:
+  explicit ProfileReader(const char *prof_csv_path,
                          ProfTimeCombinePolicy combine_policy)
-      : csv_path_(prof_csv_path),
-        combine_policy_(combine_policy),
+      : csv_path_(prof_csv_path), combine_policy_(combine_policy),
         fd_(nullptr) {}
 
   ~ProfileReader() { SafeCloseFile(); }
@@ -25,23 +24,22 @@ class ProfileReader {
    * or a unique pointer
    */
 
-  ProfileReader& operator=(ProfileReader&& rhs) = delete;
+  ProfileReader &operator=(ProfileReader &&rhs) = delete;
 
-  ProfileReader(ProfileReader&& rhs) noexcept
-      : csv_path_(rhs.csv_path_),
-        combine_policy_(rhs.combine_policy_),
+  ProfileReader(ProfileReader &&rhs) noexcept
+      : csv_path_(rhs.csv_path_), combine_policy_(rhs.combine_policy_),
         fd_(rhs.fd_) {
     if (this != &rhs) {
       rhs.fd_ = nullptr;
     }
   }
 
-  virtual int ReadNextTimestep(std::vector<int>& times) = 0;
+  virtual int ReadNextTimestep(std::vector<int> &times) = 0;
 
-  virtual int ReadTimestep(int ts_to_read, std::vector<int>& times,
-                           int& nlines_read) = 0;
+  virtual int ReadTimestep(int ts_to_read, std::vector<int> &times,
+                           int &nlines_read) = 0;
 
- protected:
+protected:
   void SafeCloseFile() {
     if (fd_) {
       fclose(fd_);
@@ -49,7 +47,7 @@ class ProfileReader {
     }
   }
 
-  static void AddVec2Vec(std::vector<int>& dest, std::vector<int> const& src) {
+  static void AddVec2Vec(std::vector<int> &dest, std::vector<int> const &src) {
     if (dest.size() < src.size()) {
       dest.resize(src.size(), 0);
     }
@@ -59,13 +57,14 @@ class ProfileReader {
     }
   }
 
-  void LogTime(std::vector<int>& times, int bid, int time_us) const {
+  void LogTime(std::vector<int> &times, int bid, int time_us) const {
     if (times.size() <= bid) {
       times.resize(bid + 1, 0);
     }
 
     if (combine_policy_ == ProfTimeCombinePolicy::kUseFirst) {
-      if (times[bid] == 0) times[bid] = time_us;
+      if (times[bid] == 0)
+        times[bid] = time_us;
     } else if (combine_policy_ == ProfTimeCombinePolicy::kUseLast) {
       times[bid] = time_us;
     } else if (combine_policy_ == ProfTimeCombinePolicy::kAdd) {
@@ -75,24 +74,25 @@ class ProfileReader {
 
   const std::string csv_path_;
   ProfTimeCombinePolicy combine_policy_;
-  FILE* fd_;
+  FILE *fd_;
 };
 
 class BinProfileReader : public ProfileReader {
- public:
-  BinProfileReader(const char* prof_csv_path,
+public:
+  BinProfileReader(const char *prof_csv_path,
                    ProfTimeCombinePolicy combine_policy)
       : ProfileReader(prof_csv_path, combine_policy), eof_(false), nts_(-1) {}
 
-#define ASSERT_NREAD(a, b)                                                   \
-  if (a != b) {                                                              \
-    MLOG(MLOG_ERRO, "[BinProfileReader] Read error. Expected: %d, read: %d", \
-         b, a);                                                              \
-    ABORT("Read Error");                                                     \
+#define ASSERT_NREAD(a, b)                                                     \
+  if (a != b) {                                                                \
+    MLOG(MLOG_ERRO, "[BinProfileReader] Read error. Expected: %d, read: %d",   \
+         b, a);                                                                \
+    ABORT("Read Error");                                                       \
   }
-  int ReadTimestep(int ts_to_read, std::vector<int>& times,
-                   int& nlines_read) override {
-    if (eof_) return -1;
+  int ReadTimestep(int ts_to_read, std::vector<int> &times,
+                   int &nlines_read) override {
+    if (eof_)
+      return -1;
     ReadHeader();
 
     if (ts_to_read >= nts_) {
@@ -140,8 +140,9 @@ class BinProfileReader : public ProfileReader {
     return nblocks;
   }
 
-  int ReadNextTimestep(std::vector<int>& times) override {
-    if (eof_) return -1;
+  int ReadNextTimestep(std::vector<int> &times) override {
+    if (eof_)
+      return -1;
     ReadHeader();
 
     MLOG(MLOG_WARN, "Not implemented.");
@@ -165,9 +166,10 @@ class BinProfileReader : public ProfileReader {
     return 0;
   }
 
- private:
+private:
   void ReadHeader() {
-    if (fd_) return;
+    if (fd_)
+      return;
 
     fd_ = fopen(csv_path_.c_str(), "r");
 
@@ -188,4 +190,4 @@ class BinProfileReader : public ProfileReader {
   bool eof_;
   int nts_;
 };
-}  // namespace amr
+} // namespace amr
