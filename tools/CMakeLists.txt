@@ -1,10 +1,10 @@
-project(amr-tools)
-cmake_minimum_required(VERSION 3.10)
-
-set (common_include "${CMAKE_CURRENT_SOURCE_DIR}/common/")
-set (common_srcs "${CMAKE_CURRENT_SOURCE_DIR}/common/common.cc")
-
-add_subdirectory(common)
-add_subdirectory(topobench)
-add_subdirectory(loadbalancing)
 add_subdirectory(ember-benchmarks)
+add_subdirectory(scalebench)
+add_subdirectory(policybench)
+add_subdirectory(policysim)
+add_subdirectory(commbench)
+add_subdirectory(amr-preload-plugin)
+
+if (BUILD_TAU_PLUGIN)
+  add_subdirectory(amr-tau-plugin)
+endif()

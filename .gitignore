@@ -1,7 +1,11 @@
 /tools/cmake-build-debug/
 *.swp
 build
+**/build-vsci/*
+install/*
 *.o
 *.so
 compile_commands.json
 *.cache
+**/__pycache__/*
+.vscode/*
